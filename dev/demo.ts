@@ -25,6 +25,9 @@ const ICON_PATHS: Record<string, string> = {
   'mdi:dishwasher':
     'M6 3h12a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2zM4 8h16M8 5.5h1',
   'mdi:flash': 'M13 3L5 14h6l-1 7 8-11h-6l1-7z',
+  'mdi:power-socket-de':
+    'M12 4a8 8 0 1 0 0 16a8 8 0 1 0 0-16M9.3 12h.01M14.7 12h.01M12 4.5v1.5M12 18v1.5',
+  'mdi:power-plug-off-outline': 'M12 4a8 8 0 1 0 0 16a8 8 0 1 0 0-16M5 19L19 5',
 };
 
 /** Stand-in for Home Assistant's <ha-icon>, drawing stroke icons like the mockups. */
@@ -84,6 +87,54 @@ const states: Record<string, HassEntity> = {
   'switch.office_plug': entity('switch.office_plug', 'off', { friendly_name: 'Home Office' }),
   'switch.terrace': entity('switch.terrace', 'unavailable', { friendly_name: 'Terrasse' }),
 };
+// Smart plugs (GlowPlugs board)
+Object.assign(states, {
+  'switch.home_office': entity('switch.home_office', 'on', { friendly_name: 'Home Office' }, 3),
+  'sensor.home_office_power': entity(
+    'sensor.home_office_power',
+    '186',
+    { device_class: 'power', unit_of_measurement: 'W' },
+    0.01,
+  ),
+  'sensor.home_office_energy': entity(
+    'sensor.home_office_energy',
+    '11.76',
+    { device_class: 'energy', unit_of_measurement: 'kWh' },
+    0.1,
+  ),
+  'number.home_office_countdown': entity('number.home_office_countdown', '0', {
+    unit_of_measurement: 's',
+    min: 0,
+    max: 43200,
+  }),
+  'switch.home_office_child_lock': entity('switch.home_office_child_lock', 'off'),
+  'select.home_office_power_outage_memory': entity(
+    'select.home_office_power_outage_memory',
+    'restore',
+    { options: ['on', 'off', 'restore'] },
+  ),
+  'select.home_office_indicator_mode': entity('select.home_office_indicator_mode', 'off', {
+    options: ['off', 'off/on', 'on/off', 'on'],
+  }),
+  'switch.dryer': entity('switch.dryer', 'on', { friendly_name: 'Wäschetrockner' }),
+  'sensor.dryer_power': entity('sensor.dryer_power', '0', {
+    device_class: 'power',
+    unit_of_measurement: 'W',
+  }),
+  'switch.bedroom_plug': entity('switch.bedroom_plug', 'on', { friendly_name: 'Schlafzimmer' }),
+  'sensor.bedroom_plug_power': entity('sensor.bedroom_plug_power', '0', {
+    device_class: 'power',
+    unit_of_measurement: 'W',
+  }),
+  'switch.fairy_lights': entity('switch.fairy_lights', 'unavailable', {
+    friendly_name: 'Lichterkette',
+  }),
+});
+const OFFICE_SERIES = [
+  4, 4, 70, 126, 144, 152, 135, 134, 115, 117, 111, 108, 119, 126, 123, 140, 130, 157, 145, 149,
+  156, 159, 168, 186,
+];
+
 const leds = ['Esszimmer', 'Flur oben', 'Dachboden', 'Kinderzimmer', 'Büro', 'Schlafzimmer'];
 leds.forEach((room, i) => {
   const id = `switch.led_${i}`;
@@ -94,15 +145,31 @@ const areas = {
   living: { area_id: 'living', name: 'Wohnzimmer' },
   utility: { area_id: 'utility', name: 'Hauswirtschaftsraum' },
   kitchen: { area_id: 'kitchen', name: 'Küche' },
+  terrace: { area_id: 'terrace', name: 'Terrasse' },
 };
 const entities: HomeAssistant['entities'] = {
   'input_boolean.tv_warm': { entity_id: 'input_boolean.tv_warm', area_id: 'living' },
   'switch.carpet_boost': { entity_id: 'switch.carpet_boost', area_id: 'utility' },
   'switch.dishwasher': { entity_id: 'switch.dishwasher', area_id: 'kitchen' },
+  'switch.fairy_lights': { entity_id: 'switch.fairy_lights', area_id: 'terrace' },
 };
 
 /** Recorder-like history: TV Wand pattern from the mockup, simple patterns for the rest. */
 function fakeHistory(id: string, start: number) {
+  if (id === 'sensor.home_office_power') {
+    const step = (nowMs - start) / OFFICE_SERIES.length;
+    return OFFICE_SERIES.map((v, i) => ({ s: String(v), lu: (start + i * step) / 1000 }));
+  }
+  if (id.endsWith('_power')) return [{ s: '0', lu: start / 1000 }];
+  if (id === 'sensor.home_office_energy') {
+    const today = new Date(nowMs);
+    today.setHours(0, 0, 0, 0);
+    return [
+      { s: '10.00', lu: start / 1000 },
+      { s: '11.52', lu: today.getTime() / 1000 },
+      { s: '11.76', lu: (nowMs - HOUR) / 1000 },
+    ];
+  }
   const day0 = new Date(nowMs);
   day0.setHours(0, 0, 0, 0);
   const at = (dayOffset: number, h: number) => day0.getTime() - dayOffset * 24 * HOUR + h * HOUR;
@@ -144,6 +211,7 @@ export function fakeHass(darkMode: boolean): HomeAssistant {
         const e = states[id];
         if (!e) continue;
         if (service === 'toggle') e.state = e.state === 'on' ? 'off' : 'on';
+        if (service === 'set_value') e.state = String(data?.value);
         if (service === 'turn_on') e.state = 'on';
         if (service === 'turn_off') e.state = 'off';
         if (domain === 'light' && service === 'turn_on' && Array.isArray(data?.rgb_color)) {
