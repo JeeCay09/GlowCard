@@ -130,6 +130,11 @@
           { entity: 'switch.dishwasher', icon: 'mdi:dishwasher', color: 'indigo', variant: 'row' },
           'span2',
         ],
+        ['glowcard-plug', { entity: 'switch.home_office' }, ''],
+        ['glowcard-plug', { entity: 'switch.dryer' }, ''],
+        ['glowcard-plug', { entity: 'switch.bedroom_plug' }, ''],
+        ['glowcard-plug', { entity: 'switch.fairy_lights' }, ''],
+        ['glowcard-plug', { entity: 'switch.home_office', variant: 'wide' }, 'span4'],
       ];
       for (const grid of document.querySelectorAll('.grid')) {
         for (const [tag, config, cls] of cards) {
