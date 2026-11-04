@@ -31,6 +31,11 @@ const LABELS = {
     icon: 'Icon',
     color: 'Farbe',
     font: 'Schrift',
+    actions_section: 'Aktionen',
+    tap_action: 'Tippen',
+    hold_action: 'Gedrückt halten',
+    tap_helper: 'Standardaktion = GlowCard-Popup (bei Gruppen: keine)',
+    hold_helper: 'Standardaktion = Weitere Infos (Popup von Home Assistant)',
     area: 'Text unter dem Namen',
     threshold: 'Glüht ab (W)',
     entities_section: 'Entitäten der Steckdose',
@@ -92,6 +97,11 @@ const LABELS = {
     icon: 'Icon',
     color: 'Colour',
     font: 'Font',
+    actions_section: 'Actions',
+    tap_action: 'Tap',
+    hold_action: 'Hold',
+    tap_helper: 'Default action = GlowCard popup (groups: none)',
+    hold_helper: 'Default action = more info (Home Assistant dialog)',
     area: 'Text under the name',
     threshold: 'Glows from (W)',
     entities_section: 'Plug entities',
@@ -230,6 +240,25 @@ export const fontField: FormSchema = {
   },
 };
 
+/**
+ * Tap and hold actions with Home Assistant's own action picker. The picker cannot list
+ * our `popup` action, so the popup is the tap default ("Default action" = key removed);
+ * an `action: popup` set in YAML is kept as it is.
+ */
+const CARD_ACTIONS = ['more-info', 'toggle', 'navigate', 'url', 'perform-action', 'none'];
+export const actionsField: FormSchema = {
+  name: '',
+  type: 'expandable',
+  title: 'actions_section',
+  schema: [
+    { name: 'tap_action', selector: { ui_action: { actions: CARD_ACTIONS } } },
+    {
+      name: 'hold_action',
+      selector: { ui_action: { actions: CARD_ACTIONS, default_action: 'more-info' } },
+    },
+  ],
+};
+
 export const areaField: FormSchema = { name: 'area', selector: { text: {} } };
 
 /** Builds the `getConfigForm()` result with DE/EN labels and helpers. */
@@ -245,7 +274,8 @@ export function configForm(
       return isLabel(s.name) ? editorLabel(s.name) : undefined;
     },
     computeHelper: (s) => {
-      const key = helpers[s.name];
+      const key = { tap_action: 'tap_helper', hold_action: 'hold_helper', ...helpers }[s.name] as
+        EditorLabel | undefined;
       return key ? editorLabel(key) : undefined;
     },
     assertConfig,
