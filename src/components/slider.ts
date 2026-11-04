@@ -22,6 +22,8 @@ export class GlowSlider extends LitElement {
   @property({ type: Number }) step = 1;
   @property({ type: Boolean, reflect: true }) vertical = false;
   @property({ type: Boolean, reflect: true }) disabled = false;
+  /** Horizontal only: bar without knob and a softer glow (light rows in the status popup). */
+  @property({ type: Boolean, reflect: true }) plain = false;
   @property() label = '';
   /** Vertical: label turns dark on very light colours once the fill reaches it. */
   @property({ type: Boolean, attribute: 'dark-text' }) darkText = false;
@@ -74,6 +76,9 @@ export class GlowSlider extends LitElement {
       border-radius: 999px;
       background: var(--glow-fill-h, rgb(var(--glow-accent)));
       box-shadow: 0 0 14px rgba(var(--glow-accent), 0.8);
+    }
+    :host([plain]) .bar .fill {
+      box-shadow: 0 0 10px rgba(var(--glow-accent), 0.7);
     }
     .knob {
       position: absolute;
@@ -247,7 +252,7 @@ export class GlowSlider extends LitElement {
       return this.hit(
         html`<div class="bar">
           <div class="fill" style="width:${pct}%"></div>
-          ${pct > 0 ? html`<div class="knob" style="left:${pct}%"></div>` : nothing}
+          ${pct > 0 && !this.plain ? html`<div class="knob" style="left:${pct}%"></div>` : nothing}
         </div>`,
       );
     }

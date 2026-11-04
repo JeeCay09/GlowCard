@@ -61,5 +61,29 @@ describe('visual editor', () => {
     expect(grid('glowcard-plug', { entity: 'switch.a', variant: 'wide' })).toBe(12);
     expect(grid('glowcard-light', { entity: 'light.a' })).toBe(6);
     expect(grid('glowcard-light', { entity: 'light.a', variant: 'small' })).toBe(3);
+    expect(grid('glowcard-header', {})).toBe(12);
+    expect(grid('glowcard-status', { weather: 'weather.home' })).toBe(12);
+    expect(grid('glowcard-chip', { chip: 'lights' })).toBe(6);
+    expect(grid('glowcard-chip', { chip: 'lights', icon_only: true })).toBe(3);
+    expect(grid('glowcard-chip', { chips: [{ type: 'lights' }] })).toBe(12);
+  });
+
+  it('offers forms for header, status bar and chips', () => {
+    expect(names(card('glowcard-header').getConfigForm().schema)).toEqual([
+      'persons',
+      'greeting_name',
+      'font',
+    ]);
+    const status = card('glowcard-status').getConfigForm();
+    expect(names(status.schema)).toEqual(
+      expect.arrayContaining(['weather', 'all_lights', 'solar', 'security', 'alerts']),
+    );
+    for (const s of status.schema.flatMap((x) => (x.schema ? x.schema : [x]))) {
+      if (s.name) expect(status.computeLabel(s)).toBeTruthy();
+    }
+    expect(() => status.assertConfig!({ segments: [] })).toThrow();
+    const chip = card('glowcard-chip').getConfigForm();
+    expect(names(chip.schema)).toEqual(expect.arrayContaining(['chip', 'entity', 'icon_only']));
+    expect(() => chip.assertConfig!({ chips: [] })).toThrow();
   });
 });
