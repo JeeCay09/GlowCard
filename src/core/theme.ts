@@ -17,11 +17,13 @@ const compactSizes = css`
   --glow-name-size: 15px;
   --glow-name-small: 14px;
   --glow-sub-size: 12px;
-  --glow-dock-h: 56px;
-  --glow-dock-pad: 6px;
-  --glow-dot-scale: 0.8;
-  --glow-seg-val: 14px;
-  --glow-seg-lab: 11px;
+  --glow-dock-h: 48px;
+  --glow-dock-pad: 5px;
+  --glow-dot-scale: 0.7;
+  --glow-seg-val: 13px;
+  --glow-seg-lab: 10px;
+  --glow-seg-gap: 7px;
+  --glow-seg-pad: 0 8px 0 4px;
 `;
 
 /**
@@ -88,6 +90,8 @@ export const glowTokens = css`
     --glow-dot-scale: 1;
     --glow-seg-val: 16px;
     --glow-seg-lab: 12px;
+    --glow-seg-gap: 10px;
+    --glow-seg-pad: 0 12px 0 8px;
   }
   @media (max-width: 600px) {
     :host(:not([size='normal'])) {

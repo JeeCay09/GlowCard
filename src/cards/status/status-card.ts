@@ -229,10 +229,10 @@ export class GlowStatusCard extends GlowStatusBase<StatusCardConfig> {
         flex: 1 1 0;
         min-width: 0;
         border-radius: 999px;
-        padding: 0 12px 0 8px;
+        padding: var(--glow-seg-pad);
         display: flex;
         align-items: center;
-        gap: 10px;
+        gap: var(--glow-seg-gap);
         text-align: left;
         cursor: default;
         user-select: none;
