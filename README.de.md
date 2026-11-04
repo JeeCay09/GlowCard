@@ -170,6 +170,7 @@ Später: Raum-Karte, Binärsensor, Bewässerung/Pflanze, Popups für Medien, Rol
 ```bash
 npm install
 npm run watch   # baut bei jeder Änderung neu
+npm run dev     # baut inkl. Vorschauseite, dann: npm run serve → http://localhost:5050/dev/
 npm test        # Unit-Tests
 npm run build   # erzeugt dist/glowcard.js
 ```
@@ -178,4 +179,4 @@ Releases werden per GitHub Actions gebaut; `glowcard.js` wird an jedes GitHub-Re
 
 ## Lizenz
 
-MIT
+MIT. Die eingebettete Schrift [Plus Jakarta Sans](https://github.com/tokotype/PlusJakartaSans) steht unter der SIL Open Font License 1.1 (siehe `src/assets/OFL-PlusJakartaSans.txt`).
