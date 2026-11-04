@@ -41,6 +41,9 @@ export const glowTokens = css`
     --glow-tab-active: #ffffff;
     --glow-knob-ring: #ffffff;
     --glow-halo: 0.6;
+    --glow-pop-plain: rgba(255, 255, 255, 0.8);
+    --glow-pop-glow: 0 0 80px -30px rgba(var(--glow-accent), 0.6);
+    --glow-line: rgba(20, 22, 26, 0.07);
   }
   :host([dark]) {
     --glow-text: #f3f4f6;
@@ -67,6 +70,9 @@ export const glowTokens = css`
     --glow-tab-active: rgba(255, 255, 255, 0.14);
     --glow-knob-ring: #16181d;
     --glow-halo: 0.75;
+    --glow-pop-plain: rgba(24, 26, 32, 0.68);
+    --glow-pop-glow: 0 0 90px -30px rgba(var(--glow-accent), 0.5);
+    --glow-line: rgba(255, 255, 255, 0.07);
   }
   :host([font='theme']) {
     --glow-font: var(--primary-font-family, inherit);

@@ -7,19 +7,13 @@
     <style>
       body {
         margin: 0;
-        display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(420px, 1fr));
-        min-height: 100vh;
         font-family: system-ui, sans-serif;
         color: #888;
       }
       .wall {
         position: relative;
         overflow: hidden;
-        padding: 40px;
-        display: grid;
-        align-content: start;
-        gap: 16px;
+        padding: 28px 40px;
         background: #e7e9ef;
       }
       .wall[data-dark] {
@@ -29,83 +23,123 @@
       .wall::after {
         content: '';
         position: absolute;
-        width: 720px;
-        height: 720px;
+        width: 760px;
+        height: 760px;
         border-radius: 50%;
         z-index: 0;
       }
       .wall::before {
-        left: -180px;
-        top: -40px;
-        background: radial-gradient(circle, rgba(245, 165, 36, 0.38) 0%, rgba(245, 165, 36, 0) 65%);
+        left: -200px;
+        top: -200px;
+        background: radial-gradient(circle, rgba(99, 102, 241, 0.22) 0%, rgba(99, 102, 241, 0) 65%);
       }
       .wall::after {
-        left: 320px;
-        top: 260px;
-        background: radial-gradient(circle, rgba(139, 92, 246, 0.3) 0%, rgba(139, 92, 246, 0) 65%);
-      }
-      .wall[data-dark]::before {
-        background: radial-gradient(circle, rgba(245, 165, 36, 0.3) 0%, rgba(245, 165, 36, 0) 65%);
-      }
-      .wall[data-dark]::after {
-        background: radial-gradient(circle, rgba(139, 92, 246, 0.28) 0%, rgba(139, 92, 246, 0) 65%);
+        left: 520px;
+        top: 160px;
+        background: radial-gradient(circle, rgba(245, 165, 36, 0.2) 0%, rgba(245, 165, 36, 0) 65%);
       }
       .wall > * {
         position: relative;
         z-index: 1;
       }
       .grid {
+        width: 888px;
+        max-width: 100%;
         display: grid;
-        grid-template-columns: repeat(3, minmax(0, 1fr));
+        grid-template-columns: repeat(4, minmax(0, 1fr));
         gap: 16px;
       }
       .span2 {
         grid-column: span 2;
       }
+      .span4 {
+        grid-column: span 4;
+      }
       h1 {
-        margin: 0;
+        margin: 0 0 16px;
         font-size: 14px;
-        color: #888;
       }
     </style>
   </head>
   <body>
     <section class="wall" data-dark>
       <h1>Dunkel</h1>
-      <div class="grid">
-        <glowcard-dev-demo id="d1" class="span2"></glowcard-dev-demo>
-        <glowcard-dev-demo id="d2"></glowcard-dev-demo>
-        <glowcard-dev-demo id="d3"></glowcard-dev-demo>
-        <glowcard-dev-demo id="d4"></glowcard-dev-demo>
-        <glowcard-dev-demo id="d5"></glowcard-dev-demo>
-      </div>
+      <div class="grid"></div>
     </section>
     <section class="wall">
       <h1>Hell</h1>
-      <div class="grid">
-        <glowcard-dev-demo id="l1" class="span2"></glowcard-dev-demo>
-        <glowcard-dev-demo id="l2"></glowcard-dev-demo>
-        <glowcard-dev-demo id="l3"></glowcard-dev-demo>
-        <glowcard-dev-demo id="l4"></glowcard-dev-demo>
-        <glowcard-dev-demo id="l5"></glowcard-dev-demo>
-      </div>
+      <div class="grid"></div>
     </section>
     <script type="module">
       import '../dist/glowcard.js';
       import { mount } from './build/demo.js';
-      const configs = [
-        { entity: 'light.living', icon: 'mdi:lightbulb' },
-        { entity: 'light.tv_wall', icon: 'mdi:television' },
-        { entity: 'switch.sprinkler', icon: 'mdi:sprinkler', color: 'sky' },
-        { entity: 'switch.office_plug', icon: 'mdi:power-socket-eu', color: 'teal' },
-        { entity: 'switch.terrace', icon: 'mdi:power-socket-eu', color: 'teal' },
+      const cards = [
+        ['glowcard-dev-demo', { entity: 'light.living', icon: 'mdi:lightbulb' }, 'span2'],
+        ['glowcard-dev-demo', { entity: 'light.tv_wall', icon: 'mdi:television' }, ''],
+        ['glowcard-dev-demo', { entity: 'switch.terrace', icon: 'mdi:power-socket-eu' }, ''],
+        [
+          'glowcard-switch',
+          { entity: 'switch.sprinkler', icon: 'mdi:sprinkler', color: 'sky' },
+          '',
+        ],
+        [
+          'glowcard-switch',
+          { entity: 'input_boolean.f1_live', icon: 'mdi:flag-checkered', color: 'heat' },
+          '',
+        ],
+        [
+          'glowcard-switch',
+          { entity: 'switch.night_light', icon: 'mdi:lightbulb', color: 'amber' },
+          '',
+        ],
+        [
+          'glowcard-switch',
+          { entity: 'switch.dnd', icon: 'mdi:moon-waning-crescent', color: 'violet' },
+          '',
+        ],
+        [
+          'glowcard-switch',
+          {
+            entity: 'input_boolean.tv_warm',
+            icon: 'mdi:television',
+            color: '#FFC872',
+            variant: 'wide',
+          },
+          'span2',
+        ],
+        [
+          'glowcard-switch',
+          {
+            name: 'Rauchmelder-LEDs',
+            icon: 'mdi:smoke-detector',
+            color: 'green',
+            entities: [0, 1, 2, 3, 4, 5].map((i) => ({
+              entity: `switch.led_${i}`,
+              name: ['Esszimmer', 'Flur oben', 'Dachboden', 'Juna', 'Luke', 'Schlafzimmer'][i],
+            })),
+          },
+          'span2',
+        ],
+        [
+          'glowcard-switch',
+          { entity: 'switch.carpet_boost', icon: 'mdi:flash', color: 'cyan', variant: 'row' },
+          'span2',
+        ],
+        [
+          'glowcard-switch',
+          { entity: 'switch.dishwasher', icon: 'mdi:dishwasher', color: 'indigo', variant: 'row' },
+          'span2',
+        ],
       ];
-      for (const p of ['d', 'l'])
-        configs.forEach((c, i) =>
-          document
-            .getElementById(`${p}${i + 1}`)
-            .setConfig({ type: 'custom:glowcard-dev-demo', ...c }),
-        );
+      for (const grid of document.querySelectorAll('.grid')) {
+        for (const [tag, config, cls] of cards) {
+          const el = document.createElement(tag);
+          el.dataset.card = '';
+          if (cls) el.className = cls;
+          el.setConfig({ type: `custom:${tag}`, ...config });
+          grid.appendChild(el);
+        }
+      }
       mount(document);
     </script>
   </body>
