@@ -21,7 +21,7 @@
 - Works with **standard Home Assistant entities only**. No helpers, template sensors or automations required.
 
 > [!NOTE]
-> GlowCard is in beta. v0.1.0 contains the switch and plug cards; more cards follow (see the roadmap). Options may still change before v1.0.
+> GlowCard is in beta. v0.2.0 contains the switch, plug and light cards; more cards follow (see the roadmap). Options may still change before v1.0.
 
 ## Cards
 
@@ -29,7 +29,7 @@
 | -------------- | ------------------------ | ----------------------------------------------- | ---------------- |
 | Switch         | `custom:glowcard-switch` | `switch.*`, `input_boolean.*`                   | beta (v0.1)      |
 | Plug           | `custom:glowcard-plug`   | `switch.*` + optional power/energy `sensor.*`   | beta (v0.1)      |
-| Light          | `custom:glowcard-light`  | `light.*`                                       | planned for v0.2 |
+| Light          | `custom:glowcard-light`  | `light.*`                                       | beta (v0.2)      |
 | Header         | `custom:glowcard-header` | `person.*`, greeting, date/time                 | planned for v0.3 |
 | Status bar     | `custom:glowcard-status` | any entities, grouped into segments             | planned for v0.3 |
 | Chip           | `custom:glowcard-chip`   | any entity                                      | planned for v0.3 |
@@ -67,7 +67,7 @@ lovelace:
    - Type: **JavaScript module**
 4. Reload your browser.
 
-After an update, change the URL to e.g. `/local/glowcard/glowcard.js?v=0.1.0` so browsers load the new file.
+After an update, change the URL to e.g. `/local/glowcard/glowcard.js?v=0.2.0` so browsers load the new file.
 
 ## Configuration
 
@@ -123,9 +123,11 @@ The card finds the plug's power and energy sensors, countdown, child lock, "powe
 
 ```yaml
 type: custom:glowcard-light
-entity: light.living_room_strip
-name: TV wall
+entity: light.living_room
+variant: wide # wide (2 columns, drag bar) | small (1 column)
 ```
+
+Orb, bar and tint use the light's current colour. Drag the bar to set the brightness; dragging to 0 turns the light off. The popup has a tall brightness bar, tabs for colour temperature and colour (only what the light supports, from `supported_color_modes`) and colour presets from warm white to blue.
 
 ### Header and status bar
 
@@ -164,8 +166,8 @@ home: sensor.home_load_power
 ## Roadmap
 
 1. Core: glass, orb, drag bar, popups, light/dark mode
-2. Switch and plug cards → **v0.1.0 (beta)**
-3. Light card and popup → v0.2.0
+2. Switch and plug cards → v0.1.0 (beta)
+3. Light card and popup → **v0.2.0 (beta)**
 4. Header, status bar and chips → v0.3.0
 5. Energy "House" card and popup → v0.4.0
 6. Visual editors, full docs, submission to the HACS default list → v1.0.0
