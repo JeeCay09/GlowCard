@@ -40,8 +40,8 @@ describe('visual editor', () => {
     expect(() => assert({ entities: [{ entity: 'switch.a', name: 'A' }] })).toThrow();
   });
 
-  it('offers the card size on switch, plug and light', () => {
-    for (const type of ['glowcard-switch', 'glowcard-plug', 'glowcard-light']) {
+  it('offers the card size on switch, plug, light and status bar', () => {
+    for (const type of ['glowcard-switch', 'glowcard-plug', 'glowcard-light', 'glowcard-status']) {
       expect(names(card(type).getConfigForm().schema)).toContain('size');
     }
     expect(editorLabel('compact', 'de')).toBe('Kompakt');

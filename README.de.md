@@ -73,16 +73,16 @@ Nach einem Update die URL z. B. auf `/local/glowcard/glowcard.js?v=0.3.0` änder
 
 Alle Karten teilen diese Optionen:
 
-| Option        | Typ    | Standard           | Beschreibung                                                                                |
-| ------------- | ------ | ------------------ | ------------------------------------------------------------------------------------------- |
-| `entity`      | String | Pflicht            | Haupt-Entität der Karte                                                                     |
-| `name`        | String | Anzeigename        | Titel auf der Karte                                                                         |
-| `icon`        | String | Symbol der Entität | Beliebiges `mdi:`-Symbol                                                                    |
-| `color`       | String | je Kartentyp       | Akzentfarbe (`amber`, `teal`, `sky`, `violet`, … oder Hex)                                  |
-| `variant`     | String | `small`            | Layout der Karte, abhängig vom Kartentyp                                                    |
-| `size`        | String | `auto`             | Schalter, Steckdose, Licht: `auto` (kompakt am Handy unter 600 px), `compact` oder `normal` |
-| `tap_action`  | Aktion | Popup öffnen       | Standard-Aktion von Home Assistant                                                          |
-| `hold_action` | Aktion | `more-info`        | Standard-Aktion von Home Assistant                                                          |
+| Option        | Typ    | Standard           | Beschreibung                                                                                               |
+| ------------- | ------ | ------------------ | ---------------------------------------------------------------------------------------------------------- |
+| `entity`      | String | Pflicht            | Haupt-Entität der Karte                                                                                    |
+| `name`        | String | Anzeigename        | Titel auf der Karte                                                                                        |
+| `icon`        | String | Symbol der Entität | Beliebiges `mdi:`-Symbol                                                                                   |
+| `color`       | String | je Kartentyp       | Akzentfarbe (`amber`, `teal`, `sky`, `violet`, … oder Hex)                                                 |
+| `variant`     | String | `small`            | Layout der Karte, abhängig vom Kartentyp                                                                   |
+| `size`        | String | `auto`             | Schalter, Steckdose, Licht, Status-Leiste: `auto` (kompakt am Handy unter 600 px), `compact` oder `normal` |
+| `tap_action`  | Aktion | Popup öffnen       | Standard-Aktion von Home Assistant                                                                         |
+| `hold_action` | Aktion | `more-info`        | Standard-Aktion von Home Assistant                                                                         |
 
 Die Beispiele zeigen die geplanten Optionen. Details können sich bis v1.0 noch ändern.
 
