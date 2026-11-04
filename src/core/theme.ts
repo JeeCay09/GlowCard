@@ -17,6 +17,11 @@ const compactSizes = css`
   --glow-name-size: 15px;
   --glow-name-small: 14px;
   --glow-sub-size: 12px;
+  --glow-dock-h: 56px;
+  --glow-dock-pad: 6px;
+  --glow-dot-scale: 0.8;
+  --glow-seg-val: 14px;
+  --glow-seg-lab: 11px;
 `;
 
 /**
@@ -77,6 +82,12 @@ export const glowTokens = css`
     --glow-name-size: 16px;
     --glow-name-small: 15px;
     --glow-sub-size: 13px;
+    /* status bar */
+    --glow-dock-h: 72px;
+    --glow-dock-pad: 8px;
+    --glow-dot-scale: 1;
+    --glow-seg-val: 16px;
+    --glow-seg-lab: 12px;
   }
   @media (max-width: 600px) {
     :host(:not([size='normal'])) {

@@ -73,16 +73,16 @@ After an update, change the URL to e.g. `/local/glowcard/glowcard.js?v=0.3.0` so
 
 All cards share these options:
 
-| Option        | Type   | Default       | Description                                                                         |
-| ------------- | ------ | ------------- | ----------------------------------------------------------------------------------- |
-| `entity`      | string | required      | Main entity of the card                                                             |
-| `name`        | string | friendly name | Title shown on the card                                                             |
-| `icon`        | string | entity icon   | Any `mdi:` icon                                                                     |
-| `color`       | string | per card type | Accent colour (`amber`, `teal`, `sky`, `violet`, … or hex)                          |
-| `variant`     | string | `small`       | Card layout, depends on the card                                                    |
-| `size`        | string | `auto`        | Switch, plug, light: `auto` (compact on phones under 600 px), `compact` or `normal` |
-| `tap_action`  | action | open popup    | Standard Home Assistant action                                                      |
-| `hold_action` | action | `more-info`   | Standard Home Assistant action                                                      |
+| Option        | Type   | Default       | Description                                                                                     |
+| ------------- | ------ | ------------- | ----------------------------------------------------------------------------------------------- |
+| `entity`      | string | required      | Main entity of the card                                                                         |
+| `name`        | string | friendly name | Title shown on the card                                                                         |
+| `icon`        | string | entity icon   | Any `mdi:` icon                                                                                 |
+| `color`       | string | per card type | Accent colour (`amber`, `teal`, `sky`, `violet`, … or hex)                                      |
+| `variant`     | string | `small`       | Card layout, depends on the card                                                                |
+| `size`        | string | `auto`        | Switch, plug, light, status bar: `auto` (compact on phones under 600 px), `compact` or `normal` |
+| `tap_action`  | action | open popup    | Standard Home Assistant action                                                                  |
+| `hold_action` | action | `more-info`   | Standard Home Assistant action                                                                  |
 
 The examples below show the planned options. Details may still change before v1.0.
 

@@ -1,7 +1,7 @@
 import { css, html, nothing } from 'lit';
 import type { GlowCardConfig } from '../../core/base-card';
 import { registerCard } from '../../core/register';
-import { configForm, editorLabel, fontField, type FormSchema } from '../../core/editor';
+import { configForm, editorLabel, fontField, sizeField, type FormSchema } from '../../core/editor';
 import type { HomeAssistant } from '../../types/hass';
 import { paletteColor, validateSegment, type SegmentConfig } from './status-logic';
 import { GlowStatusBase, avatar, dot, toneDot } from './status-base';
@@ -97,6 +97,7 @@ export class GlowStatusCard extends GlowStatusBase<StatusCardConfig> {
           selector: { entity: { domain: ['binary_sensor', 'vacuum'], multiple: true } },
         },
         fontField,
+        sizeField,
       ],
       {
         lights: 'lights_helper',
@@ -210,10 +211,10 @@ export class GlowStatusCard extends GlowStatusBase<StatusCardConfig> {
         color: var(--glow-text);
       }
       .dock {
-        height: 72px;
+        height: var(--glow-dock-h);
         box-sizing: border-box;
         border-radius: 999px;
-        padding: 8px;
+        padding: var(--glow-dock-pad);
         display: flex;
         align-items: stretch;
         gap: 4px;
@@ -224,6 +225,7 @@ export class GlowStatusCard extends GlowStatusBase<StatusCardConfig> {
         box-shadow: var(--gc-dock-shadow);
       }
       .seg {
+        --dot-scale: var(--glow-dot-scale);
         flex: 1 1 0;
         min-width: 0;
         border-radius: 999px;
@@ -261,7 +263,7 @@ export class GlowStatusCard extends GlowStatusBase<StatusCardConfig> {
         min-width: 0;
       }
       .val {
-        font-size: 16px;
+        font-size: var(--glow-seg-val);
         font-weight: 800;
         letter-spacing: -0.02em;
         white-space: nowrap;
@@ -272,7 +274,7 @@ export class GlowStatusCard extends GlowStatusBase<StatusCardConfig> {
         color: rgb(var(--c));
       }
       .lab {
-        font-size: 12px;
+        font-size: var(--glow-seg-lab);
         font-weight: 600;
         white-space: nowrap;
         overflow: hidden;
