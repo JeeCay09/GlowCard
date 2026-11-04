@@ -37,6 +37,17 @@ const de = {
   today_lower: 'heute',
   no_history: 'Kein Verlauf verfügbar',
   previous_state: 'Letzter Zustand',
+  brightness: 'Helligkeit',
+  color_temp: 'Farbtemperatur',
+  color: 'Farbe',
+  light: 'Licht',
+  warm_white: 'Warmweiß',
+  neutral_white: 'Neutralweiß',
+  cool_white: 'Kaltweiß',
+  amber: 'Amber',
+  coral: 'Koralle',
+  violet: 'Violett',
+  blue: 'Blau',
 };
 
 const en: typeof de = {
@@ -76,6 +87,17 @@ const en: typeof de = {
   today_lower: 'today',
   no_history: 'No history available',
   previous_state: 'Previous state',
+  brightness: 'Brightness',
+  color_temp: 'Colour temperature',
+  color: 'Colour',
+  light: 'Light',
+  warm_white: 'Warm white',
+  neutral_white: 'Neutral white',
+  cool_white: 'Cool white',
+  amber: 'Amber',
+  coral: 'Coral',
+  violet: 'Violet',
+  blue: 'Blue',
 };
 
 export type LocalizeKey = keyof typeof de;

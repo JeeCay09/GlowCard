@@ -12,6 +12,10 @@ export interface HassEntity {
     rgb_color?: [number, number, number];
     hs_color?: [number, number];
     color_temp_kelvin?: number;
+    min_color_temp_kelvin?: number;
+    max_color_temp_kelvin?: number;
+    color_mode?: string;
+    supported_color_modes?: string[];
     options?: string[];
     min?: number;
     max?: number;
