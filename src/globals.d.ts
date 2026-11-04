@@ -11,3 +11,8 @@ interface CustomCardEntry {
 interface Window {
   customCards?: CustomCardEntry[];
 }
+
+declare module '*.woff2' {
+  const dataUrl: string;
+  export default dataUrl;
+}

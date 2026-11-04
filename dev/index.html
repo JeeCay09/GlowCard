@@ -1,0 +1,101 @@
+<!doctype html>
+<html lang="de">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>GlowCard Vorschau</title>
+    <style>
+      body {
+        margin: 0;
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
+        min-height: 100vh;
+        font-family: system-ui, sans-serif;
+      }
+      .wall {
+        position: relative;
+        overflow: hidden;
+        padding: 32px 16px;
+        display: grid;
+        align-content: start;
+        gap: 16px;
+        background: #e7e9ef;
+      }
+      .wall[data-dark] {
+        background: #07080b;
+      }
+      .wall::before,
+      .wall::after {
+        content: '';
+        position: absolute;
+        width: 320px;
+        height: 320px;
+        border-radius: 50%;
+        filter: blur(80px);
+        opacity: 0.45;
+        z-index: 0;
+      }
+      .wall::before {
+        background: #f59e0b;
+        top: -60px;
+        left: -80px;
+      }
+      .wall::after {
+        background: #6366f1;
+        bottom: -40px;
+        right: -60px;
+      }
+      .wall > * {
+        position: relative;
+        z-index: 1;
+      }
+      .grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 16px;
+      }
+      h1 {
+        margin: 0;
+        font-size: 14px;
+        color: #888;
+      }
+    </style>
+  </head>
+  <body>
+    <section class="wall" data-dark>
+      <h1>Dunkel</h1>
+      <glowcard-dev-demo id="d1"></glowcard-dev-demo>
+      <div class="grid">
+        <glowcard-dev-demo id="d2"></glowcard-dev-demo>
+        <glowcard-dev-demo id="d3"></glowcard-dev-demo>
+      </div>
+      <glowcard-dev-demo id="d4"></glowcard-dev-demo>
+    </section>
+    <section class="wall">
+      <h1>Hell</h1>
+      <glowcard-dev-demo id="l1"></glowcard-dev-demo>
+      <div class="grid">
+        <glowcard-dev-demo id="l2"></glowcard-dev-demo>
+        <glowcard-dev-demo id="l3"></glowcard-dev-demo>
+      </div>
+      <glowcard-dev-demo id="l4"></glowcard-dev-demo>
+    </section>
+    <script type="module">
+      import '../dist/glowcard.js';
+      import { mount } from './build/demo.js';
+      const configs = [
+        { entity: 'light.tv_wall', icon: 'mdi:led-strip' },
+        { entity: 'switch.sprinkler', icon: 'mdi:sprinkler', color: 'sky' },
+        { entity: 'switch.office_plug', icon: 'mdi:power-socket-eu', color: 'teal' },
+        { entity: 'switch.terrace', icon: 'mdi:power-socket-eu', color: 'teal' },
+      ];
+      for (const p of ['d', 'l'])
+        configs.forEach((c, i) =>
+          document
+            .getElementById(`${p}${i + 1}`)
+            .setConfig({ type: 'custom:glowcard-dev-demo', ...c }),
+        );
+      mount(document);
+    </script>
+  </body>
+</html>
