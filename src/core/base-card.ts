@@ -17,6 +17,8 @@ export interface GlowCardConfig {
   color?: string;
   /** `glow` (default) uses the embedded Plus Jakarta Sans, `theme` the HA theme font. */
   font?: 'glow' | 'theme';
+  /** `auto` (default) = compact on phones (< 600 px), `compact` = always, `normal` = never. */
+  size?: 'auto' | 'compact' | 'normal';
   tap_action?: ActionConfig;
   hold_action?: ActionConfig;
 }
@@ -203,6 +205,9 @@ export abstract class GlowCardBase<C extends GlowCardConfig = GlowCardConfig> ex
     this.toggleAttribute('dark', this.dark);
     if (this.config?.font === 'theme') this.setAttribute('font', 'theme');
     else this.removeAttribute('font');
+    const size = this.config?.size;
+    if (size === 'compact' || size === 'normal') this.setAttribute('size', size);
+    else this.removeAttribute('size');
     applyAccent(this, this.accent);
     this.syncPopup();
   }

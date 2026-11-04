@@ -17,6 +17,7 @@ describe('visual editor', () => {
       'icon',
       'color',
       'font',
+      'size',
       'tap_action',
       'hold_action',
     ]);
@@ -39,6 +40,13 @@ describe('visual editor', () => {
     const assert = card('glowcard-switch').getConfigForm().assertConfig!;
     expect(() => assert({ entities: ['switch.a', 'switch.b'] })).not.toThrow();
     expect(() => assert({ entities: [{ entity: 'switch.a', name: 'A' }] })).toThrow();
+  });
+
+  it('offers the card size on switch, plug, light and status bar', () => {
+    for (const type of ['glowcard-switch', 'glowcard-plug', 'glowcard-light', 'glowcard-status']) {
+      expect(names(card(type).getConfigForm().schema)).toContain('size');
+    }
+    expect(editorLabel('compact', 'de')).toBe('Kompakt');
   });
 
   it('offers tap and hold actions with the popup as tap default', () => {
