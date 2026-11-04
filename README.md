@@ -30,12 +30,12 @@
 | Switch         | `custom:glowcard-switch` | `switch.*`, `input_boolean.*`                   | beta (v0.1)      |
 | Plug           | `custom:glowcard-plug`   | `switch.*` + optional power/energy `sensor.*`   | beta (v0.1)      |
 | Light          | `custom:glowcard-light`  | `light.*`                                       | beta (v0.2)      |
-| Header         | `custom:glowcard-header` | `person.*`, greeting, date/time                 | planned for v0.3 |
-| Status bar     | `custom:glowcard-status` | any entities, grouped into segments             | planned for v0.3 |
-| Chip           | `custom:glowcard-chip`   | any entity                                      | planned for v0.3 |
+| Header         | `custom:glowcard-header` | `person.*`, greeting, date/time                 | beta (v0.3)      |
+| Status bar     | `custom:glowcard-status` | weather, lights, energy, security, alerts       | beta (v0.3)      |
+| Chip           | `custom:glowcard-chip`   | like the status bar, plus people and battery    | beta (v0.3)      |
 | Energy "House" | `custom:glowcard-energy` | power `sensor.*` for solar, battery, grid, home | planned for v0.4 |
 
-Switch, plug and light cards have a visual editor (Home Assistant 2025.1 or newer). In a sections dashboard, each card takes its width from its variant: small = 1/4, wide = 1/2, wide plug = full width. You can still resize it in the dashboard editor.
+All cards have a visual editor (Home Assistant 2025.1 or newer). In a sections dashboard, each card takes its width from its variant: small = 1/4, wide = 1/2, wide plug, header, status bar and chip rows = full width, single chip = 1/2, icon-only chip = 1/4. You can still resize it in the dashboard editor.
 
 ## Installation
 
@@ -129,28 +129,111 @@ variant: wide # wide (2 columns, drag bar) | small (1 column)
 
 Orb, bar and tint use the light's current colour. Drag the bar to set the brightness; dragging to 0 turns the light off. The popup has a tall brightness bar, tabs for colour temperature and colour (only what the light supports, from `supported_color_modes`) and colour presets from warm white to blue.
 
-### Header and status bar
+### Header
 
 ```yaml
 type: custom:glowcard-header
 persons:
   - person.alex
   - person.sam
----
+name: Alex # optional, default: first name of the signed-in user
+```
+
+Greeting by time of day ("Good morning, Alex"), date and time, people on the right. Whoever is at home gets a green ring. Tap a person to open their details. Use `greeting:` for your own text.
+
+### Status bar
+
+One glass capsule with segments. Segments with an arrow open a popup; the tapped segment gets a coloured ring.
+
+Simple (this is also what the visual editor saves; order as in the screenshot):
+
+```yaml
+type: custom:glowcard-status
+weather: weather.home
+all_lights: true # or lights: [light.a, light.b]
+solar: sensor.pv_power
+battery: sensor.battery_level # state of charge in %
+battery_power: sensor.battery_power # + = charging
+grid: sensor.grid_power # + = import, − = export
+home: sensor.home_power
+security:
+  - binary_sensor.bathroom_window
+  - binary_sensor.smoke_detectors
+alerts:
+  - binary_sensor.vacuum_problem # only shown while there is a problem
+```
+
+Free (YAML only), with your own order, names and actions:
+
+```yaml
 type: custom:glowcard-status
 segments:
   - type: weather
     entity: weather.home
-  - type: lights # counts lights that are on, popup lists them
-    entities: all
+    tap_action:
+      action: none # no arrow, not tappable
+  - type: lights # without entities: all lights (light groups are skipped)
   - type: energy
     solar: sensor.pv_power
-    battery: sensor.battery_state_of_charge
+    battery: sensor.battery_level
+    battery_power: sensor.battery_power
+    navigation_path: /energy # target of "Open energy flow"
   - type: security
     entities:
-      - binary_sensor.bathroom_window
+      - entity: binary_sensor.bathroom_window
+        name: Bathroom window
       - binary_sensor.smoke_detectors
+  - type: alert
+    entity: binary_sensor.vacuum_problem
 ```
+
+| Segment    | Shows                                    | Popup                                                             |
+| ---------- | ---------------------------------------- | ----------------------------------------------------------------- |
+| `weather`  | temperature, condition, humidity         | – (default: weather details)                                      |
+| `lights`   | number of lights that are on             | "Lights on": orb toggles, drag the bar, "Turn all off"            |
+| `energy`   | solar power, battery level and direction | "Energy now": solar, house, battery, grid                         |
+| `battery`  | battery with a ring (mainly as a chip)   | same as `energy`                                                  |
+| `security` | "All secure" or the number of alerts     | list with state and "since …"; tap a row for details              |
+| `alert`    | device and error text, red with a pulse  | error and since when; for robot vacuums "Resume"/"Return to base" |
+| `person`   | avatar and location                      | – (person details)                                                |
+| `entity`   | any entity with its state                | – (entity details)                                                |
+
+Security counts `binary_sensor` that are `on` (open, smoke, …), unlocked `lock`, triggered `alarm_control_panel` and open `cover` as an alert. For `alert`, the card finds the error text (`sensor.*_error`) and the robot vacuum (`vacuum.*`) on the same device by itself; otherwise set `detail_entity` and `vacuum`. Every segment accepts `name`, `icon`, `color`, `tap_action` and `hold_action`.
+
+On narrow screens the bar scrolls sideways; the icon-only chips are the compact option there.
+
+### Chips
+
+One chip per card (visual editor) or a row with `chips:` (YAML). Entries are the same as in the status bar and open the same popups.
+
+```yaml
+type: custom:glowcard-chip
+chip: lights
+---
+type: custom:glowcard-chip
+chips:
+  - type: weather
+    entity: weather.home
+  - type: lights
+  - type: person
+    entity: person.alex
+  - type: battery
+    battery: sensor.battery_level
+    battery_power: sensor.battery_power
+  - type: security
+    entities: [binary_sensor.bathroom_window]
+  - type: alert
+    entity: binary_sensor.vacuum_problem
+---
+type: custom:glowcard-chip
+icon_only: true # round icons with count badges, e.g. for phones
+chips:
+  - type: lights
+  - type: alert
+    entity: binary_sensor.vacuum_problem
+```
+
+Unavailable entities are shown dashed and faded. An alert chip without a problem disappears (`hide_when_ok: false` shows it in green).
 
 ### Energy "House"
 

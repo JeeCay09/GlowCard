@@ -12,6 +12,8 @@ export class GlowOrb extends LitElement {
   @property() icon = '';
   @property({ type: Boolean, reflect: true }) active = false;
   @property({ type: Boolean, reflect: true, attribute: 'dark-icon' }) darkIcon = false;
+  /** Soft style for "all good" states: tinted background, icon in the accent colour. */
+  @property({ type: Boolean, reflect: true }) calm = false;
   @property({ type: Number }) size = 52;
   @property() label = '';
 
@@ -51,6 +53,10 @@ export class GlowOrb extends LitElement {
       );
       box-shadow: var(--glow-orb-glow);
       color: #ffffff;
+    }
+    :host([calm]:not([active])) button {
+      background: rgba(var(--glow-accent), var(--glow-calm, 0.12));
+      color: rgb(var(--glow-accent));
     }
     :host([active][dark-icon]) button {
       color: #3a2504;
