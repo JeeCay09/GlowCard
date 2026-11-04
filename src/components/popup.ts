@@ -76,6 +76,15 @@ export class GlowPopup extends LitElement {
         border-color: rgba(var(--glow-accent), var(--glow-pop-lit-border));
         box-shadow: var(--glow-pop-lit-shadow);
       }
+      :host([glow-only]) .panel,
+      :host([glow-only][active]) .panel {
+        background: var(--glow-pop-plain);
+        border-color: var(--glow-pop-border);
+        box-shadow: var(--glow-pop-shadow);
+      }
+      :host([glow-only][active]) .panel {
+        box-shadow: var(--glow-pop-shadow), var(--glow-pop-glow);
+      }
       header {
         display: flex;
         align-items: center;

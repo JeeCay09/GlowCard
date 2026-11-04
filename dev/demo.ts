@@ -13,34 +13,43 @@ import '../src/components/slider';
 import '../src/components/segments';
 
 const ICON_PATHS: Record<string, string> = {
-  'mdi:lightbulb':
-    'M9 18h6M10 21h4M12 3a6 6 0 0 0-3.5 10.9c.6.4 1 1.1 1 1.8V16h5v-.3c0-.7.4-1.4 1-1.8A6 6 0 0 0 12 3z',
-  'mdi:sprinkler': 'M12 3v6M8 9h8l-1 4H9zM6 21c0-3 3-5 6-5s6 2 6 5',
+  'mdi:lightbulb': 'M9 18h6M10 21h4M12 3a6 6 0 0 0-3.5 10.9V16h7v-2.1A6 6 0 0 0 12 3z',
+  'mdi:sprinkler': 'M12 3.5c3 4 6 7.3 6 10.5a6 6 0 0 1-12 0c0-3.2 3-6.5 6-10.5z',
   'mdi:power-socket-eu':
-    'M7 3h10a4 4 0 0 1 4 4v10a4 4 0 0 1-4 4H7a4 4 0 0 1-4-4V7a4 4 0 0 1 4-4zM9 11v2M15 11v2',
-  'mdi:television': 'M3 5h18v12H3zM8 21h8',
+    'M12 4a8 8 0 1 0 0 16a8 8 0 1 0 0-16M9.3 12h.01M14.7 12h.01M12 4.5v1.5M12 18v1.5',
+  'mdi:television':
+    'M5 5h14a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2zM9 21h6M12 17v4',
+  'mdi:flag-checkered': 'M5 21V4h11l-2 4 2 4H5',
+  'mdi:moon-waning-crescent': 'M20 14.5A8 8 0 1 1 9.5 4a6.5 6.5 0 0 0 10.5 10.5z',
+  'mdi:smoke-detector': 'M4 12a8 8 0 1 0 16 0a8 8 0 1 0-16 0M10 12a2 2 0 1 0 4 0a2 2 0 1 0-4 0',
+  'mdi:dishwasher':
+    'M6 3h12a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2zM4 8h16M8 5.5h1',
+  'mdi:flash': 'M13 3L5 14h6l-1 7 8-11h-6l1-7z',
 };
 
 /** Stand-in for Home Assistant's <ha-icon>, drawing stroke icons like the mockups. */
 class FakeIcon extends HTMLElement {
   set icon(v: string) {
     const d = ICON_PATHS[v] ?? 'M12 4a8 8 0 1 0 0 16a8 8 0 1 0 0-16';
-    this.innerHTML = `<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="${d}"></path></svg>`;
+    this.innerHTML = `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="${d}"></path></svg>`;
   }
 }
 defineOnce('ha-icon', FakeIcon);
 
-const now = new Date().toISOString();
+const HOUR = 3_600_000;
+const nowMs = Date.now();
+const ago = (h: number) => new Date(nowMs - h * HOUR).toISOString();
 const entity = (
   id: string,
   state: string,
   attributes: HassEntity['attributes'] = {},
+  changedHoursAgo = 2,
 ): HassEntity => ({
   entity_id: id,
   state,
   attributes,
-  last_changed: now,
-  last_updated: now,
+  last_changed: ago(changedHoursAgo),
+  last_updated: ago(changedHoursAgo),
 });
 
 const states: Record<string, HassEntity> = {
@@ -49,32 +58,108 @@ const states: Record<string, HassEntity> = {
     brightness: 184,
     rgb_color: [255, 200, 114],
   }),
-  'switch.sprinkler': entity('switch.sprinkler', 'on', { friendly_name: 'Rasensprenger' }),
+  'switch.sprinkler': entity('switch.sprinkler', 'off', { friendly_name: 'Rasensprenger' }, 63),
+  'input_boolean.f1_live': entity('input_boolean.f1_live', 'on', { friendly_name: 'F1 Live' }, 133),
+  'switch.night_light': entity(
+    'switch.night_light',
+    'off',
+    { friendly_name: 'TV Schrank Nachtlicht' },
+    49,
+  ),
+  'switch.dnd': entity('switch.dnd', 'on', { friendly_name: 'Minerva Bitte nicht stören' }, 63),
+  'input_boolean.tv_warm': entity(
+    'input_boolean.tv_warm',
+    'on',
+    { friendly_name: 'TV Wand Warmweiß' },
+    45,
+  ),
+  'switch.carpet_boost': entity(
+    'switch.carpet_boost',
+    'on',
+    { friendly_name: 'Vesta Teppich-Boost' },
+    20,
+  ),
+  'switch.dishwasher': entity('switch.dishwasher', 'off', { friendly_name: 'Geschirrspüler' }, 5),
   'light.tv_wall': entity('light.tv_wall', 'off', { friendly_name: 'TV Wand' }),
   'switch.office_plug': entity('switch.office_plug', 'off', { friendly_name: 'Home Office' }),
   'switch.terrace': entity('switch.terrace', 'unavailable', { friendly_name: 'Terrasse' }),
 };
+const leds = ['Esszimmer', 'Flur oben', 'Dachboden', 'Juna', 'Luke', 'Schlafzimmer'];
+leds.forEach((room, i) => {
+  const id = `switch.led_${i}`;
+  states[id] = entity(id, 'on', { friendly_name: `Rauchmelder ${room}` });
+});
+
+const areas = {
+  living: { area_id: 'living', name: 'Wohnzimmer' },
+  utility: { area_id: 'utility', name: 'Hauswirtschaftsraum' },
+  kitchen: { area_id: 'kitchen', name: 'Küche' },
+};
+const entities: HomeAssistant['entities'] = {
+  'input_boolean.tv_warm': { entity_id: 'input_boolean.tv_warm', area_id: 'living' },
+  'switch.carpet_boost': { entity_id: 'switch.carpet_boost', area_id: 'utility' },
+  'switch.dishwasher': { entity_id: 'switch.dishwasher', area_id: 'kitchen' },
+};
+
+/** Recorder-like history: TV Wand pattern from the mockup, simple patterns for the rest. */
+function fakeHistory(id: string, start: number) {
+  const day0 = new Date(nowMs);
+  day0.setHours(0, 0, 0, 0);
+  const at = (dayOffset: number, h: number) => day0.getTime() - dayOffset * 24 * HOUR + h * HOUR;
+  const tv: [number, number, number][] = [
+    [6, 21.92, 23.54],
+    [5, 8.03, 8.04],
+    [5, 12.52, 48],
+    [2, 14.21, 24 * 3],
+  ];
+  const pattern =
+    id === 'input_boolean.tv_warm'
+      ? tv
+      : [[3, 18, 22] as [number, number, number], [1, 7, 9] as [number, number, number]];
+  const points: { s: string; lu: number }[] = [{ s: 'off', lu: start / 1000 }];
+  for (const [d, a, b] of pattern) {
+    points.push({ s: 'on', lu: at(d, a) / 1000 });
+    if (at(d, b) < nowMs) points.push({ s: 'off', lu: at(d, b) / 1000 });
+  }
+  return points;
+}
 
 const listeners = new Set<() => void>();
 export function fakeHass(darkMode: boolean): HomeAssistant {
   return {
-    states,
+    states: { ...states },
+    entities,
+    areas,
+    devices: {},
     language: 'de',
     themes: { darkMode },
+    async callWS<T>(msg: Record<string, unknown>): Promise<T> {
+      const ids = (msg.entity_ids as string[]) ?? [];
+      const start = new Date(String(msg.start_time)).getTime();
+      return Object.fromEntries(ids.map((id) => [id, fakeHistory(id, start)])) as T;
+    },
     async callService(domain, service, data) {
-      const id = String(data?.entity_id ?? '');
-      const e = states[id];
-      if (!e) return;
-      if (service === 'toggle') e.state = e.state === 'on' ? 'off' : 'on';
-      if (domain === 'light' && service === 'turn_on' && Array.isArray(data?.rgb_color)) {
-        e.state = 'on';
-        e.attributes.rgb_color = data.rgb_color as [number, number, number];
+      const ids = ([] as string[]).concat((data?.entity_id as string | string[]) ?? []);
+      for (const id of ids) {
+        const e = states[id];
+        if (!e) continue;
+        if (service === 'toggle') e.state = e.state === 'on' ? 'off' : 'on';
+        if (service === 'turn_on') e.state = 'on';
+        if (service === 'turn_off') e.state = 'off';
+        if (domain === 'light' && service === 'turn_on' && Array.isArray(data?.rgb_color)) {
+          e.attributes.rgb_color = data.rgb_color as [number, number, number];
+        }
+        if (
+          domain === 'light' &&
+          service === 'turn_on' &&
+          typeof data?.brightness_pct === 'number'
+        ) {
+          e.state = data.brightness_pct > 0 ? 'on' : 'off';
+          e.attributes.brightness = Math.round((data.brightness_pct / 100) * 255);
+        }
+        const t = new Date().toISOString();
+        states[id] = { ...e, last_changed: t, last_updated: t };
       }
-      if (domain === 'light' && service === 'turn_on' && typeof data?.brightness_pct === 'number') {
-        e.state = data.brightness_pct > 0 ? 'on' : 'off';
-        e.attributes.brightness = Math.round((data.brightness_pct / 100) * 255);
-      }
-      states[id] = { ...e, last_changed: new Date().toISOString() };
       listeners.forEach((fn) => fn());
     },
   };
@@ -263,12 +348,10 @@ defineOnce('glowcard-dev-demo', DemoCard);
 /** Re-renders all demo cards after a fake service call. */
 export function mount(root: ParentNode): void {
   const refresh = () =>
-    root
-      .querySelectorAll<DemoCard & { hass?: HomeAssistant }>('glowcard-dev-demo')
-      .forEach((card) => {
-        const dark = card.closest('[data-dark]') !== null;
-        card.hass = fakeHass(dark);
-      });
+    root.querySelectorAll<HTMLElement & { hass?: HomeAssistant }>('[data-card]').forEach((card) => {
+      const dark = card.closest('[data-dark]') !== null;
+      card.hass = fakeHass(dark);
+    });
   listeners.add(refresh);
   refresh();
 }
