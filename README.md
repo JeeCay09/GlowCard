@@ -21,7 +21,7 @@
 - Works with **standard Home Assistant entities only**. No helpers, template sensors or automations required.
 
 > [!NOTE]
-> GlowCard is in beta. v0.2.0 contains the switch, plug and light cards; more cards follow (see the roadmap). Options may still change before v1.0.
+> GlowCard is in beta. v0.3.0 contains the switch, plug, light, header, status bar and chip cards, all with a visual editor; more cards follow (see the roadmap). Options may still change before v1.0.
 
 ## Cards
 
@@ -67,7 +67,7 @@ lovelace:
    - Type: **JavaScript module**
 4. Reload your browser.
 
-After an update, change the URL to e.g. `/local/glowcard/glowcard.js?v=0.2.0` so browsers load the new file.
+After an update, change the URL to e.g. `/local/glowcard/glowcard.js?v=0.3.0` so browsers load the new file.
 
 ## Configuration
 
@@ -250,8 +250,8 @@ home: sensor.home_load_power
 
 1. Core: glass, orb, drag bar, popups, light/dark mode
 2. Switch and plug cards → v0.1.0 (beta)
-3. Light card and popup → **v0.2.0 (beta)**, then visual editor and default widths for these three cards
-4. Header, status bar and chips → v0.3.0
+3. Light card and popup → v0.2.0 (beta)
+4. Header, status bar and chips, visual editor and default widths → **v0.3.0 (beta)**
 5. Energy "House" card and popup → v0.4.0
 6. Visual editors for all cards, full docs, submission to the HACS default list → v1.0.0
 

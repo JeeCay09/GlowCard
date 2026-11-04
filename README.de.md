@@ -21,7 +21,7 @@
 - Funktioniert **nur mit Standard-Entitäten von Home Assistant**. Keine Helfer, Template-Sensoren oder Automationen nötig.
 
 > [!NOTE]
-> GlowCard ist in der Beta. v0.2.0 enthält die Schalter-, Steckdosen- und Licht-Karte; weitere Karten folgen (siehe Roadmap). Optionen können sich bis v1.0 noch ändern.
+> GlowCard ist in der Beta. v0.3.0 enthält Schalter, Steckdose, Licht, Kopfzeile, Status-Leiste und Chips, alle mit visuellem Editor; weitere Karten folgen (siehe Roadmap). Optionen können sich bis v1.0 noch ändern.
 
 ## Karten
 
@@ -67,7 +67,7 @@ lovelace:
    - Typ: **JavaScript-Modul**
 4. Browser neu laden.
 
-Nach einem Update die URL z. B. auf `/local/glowcard/glowcard.js?v=0.2.0` ändern, damit Browser die neue Datei laden.
+Nach einem Update die URL z. B. auf `/local/glowcard/glowcard.js?v=0.3.0` ändern, damit Browser die neue Datei laden.
 
 ## Konfiguration
 
@@ -250,8 +250,8 @@ home: sensor.home_load_power
 
 1. Kern: Glas, Orb, Ziehbalken, Popups, heller/dunkler Modus
 2. Schalter- und Steckdosen-Karte → v0.1.0 (Beta)
-3. Licht-Karte und Popup → **v0.2.0 (Beta)**, danach visueller Editor und Standard-Breiten für diese drei Karten
-4. Kopfzeile, Status-Leiste und Chips → v0.3.0
+3. Licht-Karte und Popup → v0.2.0 (Beta)
+4. Kopfzeile, Status-Leiste und Chips, visueller Editor und Standard-Breiten → **v0.3.0 (Beta)**
 5. Energie-Karte „Haus“ und Popup → v0.4.0
 6. Visuelle Editoren für alle Karten, vollständige Doku, Antrag auf HACS-Standardliste → v1.0.0
 
