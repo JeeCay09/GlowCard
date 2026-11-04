@@ -3,9 +3,15 @@
 **English** · [Deutsch](README.de.md)
 
 [![HACS Custom](https://img.shields.io/badge/HACS-Custom-41BDF5.svg)](https://hacs.xyz/docs/faq/custom_repositories/)
-![Status](https://img.shields.io/badge/status-in%20development-orange)
+![Status](https://img.shields.io/badge/status-beta-orange)
 
 **GlowCard** is a set of custom dashboard cards for [Home Assistant](https://www.home-assistant.io/) with one consistent look: frosted glass, soft coloured glow, light and dark mode, and its own popups.
+
+![GlowCard switch and plug cards in dark mode](https://raw.githubusercontent.com/JeeCay09/GlowCard/main/docs/images/cards-dark.jpg)
+
+![Switch and plug popups](https://raw.githubusercontent.com/JeeCay09/GlowCard/main/docs/images/popups-dark.jpg)
+
+![GlowCard switch and plug cards in light mode](https://raw.githubusercontent.com/JeeCay09/GlowCard/main/docs/images/cards-light.jpg)
 
 - Frosted glass cards; an active device tints its card and casts a soft glow in its own colour.
 - Round "orb" icons: tap the orb to switch on/off. No extra toggle rows.

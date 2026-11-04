@@ -3,9 +3,15 @@
 [English](README.md) · **Deutsch**
 
 [![HACS Custom](https://img.shields.io/badge/HACS-Custom-41BDF5.svg)](https://hacs.xyz/docs/faq/custom_repositories/)
-![Status](https://img.shields.io/badge/status-in%20Entwicklung-orange)
+![Status](https://img.shields.io/badge/status-Beta-orange)
 
 **GlowCard** ist ein Set eigener Dashboard-Karten für [Home Assistant](https://www.home-assistant.io/) mit einem einheitlichen Look: Milchglas, weiches farbiges Leuchten, heller und dunkler Modus und eigene Popups.
+
+![GlowCard Schalter- und Steckdosen-Karten im dunklen Modus](https://raw.githubusercontent.com/JeeCay09/GlowCard/main/docs/images/cards-dark.jpg)
+
+![Popups von Schalter und Steckdose](https://raw.githubusercontent.com/JeeCay09/GlowCard/main/docs/images/popups-dark.jpg)
+
+![GlowCard Schalter- und Steckdosen-Karten im hellen Modus](https://raw.githubusercontent.com/JeeCay09/GlowCard/main/docs/images/cards-light.jpg)
 
 - Karten aus Milchglas; ein aktives Gerät färbt seine Karte ein und leuchtet in seiner eigenen Farbe.
 - Runde „Orb“-Symbole: Tippen auf den Orb schaltet ein/aus. Keine extra Schalterzeilen.
