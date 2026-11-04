@@ -15,14 +15,14 @@
 - Works with **standard Home Assistant entities only**. No helpers, template sensors or automations required.
 
 > [!NOTE]
-> GlowCard is in early development. The first beta release (v0.1.0) will contain the switch and plug cards. Installation via HACS works as soon as that release is published.
+> GlowCard is in beta. v0.1.0 contains the switch and plug cards; more cards follow (see the roadmap). Options may still change before v1.0.
 
 ## Cards
 
 | Card           | Type                     | Entities                                        | Status           |
 | -------------- | ------------------------ | ----------------------------------------------- | ---------------- |
-| Switch         | `custom:glowcard-switch` | `switch.*`, `input_boolean.*`                   | planned for v0.1 |
-| Plug           | `custom:glowcard-plug`   | `switch.*` + optional power/energy `sensor.*`   | planned for v0.1 |
+| Switch         | `custom:glowcard-switch` | `switch.*`, `input_boolean.*`                   | beta (v0.1)      |
+| Plug           | `custom:glowcard-plug`   | `switch.*` + optional power/energy `sensor.*`   | beta (v0.1)      |
 | Light          | `custom:glowcard-light`  | `light.*`                                       | planned for v0.2 |
 | Header         | `custom:glowcard-header` | `person.*`, greeting, date/time                 | planned for v0.3 |
 | Status bar     | `custom:glowcard-status` | any entities, grouped into segments             | planned for v0.3 |
@@ -106,11 +106,12 @@ entities:
 ```yaml
 type: custom:glowcard-plug
 entity: switch.office_plug
-power: sensor.office_plug_power
-energy: sensor.office_plug_energy
 name: Home office
 variant: wide # small | wide (live power curve)
+threshold: 1 # glows from this many watts (default 1)
 ```
+
+The card finds the plug's power and energy sensors, countdown, child lock, "power on behaviour" and indicator selects on the same device by itself. Popup rows only appear when the plug has that entity. If detection picks the wrong one, set it yourself: `power_entity`, `energy_entity`, `countdown_entity`, `child_lock_entity`, `power_on_entity`, `indicator_entity`.
 
 ### Light
 
@@ -170,6 +171,7 @@ Later: room card, binary sensor, irrigation/plant, media, cover and vacuum popup
 ```bash
 npm install
 npm run watch   # rebuild on every change
+npm run dev     # rebuild incl. the preview page, then: npm run serve → http://localhost:5050/dev/
 npm test        # unit tests
 npm run build   # creates dist/glowcard.js
 ```
@@ -178,4 +180,4 @@ Releases are built by GitHub Actions; `glowcard.js` is attached to each GitHub r
 
 ## License
 
-MIT
+MIT. The embedded font [Plus Jakarta Sans](https://github.com/tokotype/PlusJakartaSans) is licensed under the SIL Open Font License 1.1 (see `src/assets/OFL-PlusJakartaSans.txt`).

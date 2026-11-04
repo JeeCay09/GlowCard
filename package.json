@@ -1,6 +1,6 @@
 {
   "name": "glowcard",
-  "version": "0.0.0",
+  "version": "0.1.0",
   "private": true,
   "description": "Glow dashboard cards for Home Assistant",
   "license": "MIT",
@@ -11,7 +11,9 @@
     "lint": "eslint . && prettier --check .",
     "format": "prettier --write .",
     "typecheck": "tsc --noEmit",
-    "test": "vitest run"
+    "test": "vitest run",
+    "dev": "GLOWCARD_DEV=1 rollup -c --watch",
+    "serve": "node dev/serve.mjs"
   },
   "dependencies": {
     "lit": "^3.2.1"
