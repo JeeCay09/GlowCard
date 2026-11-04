@@ -3,6 +3,7 @@ import { state } from 'lit/decorators.js';
 import { GlowCardBase, type GlowCardConfig } from '../../core/base-card';
 import { registerCard } from '../../core/register';
 import {
+  actionsField,
   areaField,
   configForm,
   editorLabel,
@@ -63,6 +64,7 @@ export class GlowSwitchCard extends GlowCardBase<SwitchCardConfig> {
         sizeField,
         areaField,
         { name: 'entities', selector: { entity: { domain: SWITCH_DOMAINS, multiple: true } } },
+        actionsField,
       ],
       { color: 'color_helper', area: 'area_helper', entities: 'entities_helper' },
       (config) => {

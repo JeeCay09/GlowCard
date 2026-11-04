@@ -3,6 +3,7 @@ import { state } from 'lit/decorators.js';
 import { GlowCardBase, type GlowCardConfig } from '../../core/base-card';
 import { registerCard } from '../../core/register';
 import {
+  actionsField,
   areaField,
   configForm,
   lookFields,
@@ -95,6 +96,7 @@ export class GlowPlugCard extends GlowCardBase<PlugCardConfig> {
             pick('indicator_entity', ['select']),
           ],
         },
+        actionsField,
       ],
       {
         color: 'color_helper',

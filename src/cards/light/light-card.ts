@@ -2,7 +2,14 @@ import { css, html, nothing, type PropertyValues } from 'lit';
 import { state } from 'lit/decorators.js';
 import { GlowCardBase, type GlowCardConfig } from '../../core/base-card';
 import { registerCard } from '../../core/register';
-import { configForm, lookFields, nameIconFields, sizeField, variantField } from '../../core/editor';
+import {
+  actionsField,
+  configForm,
+  lookFields,
+  nameIconFields,
+  sizeField,
+  variantField,
+} from '../../core/editor';
 import { localize } from '../../core/localize';
 import { lightColor, mix, rgbTriplet, type Rgb } from '../../core/color';
 import type { HomeAssistant } from '../../types/hass';
@@ -49,6 +56,7 @@ export class GlowLightCard extends GlowCardBase<LightCardConfig> {
         nameIconFields,
         lookFields,
         sizeField,
+        actionsField,
       ],
       { color: 'color_light_helper' },
     );
