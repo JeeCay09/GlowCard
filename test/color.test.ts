@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import {
   hexToRgb,
+  isBright,
+  mix,
   hsToRgb,
   kelvinToRgb,
   lightColor,
@@ -25,7 +27,7 @@ describe('color helpers', () => {
   });
 
   it('formats an rgb triplet for CSS', () => {
-    expect(rgbTriplet([1.4, 2.6, 3])).toBe('1 3 3');
+    expect(rgbTriplet([1.4, 2.6, 3])).toBe('1,3,3');
   });
 
   it('converts hs_color to rgb', () => {
@@ -43,7 +45,13 @@ describe('color helpers', () => {
     expect(resolveAccent('teal', true, 'amber')).toEqual([45, 212, 191]);
     expect(resolveAccent('teal', false, 'amber')).toEqual([20, 184, 166]);
     expect(resolveAccent('#102030', true, 'amber')).toEqual([16, 32, 48]);
-    expect(resolveAccent('unknown', true, 'amber')).toEqual([251, 191, 36]);
+    expect(resolveAccent('unknown', true, 'amber')).toEqual([245, 165, 36]);
+  });
+
+  it('mixes colours and spots light ones like the mockup', () => {
+    expect(mix([0, 0, 0], [255, 255, 255], 0.5)).toEqual([128, 128, 128]);
+    expect(isBright([255, 200, 114])).toBe(true);
+    expect(isBright([139, 92, 246])).toBe(false);
   });
 
   it('uses the current light colour only while the light is on', () => {
