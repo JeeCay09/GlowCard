@@ -55,8 +55,8 @@ export const dotStyles = css`
   .dot {
     position: relative;
     box-sizing: border-box;
-    width: var(--s, 40px);
-    height: var(--s, 40px);
+    width: calc(var(--s, 40px) * var(--dot-scale, 1));
+    height: calc(var(--s, 40px) * var(--dot-scale, 1));
     flex-shrink: 0;
     border-radius: 999px;
     display: flex;
@@ -66,7 +66,7 @@ export const dotStyles = css`
   .dot ha-icon,
   .ico ha-icon {
     display: flex;
-    --mdc-icon-size: var(--i, 19px);
+    --mdc-icon-size: calc(var(--i, 19px) * var(--dot-scale, 1));
   }
   .dot.off {
     background: var(--gc-inset);
@@ -293,8 +293,8 @@ export const avatarStyles = css`
   .avatar {
     position: relative;
     box-sizing: border-box;
-    width: var(--s);
-    height: var(--s);
+    width: calc(var(--s) * var(--dot-scale, 1));
+    height: calc(var(--s) * var(--dot-scale, 1));
     flex-shrink: 0;
     border-radius: 999px;
     display: flex;

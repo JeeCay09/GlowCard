@@ -2,7 +2,14 @@ import { css, html, nothing, type PropertyValues } from 'lit';
 import { state } from 'lit/decorators.js';
 import { GlowCardBase, type GlowCardConfig } from '../../core/base-card';
 import { registerCard } from '../../core/register';
-import { configForm, lookFields, nameIconFields, variantField } from '../../core/editor';
+import {
+  actionsField,
+  configForm,
+  lookFields,
+  nameIconFields,
+  sizeField,
+  variantField,
+} from '../../core/editor';
 import { localize } from '../../core/localize';
 import { lightColor, mix, rgbTriplet, type Rgb } from '../../core/color';
 import type { HomeAssistant } from '../../types/hass';
@@ -34,6 +41,9 @@ type Tab = 'brightness' | 'color_temp' | 'color';
 export class GlowLightCard extends GlowCardBase<LightCardConfig> {
   /** Value while the popup column is dragged, for the live caption. */
   @state() private dragging?: number;
+  /** Value while the card's bar is dragged, for the live value top right. */
+  @state() private cardDrag?: number;
+  private cardDragTimer?: number;
   @state() private tab: Tab = 'brightness';
 
   protected defaultColor = 'warm';
@@ -45,6 +55,8 @@ export class GlowLightCard extends GlowCardBase<LightCardConfig> {
         variantField(['wide', 'small']),
         nameIconFields,
         lookFields,
+        sizeField,
+        actionsField,
       ],
       { color: 'color_light_helper' },
     );
@@ -87,6 +99,16 @@ export class GlowLightCard extends GlowCardBase<LightCardConfig> {
     return matchSwatch(this.stateObj);
   }
 
+  protected willUpdate(changed: PropertyValues): void {
+    super.willUpdate(changed);
+    const old = changed.get('hass') as HomeAssistant | undefined;
+    const id = this.config?.entity;
+    if (this.cardDrag !== undefined && old && id && old.states[id] !== this.hass?.states[id]) {
+      this.cardDrag = undefined;
+      window.clearTimeout(this.cardDragTimer);
+    }
+  }
+
   protected updated(changed: PropertyValues): void {
     super.updated(changed);
     this.style.setProperty('--glow-value-dark', rgbTriplet(mix(this.accent, [255, 255, 255], 0.6)));
@@ -102,6 +124,9 @@ export class GlowLightCard extends GlowCardBase<LightCardConfig> {
   private setBrightness = (ev: CustomEvent<{ value: number }>) => {
     ev.stopPropagation();
     this.dragging = undefined;
+    // Keep showing the dragged value until the light reports its new state (or 4 s pass).
+    window.clearTimeout(this.cardDragTimer);
+    this.cardDragTimer = window.setTimeout(() => (this.cardDrag = undefined), 4000);
     const v = ev.detail.value;
     if (v <= 0) {
       void this.hass?.callService('light', 'turn_off', { entity_id: this.config?.entity });
@@ -115,6 +140,11 @@ export class GlowLightCard extends GlowCardBase<LightCardConfig> {
     this.dragging = undefined;
     if (this.tab === 'color_temp') this.call({ color_temp_kelvin: ev.detail.value });
     else this.call({ hs_color: [ev.detail.value, 100] });
+  };
+
+  private dragBar = (ev: CustomEvent<{ value: number }>) => {
+    ev.stopPropagation();
+    this.cardDrag = ev.detail.value;
   };
 
   private dragColumn = (ev: CustomEvent<{ value: number }>) => {
@@ -150,6 +180,8 @@ export class GlowLightCard extends GlowCardBase<LightCardConfig> {
 
   private valueText(): string {
     if (this.isUnavailable) return '';
+    if (this.cardDrag !== undefined)
+      return this.cardDrag > 0 ? `${this.cardDrag}%` : localize(this.hass, 'off');
     if (!this.isActive) return localize(this.hass, 'off');
     return this.caps.brightness ? `${this.bright}%` : localize(this.hass, 'on');
   }
@@ -173,7 +205,7 @@ export class GlowLightCard extends GlowCardBase<LightCardConfig> {
     const showBar = !small && this.caps.brightness && !this.isUnavailable;
     const value = small && !this.isActive ? '' : this.valueText();
     return html`<div
-      class="glass ${small ? 'small' : 'wide'} ${s}"
+      class="glass sized ${small ? 'small' : 'wide'} ${s}"
       @pointerdown=${this.press.down}
       @pointerup=${this.press.up}
       @pointermove=${this.press.move}
@@ -196,6 +228,7 @@ export class GlowLightCard extends GlowCardBase<LightCardConfig> {
                 label=${localize(this.hass, 'brightness')}
                 @pointerdown=${(e: Event) => e.stopPropagation()}
                 @pointerup=${(e: Event) => e.stopPropagation()}
+                @value-changing=${this.dragBar}
                 @value-changed=${this.setBrightness}
               ></glowcard-slider>`
             : nothing
@@ -325,7 +358,7 @@ export class GlowLightCard extends GlowCardBase<LightCardConfig> {
         display: block;
       }
       .glass {
-        height: 164px;
+        height: var(--glow-card-h);
         display: flex;
         flex-direction: column;
         justify-content: space-between;

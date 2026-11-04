@@ -31,7 +31,16 @@ export class GlowPopup extends LitElement {
       :host {
         position: fixed;
         inset: 0;
-        z-index: 9;
+        /* Shown in the top layer (popover) where supported; z-index is the fallback. */
+        z-index: 9999;
+        width: auto;
+        height: auto;
+        max-width: none;
+        max-height: none;
+        margin: 0;
+        border: 0;
+        background: transparent;
+        overflow: visible;
         display: flex;
         align-items: center;
         justify-content: center;
@@ -229,6 +238,16 @@ export type PopupInit = Partial<
 export function openPopup(init: PopupInit): GlowPopup {
   const popup = document.createElement('glowcard-popup') as GlowPopup;
   Object.assign(popup, init);
+  // Top layer: above Home Assistant's own UI whatever z-index it uses.
+  const topLayer = typeof popup.showPopover === 'function';
+  if (topLayer) popup.setAttribute('popover', 'manual');
   document.body.appendChild(popup);
+  if (topLayer) {
+    try {
+      popup.showPopover();
+    } catch {
+      popup.removeAttribute('popover');
+    }
+  }
   return popup;
 }
