@@ -35,7 +35,7 @@
 | Chip           | `custom:glowcard-chip`   | beliebige Entität                                   | geplant für v0.3 |
 | Energie „Haus“ | `custom:glowcard-energy` | Leistungs-`sensor.*` für Solar, Akku, Netz, Haus    | geplant für v0.4 |
 
-Visuelle Editoren für alle Karten sind für v1.0 geplant. Siehe [Roadmap](#roadmap).
+Schalter-, Steckdosen- und Licht-Karte haben einen visuellen Editor (ab Home Assistant 2025.1). In einem Sections-Dashboard richtet sich die Breite nach der Variante: klein = 1/4, breit = 1/2, breite Steckdose = ganze Breite. Im Dashboard-Editor kannst du die Größe weiterhin selbst ändern.
 
 ## Installation
 
@@ -167,10 +167,10 @@ home: sensor.home_load_power
 
 1. Kern: Glas, Orb, Ziehbalken, Popups, heller/dunkler Modus
 2. Schalter- und Steckdosen-Karte → v0.1.0 (Beta)
-3. Licht-Karte und Popup → **v0.2.0 (Beta)**
+3. Licht-Karte und Popup → **v0.2.0 (Beta)**, danach visueller Editor und Standard-Breiten für diese drei Karten
 4. Kopfzeile, Status-Leiste und Chips → v0.3.0
 5. Energie-Karte „Haus“ und Popup → v0.4.0
-6. Visuelle Editoren, vollständige Doku, Antrag auf HACS-Standardliste → v1.0.0
+6. Visuelle Editoren für alle Karten, vollständige Doku, Antrag auf HACS-Standardliste → v1.0.0
 
 Später: Raum-Karte, Binärsensor, Bewässerung/Pflanze, Popups für Medien, Rollos und Saugroboter.
 

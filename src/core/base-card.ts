@@ -3,6 +3,7 @@ import { property, state } from 'lit/decorators.js';
 import type { HassEntity, HomeAssistant } from '../types/hass';
 import { handleAction, type ActionConfig } from './action';
 import { isBright, mix, rgbTriplet, resolveAccent, type Rgb } from './color';
+import { cleanConfig } from './editor';
 import { ensureFont } from './font';
 import { PressController } from './press';
 import { glassStyles, glowTokens } from './theme';
@@ -65,6 +66,7 @@ export abstract class GlowCardBase<C extends GlowCardConfig = GlowCardConfig> ex
 
   setConfig(config: C): void {
     if (!config) throw new Error('Invalid configuration');
+    config = cleanConfig(config);
     this.validateConfig(config);
     this.config = config;
   }

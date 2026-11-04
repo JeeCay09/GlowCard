@@ -35,7 +35,7 @@
 | Chip           | `custom:glowcard-chip`   | any entity                                      | planned for v0.3 |
 | Energy "House" | `custom:glowcard-energy` | power `sensor.*` for solar, battery, grid, home | planned for v0.4 |
 
-Visual editors for all cards are planned for v1.0. See the [roadmap](#roadmap).
+Switch, plug and light cards have a visual editor (Home Assistant 2025.1 or newer). In a sections dashboard, each card takes its width from its variant: small = 1/4, wide = 1/2, wide plug = full width. You can still resize it in the dashboard editor.
 
 ## Installation
 
@@ -167,10 +167,10 @@ home: sensor.home_load_power
 
 1. Core: glass, orb, drag bar, popups, light/dark mode
 2. Switch and plug cards → v0.1.0 (beta)
-3. Light card and popup → **v0.2.0 (beta)**
+3. Light card and popup → **v0.2.0 (beta)**, then visual editor and default widths for these three cards
 4. Header, status bar and chips → v0.3.0
 5. Energy "House" card and popup → v0.4.0
-6. Visual editors, full docs, submission to the HACS default list → v1.0.0
+6. Visual editors for all cards, full docs, submission to the HACS default list → v1.0.0
 
 Later: room card, binary sensor, irrigation/plant, media, cover and vacuum popups.
 
