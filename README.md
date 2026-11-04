@@ -106,11 +106,12 @@ entities:
 ```yaml
 type: custom:glowcard-plug
 entity: switch.office_plug
-power: sensor.office_plug_power
-energy: sensor.office_plug_energy
 name: Home office
 variant: wide # small | wide (live power curve)
+threshold: 1 # glows from this many watts (default 1)
 ```
+
+The card finds the plug's power and energy sensors, countdown, child lock, "power on behaviour" and indicator selects on the same device by itself. Popup rows only appear when the plug has that entity. If detection picks the wrong one, set it yourself: `power_entity`, `energy_entity`, `countdown_entity`, `child_lock_entity`, `power_on_entity`, `indicator_entity`.
 
 ### Light
 
