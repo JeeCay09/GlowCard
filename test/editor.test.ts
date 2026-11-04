@@ -17,6 +17,7 @@ describe('visual editor', () => {
       'icon',
       'color',
       'font',
+      'size',
     ]);
     expect(names(card('glowcard-switch').getConfigForm().schema)).toContain('entities');
     expect(names(card('glowcard-plug').getConfigForm().schema)).toEqual(
@@ -37,6 +38,13 @@ describe('visual editor', () => {
     const assert = card('glowcard-switch').getConfigForm().assertConfig!;
     expect(() => assert({ entities: ['switch.a', 'switch.b'] })).not.toThrow();
     expect(() => assert({ entities: [{ entity: 'switch.a', name: 'A' }] })).toThrow();
+  });
+
+  it('offers the card size on switch, plug and light', () => {
+    for (const type of ['glowcard-switch', 'glowcard-plug', 'glowcard-light']) {
+      expect(names(card(type).getConfigForm().schema)).toContain('size');
+    }
+    expect(editorLabel('compact', 'de')).toBe('Kompakt');
   });
 
   it('drops cleared fields so defaults apply again', () => {

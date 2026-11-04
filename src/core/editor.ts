@@ -31,6 +31,10 @@ const LABELS = {
     icon: 'Icon',
     color: 'Farbe',
     font: 'Schrift',
+    size: 'Größe',
+    auto: 'Automatisch (kompakt am Handy)',
+    compact: 'Kompakt',
+    normal: 'Normal',
     area: 'Text unter dem Namen',
     threshold: 'Glüht ab (W)',
     entities_section: 'Entitäten der Steckdose',
@@ -92,6 +96,10 @@ const LABELS = {
     icon: 'Icon',
     color: 'Colour',
     font: 'Font',
+    size: 'Size',
+    auto: 'Automatic (compact on phones)',
+    compact: 'Compact',
+    normal: 'Normal',
     area: 'Text under the name',
     threshold: 'Glows from (W)',
     entities_section: 'Plug entities',
@@ -226,6 +234,20 @@ export const fontField: FormSchema = {
     select: {
       mode: 'dropdown',
       options: ['glow', 'theme'].map((v) => ({ value: v, label: editorLabel(v as EditorLabel) })),
+    },
+  },
+};
+
+/** Card size: auto (compact on phones), compact or normal. */
+export const sizeField: FormSchema = {
+  name: 'size',
+  selector: {
+    select: {
+      mode: 'dropdown',
+      options: ['auto', 'compact', 'normal'].map((v) => ({
+        value: v,
+        label: editorLabel(v as EditorLabel),
+      })),
     },
   },
 };

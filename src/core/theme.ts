@@ -1,6 +1,25 @@
 import { css } from 'lit';
 
 /**
+ * Compact sizes for phones: smaller value text, orb and padding, lower cards.
+ * Used automatically below 600 px viewport width (`size: auto`, the default),
+ * always with `size: compact`, never with `size: normal`.
+ */
+const compactSizes = css`
+  --glow-pad: 14px;
+  --glow-radius: 24px;
+  --glow-card-h: 120px;
+  --glow-card-h-wide: 164px;
+  --glow-orb-size: 40px;
+  --glow-value-size: 30px;
+  --glow-word-size: 20px;
+  --glow-word-big: 24px;
+  --glow-name-size: 15px;
+  --glow-name-small: 14px;
+  --glow-sub-size: 12px;
+`;
+
+/**
  * Glow design tokens, taken 1:1 from the approved mockups (GlowCards, GlowPopups,
  * GlowSwitches). Set on a card's or popup's host and inherited by its parts.
  * The host sets the `dark` attribute from hass.themes.darkMode and `--glow-accent`
@@ -46,6 +65,26 @@ export const glowTokens = css`
     --glow-line: rgba(20, 22, 26, 0.07);
     --glow-calm: 0.12;
     --glow-wall: #e7e9ef;
+
+    /* card sizes (normal); see compactSizes */
+    --glow-pad: 18px;
+    --glow-card-h: 164px;
+    --glow-card-h-wide: 200px;
+    --glow-orb-size: 52px;
+    --glow-value-size: 44px;
+    --glow-word-size: 24px;
+    --glow-word-big: 32px;
+    --glow-name-size: 16px;
+    --glow-name-small: 15px;
+    --glow-sub-size: 13px;
+  }
+  @media (max-width: 600px) {
+    :host(:not([size='normal'])) {
+      ${compactSizes}
+    }
+  }
+  :host([size='compact']) {
+    ${compactSizes}
   }
   :host([dark]) {
     --glow-text: #f3f4f6;
@@ -93,7 +132,7 @@ export const glassStyles = css`
     position: relative;
     box-sizing: border-box;
     border-radius: var(--glow-radius);
-    padding: 18px;
+    padding: var(--glow-pad);
     font-family: var(--glow-font);
     color: var(--glow-text);
     background: var(--glow-glass);
@@ -115,29 +154,33 @@ export const glassStyles = css`
     border-color: rgba(var(--glow-accent), var(--glow-lit-border));
     box-shadow: var(--glow-lit-shadow);
   }
+  /* Orbs in switch/plug/light cards follow the card size (row variant keeps its own). */
+  .glass.sized:not(.row) {
+    --glow-card-orb: var(--glow-orb-size);
+  }
   .glass.unavailable {
     border-style: dashed;
     opacity: 0.55;
   }
   .value {
-    font-size: 44px;
+    font-size: var(--glow-value-size);
     font-weight: 800;
     letter-spacing: -0.04em;
     line-height: 1;
   }
   .word {
-    font-size: 24px;
+    font-size: var(--glow-word-size);
     font-weight: 800;
     letter-spacing: -0.04em;
     line-height: 1;
   }
   .name {
-    font-size: 16px;
+    font-size: var(--glow-name-size);
     font-weight: 700;
     line-height: 1.25;
   }
   .sub {
-    font-size: 13px;
+    font-size: var(--glow-sub-size);
     font-weight: 500;
     color: var(--glow-muted);
   }
