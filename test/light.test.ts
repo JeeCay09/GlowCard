@@ -80,3 +80,51 @@ describe('light logic', () => {
     });
   });
 });
+
+describe('light card bar', () => {
+  it('shows the dragged value live and keeps it until the light reports back', async () => {
+    await import('../src/glowcard');
+    const states = {
+      'light.x': light('on', { brightness: 184, supported_color_modes: ['brightness'] }),
+    };
+    const calls: unknown[] = [];
+    const hass = {
+      states,
+      language: 'de',
+      locale: { language: 'de' },
+      themes: { darkMode: true },
+      callService: async (...args: unknown[]) => void calls.push(args),
+    };
+    const el = document.createElement('glowcard-light') as HTMLElement & {
+      setConfig(c: unknown): void;
+      hass: unknown;
+      updateComplete: Promise<boolean>;
+    };
+    el.setConfig({ type: 'custom:glowcard-light', entity: 'light.x' });
+    el.hass = hass;
+    document.body.appendChild(el);
+    await el.updateComplete;
+    const value = () => el.shadowRoot!.querySelector('.value')!.textContent;
+    const slider = el.shadowRoot!.querySelector('glowcard-slider')!;
+    expect(value()).toBe('72%');
+
+    slider.dispatchEvent(new CustomEvent('value-changing', { detail: { value: 40 } }));
+    await el.updateComplete;
+    expect(value()).toBe('40%');
+
+    slider.dispatchEvent(new CustomEvent('value-changed', { detail: { value: 40 } }));
+    await el.updateComplete;
+    expect(value()).toBe('40%');
+    expect(calls).toHaveLength(1);
+
+    el.hass = {
+      ...hass,
+      states: {
+        'light.x': light('on', { brightness: 102, supported_color_modes: ['brightness'] }),
+      },
+    };
+    await el.updateComplete;
+    expect(value()).toBe('40%');
+    el.remove();
+  });
+});
