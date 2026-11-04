@@ -15,14 +15,14 @@
 - Works with **standard Home Assistant entities only**. No helpers, template sensors or automations required.
 
 > [!NOTE]
-> GlowCard is in early development. The first beta release (v0.1.0) will contain the switch and plug cards. Installation via HACS works as soon as that release is published.
+> GlowCard is in beta. v0.1.0 contains the switch and plug cards; more cards follow (see the roadmap). Options may still change before v1.0.
 
 ## Cards
 
 | Card           | Type                     | Entities                                        | Status           |
 | -------------- | ------------------------ | ----------------------------------------------- | ---------------- |
-| Switch         | `custom:glowcard-switch` | `switch.*`, `input_boolean.*`                   | planned for v0.1 |
-| Plug           | `custom:glowcard-plug`   | `switch.*` + optional power/energy `sensor.*`   | planned for v0.1 |
+| Switch         | `custom:glowcard-switch` | `switch.*`, `input_boolean.*`                   | beta (v0.1)      |
+| Plug           | `custom:glowcard-plug`   | `switch.*` + optional power/energy `sensor.*`   | beta (v0.1)      |
 | Light          | `custom:glowcard-light`  | `light.*`                                       | planned for v0.2 |
 | Header         | `custom:glowcard-header` | `person.*`, greeting, date/time                 | planned for v0.3 |
 | Status bar     | `custom:glowcard-status` | any entities, grouped into segments             | planned for v0.3 |
