@@ -1,0 +1,32 @@
+name: Release
+
+# Publish a GitHub release with a tag like v0.1.0; this job builds glowcard.js
+# with that version and attaches it to the release for HACS.
+on:
+  release:
+    types: [published]
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Set version from tag
+        run: npm version "${TAG#v}" --no-git-tag-version --allow-same-version
+        env:
+          TAG: ${{ github.event.release.tag_name }}
+      - run: npm test
+      - run: npm run build
+      - name: Attach glowcard.js to the release
+        run: gh release upload "$TAG" dist/glowcard.js --clobber
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ github.event.release.tag_name }}
