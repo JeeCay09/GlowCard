@@ -7,5 +7,6 @@ import { logVersion } from './core/version';
 
 import './cards/switch/switch-card';
 import './cards/plug/plug-card';
+import './cards/light/light-card';
 
 logVersion();

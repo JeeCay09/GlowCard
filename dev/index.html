@@ -74,9 +74,14 @@
       import '../dist/glowcard.js';
       import { mount } from './build/demo.js';
       const cards = [
-        ['glowcard-dev-demo', { entity: 'light.living', icon: 'mdi:lightbulb' }, 'span2'],
-        ['glowcard-dev-demo', { entity: 'light.tv_wall', icon: 'mdi:television' }, ''],
-        ['glowcard-dev-demo', { entity: 'switch.terrace', icon: 'mdi:power-socket-eu' }, ''],
+        ['glowcard-light', { entity: 'light.living' }, 'span2'],
+        [
+          'glowcard-light',
+          { entity: 'light.tv_wall', icon: 'mdi:television', variant: 'small' },
+          '',
+        ],
+        ['glowcard-light', { entity: 'light.hall', variant: 'small' }, ''],
+        ['glowcard-light', { entity: 'light.kitchen' }, 'span2'],
         [
           'glowcard-switch',
           { entity: 'switch.sprinkler', icon: 'mdi:sprinkler', color: 'sky' },
