@@ -21,6 +21,7 @@ export class GlowPopup extends LitElement {
   @property() icon = '';
   @property({ type: Boolean, reflect: true }) active = false;
   @property({ type: Boolean }) darkIcon = false;
+  @property({ type: Boolean }) calm = false;
   @property({ attribute: false }) content: TemplateResult | typeof nothing = nothing;
   @property({ attribute: false }) contentStyles: CSSResult[] = [];
 
@@ -179,6 +180,7 @@ export class GlowPopup extends LitElement {
             .icon=${this.icon}
             ?active=${this.active}
             ?dark-icon=${this.darkIcon}
+            ?calm=${this.calm && !this.active}
             label=${this.heading}
             @click=${this.onOrb}
           ></glowcard-orb>

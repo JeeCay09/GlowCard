@@ -19,6 +19,11 @@ export interface HassEntity {
     options?: string[];
     min?: number;
     max?: number;
+    entity_picture?: string;
+    temperature?: number;
+    humidity?: number;
+    /** Members of a group entity. */
+    entity_id?: string[];
   };
   last_changed: string;
   last_updated: string;
@@ -46,6 +51,9 @@ export interface HomeAssistant {
   language: string;
   locale?: { language: string };
   themes?: { darkMode?: boolean };
+  user?: { name?: string };
+  /** Translated state text, e.g. "Geschlossen" (HA 2023.9+). */
+  formatEntityState?(stateObj: HassEntity, state?: string): string;
   callService(
     domain: string,
     service: string,

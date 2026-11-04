@@ -44,6 +44,8 @@ export const glowTokens = css`
     --glow-pop-plain: rgba(255, 255, 255, 0.8);
     --glow-pop-glow: 0 0 80px -30px rgba(var(--glow-accent), 0.6);
     --glow-line: rgba(20, 22, 26, 0.07);
+    --glow-calm: 0.12;
+    --glow-wall: #e7e9ef;
   }
   :host([dark]) {
     --glow-text: #f3f4f6;
@@ -73,6 +75,8 @@ export const glowTokens = css`
     --glow-pop-plain: rgba(24, 26, 32, 0.68);
     --glow-pop-glow: 0 0 90px -30px rgba(var(--glow-accent), 0.5);
     --glow-line: rgba(255, 255, 255, 0.07);
+    --glow-calm: 0.14;
+    --glow-wall: #07080b;
   }
   :host([font='theme']) {
     --glow-font: var(--primary-font-family, inherit);
