@@ -15,14 +15,14 @@
 - Funktioniert **nur mit Standard-Entitäten von Home Assistant**. Keine Helfer, Template-Sensoren oder Automationen nötig.
 
 > [!NOTE]
-> GlowCard ist in früher Entwicklung. Das erste Beta-Release (v0.1.0) enthält die Schalter- und die Steckdosen-Karte. Die Installation über HACS funktioniert, sobald dieses Release veröffentlicht ist.
+> GlowCard ist in der Beta. v0.1.0 enthält die Schalter- und die Steckdosen-Karte; weitere Karten folgen (siehe Roadmap). Optionen können sich bis v1.0 noch ändern.
 
 ## Karten
 
 | Karte          | Typ                      | Entitäten                                           | Status           |
 | -------------- | ------------------------ | --------------------------------------------------- | ---------------- |
-| Schalter       | `custom:glowcard-switch` | `switch.*`, `input_boolean.*`                       | geplant für v0.1 |
-| Steckdose      | `custom:glowcard-plug`   | `switch.*` + optional Leistungs-/Energie-`sensor.*` | geplant für v0.1 |
+| Schalter       | `custom:glowcard-switch` | `switch.*`, `input_boolean.*`                       | Beta (v0.1)      |
+| Steckdose      | `custom:glowcard-plug`   | `switch.*` + optional Leistungs-/Energie-`sensor.*` | Beta (v0.1)      |
 | Licht          | `custom:glowcard-light`  | `light.*`                                           | geplant für v0.2 |
 | Kopfzeile      | `custom:glowcard-header` | `person.*`, Begrüßung, Datum/Uhrzeit                | geplant für v0.3 |
 | Status-Leiste  | `custom:glowcard-status` | beliebige Entitäten, in Segmenten gruppiert         | geplant für v0.3 |
