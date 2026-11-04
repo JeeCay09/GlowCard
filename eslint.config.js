@@ -2,11 +2,11 @@ import js from '@eslint/js';
 import tseslint from 'typescript-eslint';
 
 export default tseslint.config(
-  { ignores: ['dist/', 'node_modules/'] },
+  { ignores: ['dist/', 'node_modules/', 'dev/build/'] },
   js.configs.recommended,
   ...tseslint.configs.recommended,
   {
-    files: ['*.js', '*.mjs'],
-    languageOptions: { globals: { process: 'readonly', URL: 'readonly' } },
+    files: ['*.js', '*.mjs', 'dev/*.mjs'],
+    languageOptions: { globals: { process: 'readonly', URL: 'readonly', console: 'readonly' } },
   },
 );

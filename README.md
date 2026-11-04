@@ -170,6 +170,7 @@ Later: room card, binary sensor, irrigation/plant, media, cover and vacuum popup
 ```bash
 npm install
 npm run watch   # rebuild on every change
+npm run dev     # rebuild incl. the preview page, then: npm run serve → http://localhost:5050/dev/
 npm test        # unit tests
 npm run build   # creates dist/glowcard.js
 ```
@@ -178,4 +179,4 @@ Releases are built by GitHub Actions; `glowcard.js` is attached to each GitHub r
 
 ## License
 
-MIT
+MIT. The embedded font [Plus Jakarta Sans](https://github.com/tokotype/PlusJakartaSans) is licensed under the SIL Open Font License 1.1 (see `src/assets/OFL-PlusJakartaSans.txt`).
