@@ -2,7 +2,7 @@ import { css, html, nothing, type PropertyValues } from 'lit';
 import { state } from 'lit/decorators.js';
 import { GlowCardBase, type GlowCardConfig } from '../../core/base-card';
 import { registerCard } from '../../core/register';
-import { configForm, lookFields, nameIconFields, variantField } from '../../core/editor';
+import { configForm, lookFields, nameIconFields, sizeField, variantField } from '../../core/editor';
 import { localize } from '../../core/localize';
 import { lightColor, mix, rgbTriplet, type Rgb } from '../../core/color';
 import type { HomeAssistant } from '../../types/hass';
@@ -45,6 +45,7 @@ export class GlowLightCard extends GlowCardBase<LightCardConfig> {
         variantField(['wide', 'small']),
         nameIconFields,
         lookFields,
+        sizeField,
       ],
       { color: 'color_light_helper' },
     );
@@ -173,7 +174,7 @@ export class GlowLightCard extends GlowCardBase<LightCardConfig> {
     const showBar = !small && this.caps.brightness && !this.isUnavailable;
     const value = small && !this.isActive ? '' : this.valueText();
     return html`<div
-      class="glass ${small ? 'small' : 'wide'} ${s}"
+      class="glass sized ${small ? 'small' : 'wide'} ${s}"
       @pointerdown=${this.press.down}
       @pointerup=${this.press.up}
       @pointermove=${this.press.move}
@@ -325,7 +326,7 @@ export class GlowLightCard extends GlowCardBase<LightCardConfig> {
         display: block;
       }
       .glass {
-        height: 164px;
+        height: var(--glow-card-h);
         display: flex;
         flex-direction: column;
         justify-content: space-between;
