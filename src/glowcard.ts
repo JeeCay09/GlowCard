@@ -5,6 +5,6 @@ import './components/segments';
 import './components/swatches';
 import { logVersion } from './core/version';
 
-// Cards register themselves via registerCard() and are imported here as they are built.
+import './cards/switch/switch-card';
 
 logVersion();

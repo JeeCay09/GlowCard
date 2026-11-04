@@ -78,6 +78,40 @@ export abstract class GlowCardBase<C extends GlowCardConfig = GlowCardConfig> ex
     return 2;
   }
 
+  /** Entities whose changes re-render the card (default: the main entity). */
+  protected watchedEntities(): string[] {
+    return this.config?.entity ? [this.config.entity] : [];
+  }
+
+  /** Re-render only when a watched entity, the theme or the language changed. */
+  protected shouldUpdate(changed: PropertyValues): boolean {
+    if (!changed.has('hass') || changed.size > 1) return true;
+    const old = changed.get('hass') as HomeAssistant | undefined;
+    if (!old || !this.hass) return true;
+    if (
+      old.themes?.darkMode !== this.hass.themes?.darkMode ||
+      old.language !== this.hass.language
+    ) {
+      return true;
+    }
+    return this.watchedEntities().some((id) => old.states[id] !== this.hass!.states[id]);
+  }
+
+  /** Area name of an entity (entity area first, then its device's area). */
+  protected areaName(entityId?: string): string | undefined {
+    const id = entityId ?? this.config?.entity;
+    if (!id || !this.hass) return undefined;
+    const entry = this.hass.entities?.[id];
+    const areaId =
+      entry?.area_id ??
+      (entry?.device_id ? this.hass.devices?.[entry.device_id]?.area_id : undefined);
+    return areaId ? this.hass.areas?.[areaId]?.name : undefined;
+  }
+
+  protected friendlyName(entityId: string): string {
+    return this.hass?.states[entityId]?.attributes.friendly_name ?? entityId;
+  }
+
   get dark(): boolean {
     return this.hass?.themes?.darkMode ?? false;
   }
@@ -130,6 +164,16 @@ export abstract class GlowCardBase<C extends GlowCardConfig = GlowCardConfig> ex
     return [];
   }
 
+  /** `tint` (light/climate popups) or `glow` (switch/plug popups: plain glass + glow). */
+  protected popupStyle: 'tint' | 'glow' = 'tint';
+
+  /** Called when the popup opens, e.g. to load history. */
+  protected popupOpened(): void {}
+
+  protected get popupOpen(): boolean {
+    return this.popup !== undefined;
+  }
+
   connectedCallback(): void {
     super.connectedCallback();
     if (this.config?.font !== 'theme') ensureFont();
@@ -161,7 +205,13 @@ export abstract class GlowCardBase<C extends GlowCardConfig = GlowCardConfig> ex
     this.popup.addEventListener('closed', () => (this.popup = undefined));
     this.popup.addEventListener('orb-tap', () => void this.toggle());
     this.syncPopup();
+    this.popupOpened();
   };
+
+  /** Re-renders the open popup, e.g. after history was loaded. */
+  protected refreshPopup(): void {
+    this.syncPopup();
+  }
 
   protected closePopup(): void {
     this.popup?.close();
@@ -179,6 +229,8 @@ export abstract class GlowCardBase<C extends GlowCardConfig = GlowCardConfig> ex
     this.popup.icon = this.icon;
     this.popup.active = this.isActive;
     this.popup.darkIcon = this.darkIcon;
+    this.popup.toggleAttribute('glow-only', this.popupStyle === 'glow');
+    this.popup.toggleAttribute('unavailable', this.isUnavailable);
     this.popup.content = view?.content ?? nothing;
   }
 
