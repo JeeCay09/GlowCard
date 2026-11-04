@@ -5,7 +5,8 @@
 import { css, html } from 'lit';
 import { GlowCardBase, type GlowCardConfig } from '../src/core/base-card';
 import { defineOnce } from '../src/core/define';
-import { lightColor, type Rgb } from '../src/core/color';
+import { hexToRgb, lightColor, type Rgb } from '../src/core/color';
+import { LIGHT_SWATCHES, type Swatch } from '../src/components/swatches';
 import type { HassEntity, HomeAssistant } from '../src/types/hass';
 import '../src/components/orb';
 import '../src/components/slider';
@@ -65,6 +66,10 @@ export function fakeHass(darkMode: boolean): HomeAssistant {
       const e = states[id];
       if (!e) return;
       if (service === 'toggle') e.state = e.state === 'on' ? 'off' : 'on';
+      if (domain === 'light' && service === 'turn_on' && Array.isArray(data?.rgb_color)) {
+        e.state = 'on';
+        e.attributes.rgb_color = data.rgb_color as [number, number, number];
+      }
       if (domain === 'light' && service === 'turn_on' && typeof data?.brightness_pct === 'number') {
         e.state = data.brightness_pct > 0 ? 'on' : 'off';
         e.attributes.brightness = Math.round((data.brightness_pct / 100) * 255);
@@ -141,8 +146,22 @@ class DemoCard extends GlowCardBase<GlowCardConfig> {
 
   private tab = 'brightness';
 
+  private get swatchName(): string {
+    const rgb = this.stateObj?.attributes.rgb_color;
+    if (!rgb) return '';
+    return LIGHT_SWATCHES.find((s) => hexToRgb(s.color)?.join() === rgb.join())?.name ?? '';
+  }
+
+  private setSwatch = (ev: CustomEvent<{ value: Swatch }>) => {
+    void this.hass?.callService('light', 'turn_on', {
+      entity_id: this.config?.entity,
+      rgb_color: hexToRgb(ev.detail.value.color),
+    });
+  };
+
   protected renderPopup() {
-    const sub = this.isUnavailable ? 'Nicht verfügbar' : this.isActive ? 'An' : 'Aus';
+    const state = this.isUnavailable ? 'Nicht verfügbar' : this.isActive ? 'An' : 'Aus';
+    const sub = this.isActive && this.swatchName ? `${state} · ${this.swatchName}` : state;
     return {
       heading: this.displayName,
       subtitle: sub,
@@ -163,7 +182,11 @@ class DemoCard extends GlowCardBase<GlowCardConfig> {
               ]}
               .value=${this.tab}
               @value-changed=${(e: CustomEvent<{ value: string }>) => (this.tab = e.detail.value)}
-            ></glowcard-segments>`
+            ></glowcard-segments>
+            <glowcard-swatches
+              .selected=${this.swatchName}
+              @value-changed=${this.setSwatch}
+            ></glowcard-swatches>`
         : html``,
     };
   }
