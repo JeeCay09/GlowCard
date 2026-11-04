@@ -36,6 +36,7 @@ const de = {
   now: 'jetzt',
   today_lower: 'heute',
   no_history: 'Kein Verlauf verfügbar',
+  previous_state: 'Letzter Zustand',
 };
 
 const en: typeof de = {
@@ -74,6 +75,7 @@ const en: typeof de = {
   now: 'now',
   today_lower: 'today',
   no_history: 'No history available',
+  previous_state: 'Previous state',
 };
 
 export type LocalizeKey = keyof typeof de;

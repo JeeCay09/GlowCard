@@ -106,11 +106,12 @@ entities:
 ```yaml
 type: custom:glowcard-plug
 entity: switch.office_plug
-power: sensor.office_plug_power
-energy: sensor.office_plug_energy
 name: Home Office
 variant: wide # small | wide (Live-Leistungskurve)
+threshold: 1 # leuchtet ab so vielen Watt (Standard 1)
 ```
+
+Die Karte findet Leistungs- und Energie-Sensor, Countdown, Kindersicherung sowie die Selects für „Nach Stromausfall“ und die LED selbst über das Gerät der Steckdose. Zeilen im Popup erscheinen nur, wenn die Steckdose die passende Entität hat. Falls die Erkennung danebenliegt, lassen sie sich festlegen: `power_entity`, `energy_entity`, `countdown_entity`, `child_lock_entity`, `power_on_entity`, `indicator_entity`.
 
 ### Licht
 
