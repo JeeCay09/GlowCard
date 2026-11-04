@@ -21,7 +21,7 @@
 - Funktioniert **nur mit Standard-Entitäten von Home Assistant**. Keine Helfer, Template-Sensoren oder Automationen nötig.
 
 > [!NOTE]
-> GlowCard ist in der Beta. v0.1.0 enthält die Schalter- und die Steckdosen-Karte; weitere Karten folgen (siehe Roadmap). Optionen können sich bis v1.0 noch ändern.
+> GlowCard ist in der Beta. v0.2.0 enthält die Schalter-, Steckdosen- und Licht-Karte; weitere Karten folgen (siehe Roadmap). Optionen können sich bis v1.0 noch ändern.
 
 ## Karten
 
@@ -29,7 +29,7 @@
 | -------------- | ------------------------ | --------------------------------------------------- | ---------------- |
 | Schalter       | `custom:glowcard-switch` | `switch.*`, `input_boolean.*`                       | Beta (v0.1)      |
 | Steckdose      | `custom:glowcard-plug`   | `switch.*` + optional Leistungs-/Energie-`sensor.*` | Beta (v0.1)      |
-| Licht          | `custom:glowcard-light`  | `light.*`                                           | geplant für v0.2 |
+| Licht          | `custom:glowcard-light`  | `light.*`                                           | Beta (v0.2)      |
 | Kopfzeile      | `custom:glowcard-header` | `person.*`, Begrüßung, Datum/Uhrzeit                | geplant für v0.3 |
 | Status-Leiste  | `custom:glowcard-status` | beliebige Entitäten, in Segmenten gruppiert         | geplant für v0.3 |
 | Chip           | `custom:glowcard-chip`   | beliebige Entität                                   | geplant für v0.3 |
@@ -67,7 +67,7 @@ lovelace:
    - Typ: **JavaScript-Modul**
 4. Browser neu laden.
 
-Nach einem Update die URL z. B. auf `/local/glowcard/glowcard.js?v=0.1.0` ändern, damit Browser die neue Datei laden.
+Nach einem Update die URL z. B. auf `/local/glowcard/glowcard.js?v=0.2.0` ändern, damit Browser die neue Datei laden.
 
 ## Konfiguration
 
@@ -166,8 +166,8 @@ home: sensor.home_load_power
 ## Roadmap
 
 1. Kern: Glas, Orb, Ziehbalken, Popups, heller/dunkler Modus
-2. Schalter- und Steckdosen-Karte → **v0.1.0 (Beta)**
-3. Licht-Karte und Popup → v0.2.0
+2. Schalter- und Steckdosen-Karte → v0.1.0 (Beta)
+3. Licht-Karte und Popup → **v0.2.0 (Beta)**
 4. Kopfzeile, Status-Leiste und Chips → v0.3.0
 5. Energie-Karte „Haus“ und Popup → v0.4.0
 6. Visuelle Editoren, vollständige Doku, Antrag auf HACS-Standardliste → v1.0.0
