@@ -21,7 +21,7 @@
 - Funktioniert **nur mit Standard-Entitäten von Home Assistant**. Keine Helfer, Template-Sensoren oder Automationen nötig.
 
 > [!NOTE]
-> GlowCard ist in der Beta. v0.2.0 enthält die Schalter-, Steckdosen- und Licht-Karte; weitere Karten folgen (siehe Roadmap). Optionen können sich bis v1.0 noch ändern.
+> GlowCard ist in der Beta. v0.3.0 enthält Schalter, Steckdose, Licht, Kopfzeile, Status-Leiste und Chips, alle mit visuellem Editor; weitere Karten folgen (siehe Roadmap). Optionen können sich bis v1.0 noch ändern.
 
 ## Karten
 
@@ -30,12 +30,12 @@
 | Schalter       | `custom:glowcard-switch` | `switch.*`, `input_boolean.*`                       | Beta (v0.1)      |
 | Steckdose      | `custom:glowcard-plug`   | `switch.*` + optional Leistungs-/Energie-`sensor.*` | Beta (v0.1)      |
 | Licht          | `custom:glowcard-light`  | `light.*`                                           | Beta (v0.2)      |
-| Kopfzeile      | `custom:glowcard-header` | `person.*`, Begrüßung, Datum/Uhrzeit                | geplant für v0.3 |
-| Status-Leiste  | `custom:glowcard-status` | beliebige Entitäten, in Segmenten gruppiert         | geplant für v0.3 |
-| Chip           | `custom:glowcard-chip`   | beliebige Entität                                   | geplant für v0.3 |
+| Kopfzeile      | `custom:glowcard-header` | `person.*`, Begrüßung, Datum/Uhrzeit                | Beta (v0.3)      |
+| Status-Leiste  | `custom:glowcard-status` | Wetter, Lichter, Energie, Sicherheit, Warnungen     | Beta (v0.3)      |
+| Chip           | `custom:glowcard-chip`   | wie die Status-Leiste, plus Personen und Akku       | Beta (v0.3)      |
 | Energie „Haus“ | `custom:glowcard-energy` | Leistungs-`sensor.*` für Solar, Akku, Netz, Haus    | geplant für v0.4 |
 
-Visuelle Editoren für alle Karten sind für v1.0 geplant. Siehe [Roadmap](#roadmap).
+Alle Karten haben einen visuellen Editor (ab Home Assistant 2025.1). In einem Sections-Dashboard richtet sich die Breite nach der Variante: klein = 1/4, breit = 1/2, breite Steckdose, Kopfzeile, Status-Leiste und Chip-Reihen = ganze Breite, einzelner Chip = 1/2, Symbol-Chip = 1/4. Im Dashboard-Editor kannst du die Größe weiterhin selbst ändern.
 
 ## Installation
 
@@ -67,7 +67,7 @@ lovelace:
    - Typ: **JavaScript-Modul**
 4. Browser neu laden.
 
-Nach einem Update die URL z. B. auf `/local/glowcard/glowcard.js?v=0.2.0` ändern, damit Browser die neue Datei laden.
+Nach einem Update die URL z. B. auf `/local/glowcard/glowcard.js?v=0.3.0` ändern, damit Browser die neue Datei laden.
 
 ## Konfiguration
 
@@ -129,28 +129,111 @@ variant: wide # wide (2 Spalten, Ziehbalken) | small (1 Spalte)
 
 Orb, Balken und Kartentönung nutzen die aktuelle Farbe der Lampe. Den Balken ziehen stellt die Helligkeit ein, ganz nach links schaltet aus. Das Popup hat einen hohen Helligkeitsbalken, Reiter für Farbtemperatur und Farbe (nur was die Lampe laut `supported_color_modes` kann) und Farbkreise von Warmweiß bis Blau.
 
-### Kopfzeile und Status-Leiste
+### Kopfzeile
 
 ```yaml
 type: custom:glowcard-header
 persons:
   - person.alex
   - person.sam
----
+name: Alex # optional, sonst der Vorname des angemeldeten Benutzers
+```
+
+Begrüßung je nach Tageszeit („Guten Morgen, Alex“), Datum und Uhrzeit, rechts die Personen. Wer zu Hause ist, bekommt einen grünen Ring. Tippen auf eine Person öffnet ihre Details. Mit `greeting:` kannst du einen eigenen Text setzen.
+
+### Status-Leiste
+
+Eine Glas-Kapsel mit Abschnitten. Abschnitte mit Pfeil öffnen ein Popup, der angetippte Abschnitt bekommt einen farbigen Ring.
+
+Einfach (so speichert es auch der visuelle Editor, Reihenfolge wie im Bild):
+
+```yaml
+type: custom:glowcard-status
+weather: weather.home
+all_lights: true # oder lights: [light.a, light.b]
+solar: sensor.pv_power
+battery: sensor.battery_level # Ladestand in %
+battery_power: sensor.battery_power # + = lädt
+grid: sensor.grid_power # + = Bezug, − = Einspeisung
+home: sensor.home_power
+security:
+  - binary_sensor.bathroom_window
+  - binary_sensor.smoke_detectors
+alerts:
+  - binary_sensor.vacuum_problem # nur sichtbar, wenn ein Problem vorliegt
+```
+
+Frei (nur YAML), mit eigener Reihenfolge, Namen und Aktionen:
+
+```yaml
 type: custom:glowcard-status
 segments:
   - type: weather
     entity: weather.home
-  - type: lights # zählt eingeschaltete Lichter, Popup listet sie
-    entities: all
+    tap_action:
+      action: none # ohne Pfeil, nicht antippbar
+  - type: lights # ohne entities: alle Lichter (ohne Lichtgruppen)
   - type: energy
     solar: sensor.pv_power
-    battery: sensor.battery_state_of_charge
+    battery: sensor.battery_level
+    battery_power: sensor.battery_power
+    navigation_path: /energy # Ziel von „Energiefluss öffnen“
   - type: security
     entities:
-      - binary_sensor.bathroom_window
+      - entity: binary_sensor.bathroom_window
+        name: Fenster Bad
       - binary_sensor.smoke_detectors
+  - type: alert
+    entity: binary_sensor.vacuum_problem
 ```
+
+| Abschnitt  | Zeigt                                   | Popup                                                          |
+| ---------- | --------------------------------------- | -------------------------------------------------------------- |
+| `weather`  | Temperatur, Zustand, Luftfeuchte        | – (Standard: Details der Wetter-Entität)                       |
+| `lights`   | Anzahl eingeschalteter Lichter          | „Lichter an“: Orb schaltet, Balken ziehen, „Alle ausschalten“  |
+| `energy`   | Solarleistung, Akku-Stand und -Richtung | „Energie jetzt“: Solar, Haus, Akku, Netz                       |
+| `battery`  | Akku mit Ring (vor allem als Chip)      | wie `energy`                                                   |
+| `security` | „Alles zu“ oder Anzahl der Meldungen    | Liste mit Zustand und „seit …“; Tippen öffnet Details          |
+| `alert`    | Gerät und Fehlertext, rot mit Puls      | Fehler, seit wann; bei Saugrobotern „Fortsetzen“/„Zur Station“ |
+| `person`   | Avatar und Ort                          | – (Details der Person)                                         |
+| `entity`   | beliebige Entität mit ihrem Zustand     | – (Details der Entität)                                        |
+
+Sicherheit zählt `binary_sensor` mit `on` (offen, Rauch, …), nicht verriegelte `lock`, ausgelöste `alarm_control_panel` und offene `cover` als Meldung. Bei `alert` sucht die Karte Fehlertext (`sensor.*_error`) und Saugroboter (`vacuum.*`) auf demselben Gerät selbst; sonst `detail_entity` und `vacuum` angeben. Jeder Abschnitt kennt `name`, `icon`, `color`, `tap_action` und `hold_action`.
+
+Auf schmalen Bildschirmen lässt sich die Leiste seitlich wischen; kompakter sind dort die Symbol-Chips.
+
+### Chips
+
+Ein Chip pro Karte (visueller Editor) oder eine Reihe mit `chips:` (YAML). Die Einträge sind dieselben wie bei der Status-Leiste und öffnen dieselben Popups.
+
+```yaml
+type: custom:glowcard-chip
+chip: lights
+---
+type: custom:glowcard-chip
+chips:
+  - type: weather
+    entity: weather.home
+  - type: lights
+  - type: person
+    entity: person.alex
+  - type: battery
+    battery: sensor.battery_level
+    battery_power: sensor.battery_power
+  - type: security
+    entities: [binary_sensor.bathroom_window]
+  - type: alert
+    entity: binary_sensor.vacuum_problem
+---
+type: custom:glowcard-chip
+icon_only: true # runde Symbole mit Zähler, z. B. fürs Handy
+chips:
+  - type: lights
+  - type: alert
+    entity: binary_sensor.vacuum_problem
+```
+
+Nicht erreichbare Entitäten erscheinen gestrichelt und blass. Ein Warn-Chip ohne Meldung verschwindet (`hide_when_ok: false` zeigt ihn grün).
 
 ### Energie „Haus“
 
@@ -167,10 +250,10 @@ home: sensor.home_load_power
 
 1. Kern: Glas, Orb, Ziehbalken, Popups, heller/dunkler Modus
 2. Schalter- und Steckdosen-Karte → v0.1.0 (Beta)
-3. Licht-Karte und Popup → **v0.2.0 (Beta)**
-4. Kopfzeile, Status-Leiste und Chips → v0.3.0
+3. Licht-Karte und Popup → v0.2.0 (Beta)
+4. Kopfzeile, Status-Leiste und Chips, visueller Editor und Standard-Breiten → **v0.3.0 (Beta)**
 5. Energie-Karte „Haus“ und Popup → v0.4.0
-6. Visuelle Editoren, vollständige Doku, Antrag auf HACS-Standardliste → v1.0.0
+6. Visuelle Editoren für alle Karten, vollständige Doku, Antrag auf HACS-Standardliste → v1.0.0
 
 Später: Raum-Karte, Binärsensor, Bewässerung/Pflanze, Popups für Medien, Rollos und Saugroboter.
 

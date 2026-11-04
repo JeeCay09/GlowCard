@@ -2,6 +2,14 @@ import { css, html, nothing, type PropertyValues } from 'lit';
 import { state } from 'lit/decorators.js';
 import { GlowCardBase, type GlowCardConfig } from '../../core/base-card';
 import { registerCard } from '../../core/register';
+import {
+  areaField,
+  configForm,
+  editorLabel,
+  lookFields,
+  nameIconFields,
+  variantField,
+} from '../../core/editor';
 import { localize } from '../../core/localize';
 import {
   formatDuration,
@@ -43,6 +51,26 @@ export class GlowSwitchCard extends GlowCardBase<SwitchCardConfig> {
   private historyFor?: string;
 
   protected popupStyle = 'glow' as const;
+
+  static getConfigForm() {
+    return configForm(
+      [
+        { name: 'entity', selector: { entity: { domain: SWITCH_DOMAINS } } },
+        variantField(['small', 'wide', 'row']),
+        nameIconFields,
+        lookFields,
+        areaField,
+        { name: 'entities', selector: { entity: { domain: SWITCH_DOMAINS, multiple: true } } },
+      ],
+      { color: 'color_helper', area: 'area_helper', entities: 'entities_helper' },
+      (config) => {
+        const list = config.entities;
+        if (Array.isArray(list) && list.some((e) => typeof e !== 'string')) {
+          throw new Error(editorLabel('yaml_only'));
+        }
+      },
+    );
+  }
 
   static getStubConfig(hass: HomeAssistant): Partial<SwitchCardConfig> {
     const entity = Object.keys(hass.states).find((id) => SWITCH_DOMAINS.includes(id.split('.')[0]));

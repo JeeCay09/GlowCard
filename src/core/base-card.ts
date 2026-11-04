@@ -3,6 +3,7 @@ import { property, state } from 'lit/decorators.js';
 import type { HassEntity, HomeAssistant } from '../types/hass';
 import { handleAction, type ActionConfig } from './action';
 import { isBright, mix, rgbTriplet, resolveAccent, type Rgb } from './color';
+import { cleanConfig } from './editor';
 import { ensureFont } from './font';
 import { PressController } from './press';
 import { glassStyles, glowTokens } from './theme';
@@ -65,6 +66,7 @@ export abstract class GlowCardBase<C extends GlowCardConfig = GlowCardConfig> ex
 
   setConfig(config: C): void {
     if (!config) throw new Error('Invalid configuration');
+    config = cleanConfig(config);
     this.validateConfig(config);
     this.config = config;
   }
@@ -170,6 +172,14 @@ export abstract class GlowCardBase<C extends GlowCardConfig = GlowCardConfig> ex
   /** Called when the popup opens, e.g. to load history. */
   protected popupOpened(): void {}
 
+  /** Called after the popup was closed. */
+  protected popupClosed(): void {}
+
+  /** Popup orb in the soft "calm" style (tinted background, coloured icon). */
+  protected get popupCalm(): boolean {
+    return false;
+  }
+
   protected get popupOpen(): boolean {
     return this.popup !== undefined;
   }
@@ -202,7 +212,10 @@ export abstract class GlowCardBase<C extends GlowCardConfig = GlowCardConfig> ex
     if (!view) return;
     this.closePopup();
     this.popup = openPopup({ contentStyles: this.popupStyles() });
-    this.popup.addEventListener('closed', () => (this.popup = undefined));
+    this.popup.addEventListener('closed', () => {
+      this.popup = undefined;
+      this.popupClosed();
+    });
     this.popup.addEventListener('orb-tap', () => void this.toggle());
     this.syncPopup();
     this.popupOpened();
@@ -229,6 +242,7 @@ export abstract class GlowCardBase<C extends GlowCardConfig = GlowCardConfig> ex
     this.popup.icon = this.icon;
     this.popup.active = this.isActive;
     this.popup.darkIcon = this.darkIcon;
+    this.popup.calm = this.popupCalm;
     this.popup.toggleAttribute('glow-only', this.popupStyle === 'glow');
     this.popup.toggleAttribute('unavailable', this.isUnavailable);
     this.popup.content = view?.content ?? nothing;

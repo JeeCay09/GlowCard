@@ -28,13 +28,29 @@ const ICON_PATHS: Record<string, string> = {
   'mdi:power-socket-de':
     'M12 4a8 8 0 1 0 0 16a8 8 0 1 0 0-16M9.3 12h.01M14.7 12h.01M12 4.5v1.5M12 18v1.5',
   'mdi:power-plug-off-outline': 'M12 4a8 8 0 1 0 0 16a8 8 0 1 0 0-16M5 19L19 5',
+  // GlowChips board
+  'mdi:weather-cloudy': 'M7 18h10a4 4 0 0 0 .5-7.97A6 6 0 0 0 6.1 9.2 4.5 4.5 0 0 0 7 18z',
+  'mdi:white-balance-sunny':
+    'M8 12a4 4 0 1 0 8 0a4 4 0 1 0-8 0M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4',
+  'mdi:shield-check': 'M12 3l7 3v6c0 4.5-3 7.5-7 9-4-1.5-7-4.5-7-9V6l7-3zM9 12l2 2 4-4',
+  'mdi:shield-alert': 'M12 3l7 3v6c0 4.5-3 7.5-7 9-4-1.5-7-4.5-7-9V6l7-3zM12 8v4M12 15v.5',
+  'mdi:alert': 'M12 4l9 16H3L12 4zM12 10v4M12 17v.5',
+  'mdi:battery':
+    'M5 8h12a1 1 0 0 1 1 1v6a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V9a1 1 0 0 1 1-1zM21 11v2M7 11v2M10 11v2',
+  'mdi:power-plug': 'M4 12a8 8 0 1 0 16 0a8 8 0 1 0-16 0M9.5 10.5v3M14.5 10.5v3',
+  'mdi:home': 'M4 11l8-6 8 6v9H4zM10 20v-5h4v5',
+  'mdi:transmission-tower': 'M12 3l-5 18M12 3l5 18M8.5 9h7M7 14h10',
+  'mdi:window-closed-variant': 'M6 3h12v18H6zM12 3v18M6 12h12',
+  'mdi:smoke-detector-variant':
+    'M4 12a8 8 0 1 0 16 0a8 8 0 1 0-16 0M10 12a2 2 0 1 0 4 0a2 2 0 1 0-4 0',
+  'mdi:bell': 'M6 16v-5a6 6 0 0 1 12 0v5l1.5 2h-15L6 16zM10 20a2 2 0 0 0 4 0',
 };
 
 /** Stand-in for Home Assistant's <ha-icon>, drawing stroke icons like the mockups. */
 class FakeIcon extends HTMLElement {
   set icon(v: string) {
     const d = ICON_PATHS[v] ?? 'M12 4a8 8 0 1 0 0 16a8 8 0 1 0 0-16';
-    this.innerHTML = `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="${d}"></path></svg>`;
+    this.innerHTML = `<svg style="width:var(--mdc-icon-size,22px);height:var(--mdc-icon-size,22px)" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="${d}"></path></svg>`;
   }
 }
 defineOnce('ha-icon', FakeIcon);
@@ -160,6 +176,90 @@ const OFFICE_SERIES = [
   156, 159, 168, 186,
 ];
 
+/** Fixed clock time today (dayOffset 1 = yesterday), as ISO string. */
+const at = (dayOffset: number, hhmm: string) => {
+  const [h, m] = hhmm.split(':').map(Number);
+  const d = new Date(nowMs);
+  d.setDate(d.getDate() - dayOffset);
+  d.setHours(h, m, 0, 0);
+  return d.toISOString();
+};
+const fixed = (e: HassEntity, iso: string): HassEntity => ({
+  ...e,
+  last_changed: iso,
+  last_updated: iso,
+});
+// Header, status bar and chips (GlowChips board, Gilbert's real entities)
+Object.assign(states, {
+  'weather.wetter_home': entity('weather.wetter_home', 'cloudy', {
+    friendly_name: 'Wetter',
+    temperature: 7.8,
+    humidity: 81,
+  }),
+  'person.gilbert': entity('person.gilbert', 'home', { friendly_name: 'Gilbert' }),
+  'person.sam': entity('person.sam', 'home', { friendly_name: 'Sam' }),
+  'sensor.sigen_plant_pv_power': entity('sensor.sigen_plant_pv_power', '2.35', {
+    device_class: 'power',
+    unit_of_measurement: 'kW',
+  }),
+  'sensor.sigen_battery_soc': entity('sensor.sigen_battery_soc', '60', {
+    device_class: 'battery',
+    unit_of_measurement: '%',
+  }),
+  'sensor.sigen_battery_power': entity('sensor.sigen_battery_power', '2050', {
+    device_class: 'power',
+    unit_of_measurement: 'W',
+  }),
+  'sensor.sigen_grid_power': entity('sensor.sigen_grid_power', '0', {
+    device_class: 'power',
+    unit_of_measurement: 'W',
+  }),
+  'sensor.sigen_home_power': entity('sensor.sigen_home_power', '320', {
+    device_class: 'power',
+    unit_of_measurement: 'W',
+  }),
+  'binary_sensor.fenster_bad': fixed(
+    entity('binary_sensor.fenster_bad', 'off', { device_class: 'window' }),
+    at(0, '06:31'),
+  ),
+  'binary_sensor.rauchmelder_alle': entity('binary_sensor.rauchmelder_alle', 'off', {
+    device_class: 'smoke',
+    friendly_name: 'Rauchmelder alle',
+    entity_id: ['a', 'b', 'c', 'd', 'e', 'f'].map((x) => `binary_sensor.rauchmelder_${x}`),
+  }),
+  'binary_sensor.basisstation_alarm': fixed(
+    entity('binary_sensor.basisstation_alarm', 'off', { icon: 'mdi:bell' }),
+    at(1, '13:48'),
+  ),
+  'binary_sensor.vesta_problem': fixed(
+    entity('binary_sensor.vesta_problem', 'on', {
+      device_class: 'problem',
+      friendly_name: 'Vesta Problem',
+    }),
+    at(0, '08:31'),
+  ),
+  'sensor.vesta_error': entity('sensor.vesta_error', 'water_tank_dry', {
+    friendly_name: 'Vesta Fehler',
+  }),
+  'vacuum.vesta': fixed(
+    entity('vacuum.vesta', 'paused', { friendly_name: 'Vesta' }),
+    at(0, '08:31'),
+  ),
+});
+['1', '2', '3'].forEach((n, i) => {
+  const id = `light.tv_wand_streifen_${n}`;
+  states[id] = fixed(
+    entity(id, 'on', {
+      friendly_name: `TV Wand Streifen ${n}`,
+      brightness: 255,
+      rgb_color: [255, 165, 110],
+      color_mode: 'hs',
+      supported_color_modes: ['hs'],
+    }),
+    at(1, i === 0 ? '17:02' : '16:52'),
+  );
+});
+
 const leds = ['Esszimmer', 'Flur oben', 'Dachboden', 'Kinderzimmer', 'Büro', 'Schlafzimmer'];
 leds.forEach((room, i) => {
   const id = `switch.led_${i}`;
@@ -180,6 +280,18 @@ const entities: HomeAssistant['entities'] = {
   'switch.carpet_boost': { entity_id: 'switch.carpet_boost', area_id: 'utility' },
   'switch.dishwasher': { entity_id: 'switch.dishwasher', area_id: 'kitchen' },
   'switch.fairy_lights': { entity_id: 'switch.fairy_lights', area_id: 'terrace' },
+  'light.tv_wand_streifen_1': { entity_id: 'light.tv_wand_streifen_1', area_id: 'living' },
+  'light.tv_wand_streifen_2': { entity_id: 'light.tv_wand_streifen_2', area_id: 'living' },
+  'light.tv_wand_streifen_3': { entity_id: 'light.tv_wand_streifen_3', area_id: 'living' },
+  'binary_sensor.vesta_problem': { entity_id: 'binary_sensor.vesta_problem', device_id: 'vesta' },
+  'sensor.vesta_error': { entity_id: 'sensor.vesta_error', device_id: 'vesta' },
+  'vacuum.vesta': { entity_id: 'vacuum.vesta', device_id: 'vesta' },
+};
+const STATE_TEXT: Record<string, string> = {
+  cloudy: 'Bewölkt',
+  water_tank_dry: 'Wassertank leer',
+  paused: 'Pausiert',
+  home: 'Zu Hause',
 };
 
 /** Recorder-like history: TV Wand pattern from the mockup, simple patterns for the rest. */
@@ -225,8 +337,10 @@ export function fakeHass(darkMode: boolean): HomeAssistant {
     states: { ...states },
     entities,
     areas,
-    devices: {},
+    devices: { vesta: { id: 'vesta', name: 'Vesta' } },
     language: 'de',
+    user: { name: 'Gilbert' },
+    formatEntityState: (e: HassEntity) => STATE_TEXT[e.state] ?? e.state,
     themes: { darkMode },
     async callWS<T>(msg: Record<string, unknown>): Promise<T> {
       const ids = (msg.entity_ids as string[]) ?? [];
