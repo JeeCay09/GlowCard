@@ -1,0 +1,21 @@
+name: HACS validation
+
+# Runs on main, daily and on demand. Not on PRs: the check needs a published
+# release containing glowcard.js and fails until the first release exists.
+on:
+  push:
+    branches: [main]
+  schedule:
+    - cron: '0 4 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  hacs:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: hacs/action@main
+        with:
+          category: plugin
