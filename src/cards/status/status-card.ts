@@ -1,0 +1,317 @@
+import { css, html, nothing } from 'lit';
+import type { GlowCardConfig } from '../../core/base-card';
+import { registerCard } from '../../core/register';
+import { configForm, editorLabel, fontField, type FormSchema } from '../../core/editor';
+import type { HomeAssistant } from '../../types/hass';
+import { paletteColor, validateSegment, type SegmentConfig } from './status-logic';
+import { GlowStatusBase, avatar, dot, toneDot } from './status-base';
+import { avatarStyles, dotStyles, statusTokens } from './status-styles';
+import { rgbTriplet } from '../../core/color';
+
+export interface StatusCardConfig extends GlowCardConfig {
+  /** Full control in YAML: any number of segments in any order. */
+  segments?: SegmentConfig[];
+  // Simple form (visual editor) → weather, lights, energy, security, alerts in this order.
+  weather?: string;
+  lights?: string[] | 'all';
+  all_lights?: boolean;
+  solar?: string;
+  battery?: string;
+  battery_power?: string;
+  grid?: string;
+  home?: string;
+  navigation_path?: string;
+  security?: string[];
+  alerts?: string[];
+}
+
+const CHEVRON = 'M9 6l6 6-6 6';
+
+/** Builds the segments of the simple (editor) form. */
+export function simpleSegments(c: StatusCardConfig): SegmentConfig[] {
+  const out: SegmentConfig[] = [];
+  if (c.weather) out.push({ type: 'weather', entity: c.weather });
+  if (c.lights === 'all' || c.all_lights) out.push({ type: 'lights' });
+  else if (Array.isArray(c.lights) && c.lights.length) {
+    out.push({ type: 'lights', entities: c.lights });
+  }
+  if (c.solar || c.home || c.grid || c.battery_power) {
+    out.push({
+      type: 'energy',
+      solar: c.solar,
+      battery: c.battery,
+      battery_power: c.battery_power,
+      grid: c.grid,
+      home: c.home,
+      navigation_path: c.navigation_path,
+    });
+  }
+  if (c.security?.length) out.push({ type: 'security', entities: c.security });
+  for (const entity of c.alerts ?? []) out.push({ type: 'alert', entity });
+  return out;
+}
+
+/** Status bar ("Status-Leiste") from the GlowChips board: one glass capsule with segments. */
+export class GlowStatusCard extends GlowStatusBase<StatusCardConfig> {
+  private segs: SegmentConfig[] = [];
+
+  static getConfigForm() {
+    const sensor = (device_class?: string): FormSchema['selector'] => ({
+      entity: { domain: ['sensor'], ...(device_class ? { device_class } : {}) },
+    });
+    return configForm(
+      [
+        { name: 'weather', selector: { entity: { domain: ['weather'] } } },
+        { name: 'all_lights', selector: { boolean: {} } },
+        { name: 'lights', selector: { entity: { domain: ['light'], multiple: true } } },
+        {
+          name: '',
+          type: 'expandable',
+          title: 'energy_section',
+          schema: [
+            {
+              name: '',
+              type: 'grid',
+              schema: [
+                { name: 'solar', selector: sensor('power') },
+                { name: 'home', selector: sensor('power') },
+                { name: 'battery', selector: sensor('battery') },
+                { name: 'battery_power', selector: sensor('power') },
+                { name: 'grid', selector: sensor('power') },
+                { name: 'navigation_path', selector: { text: {} } },
+              ],
+            },
+          ],
+        },
+        {
+          name: 'security',
+          selector: {
+            entity: {
+              domain: ['binary_sensor', 'lock', 'alarm_control_panel', 'cover'],
+              multiple: true,
+            },
+          },
+        },
+        {
+          name: 'alerts',
+          selector: { entity: { domain: ['binary_sensor', 'vacuum'], multiple: true } },
+        },
+        fontField,
+      ],
+      {
+        lights: 'lights_helper',
+        security: 'security_helper',
+        alerts: 'alerts_helper',
+        navigation_path: 'navigation_path_helper',
+      },
+      (config) => {
+        if (config.segments !== undefined || config.lights === 'all') {
+          throw new Error(editorLabel('segments_yaml_only'));
+        }
+      },
+    );
+  }
+
+  static getStubConfig(hass: HomeAssistant): Partial<StatusCardConfig> {
+    const weather = Object.keys(hass.states).find((id) => id.startsWith('weather.'));
+    return { ...(weather ? { weather } : {}), all_lights: true };
+  }
+
+  protected validateConfig(config: StatusCardConfig): void {
+    if (config.segments !== undefined) {
+      if (!Array.isArray(config.segments)) throw new Error('"segments" must be a list');
+      config.segments.forEach((s, i) => validateSegment(s, `segments[${i}]`));
+      this.segs = config.segments;
+    } else {
+      this.segs = simpleSegments(config);
+    }
+    if (!this.segs.length) {
+      throw new Error('Please add segments (weather, lights, energy, security, alerts)');
+    }
+  }
+
+  protected get segmentConfigs(): SegmentConfig[] {
+    return this.segs;
+  }
+
+  getCardSize(): number {
+    return 1;
+  }
+
+  getGridOptions() {
+    return { columns: 12, rows: 'auto', min_columns: 6 };
+  }
+
+  render() {
+    if (!this.config || !this.hass) return nothing;
+    const green = paletteColor('green', this.dark);
+    return html`<div class="dock" role="toolbar" aria-label="Status">
+      ${this.segs.map((cfg, i) => {
+        const v = this.viewOf(cfg);
+        if (!v || v.hidden) return nothing;
+        const clickable = this.isClickable(cfg, v);
+        const selected = clickable && this.openSeg === i;
+        const orb = v.avatar
+          ? avatar(v, 40, 15, green)
+          : dot(v.icon, toneDot(v), v.rgb, 40, 19, 22, v.pulse);
+        return html`<div
+          class="seg ${selected ? 'selected' : ''} ${clickable ? 'clickable' : ''} ${v.tone}"
+          style="--c:${rgbTriplet(v.rgb)}"
+          role="button"
+          tabindex=${clickable ? 0 : -1}
+          aria-disabled=${clickable ? 'false' : 'true'}
+          aria-pressed=${selected ? 'true' : 'false'}
+          aria-label=${`${v.value}, ${v.label}`}
+          @pointerdown=${(e: PointerEvent) => clickable && this.segDown(i, e)}
+          @pointerup=${() => clickable && this.segUp(i)}
+          @pointercancel=${this.segCancel}
+          @pointerleave=${this.segCancel}
+          @keydown=${(e: KeyboardEvent) => clickable && this.segKey(i, e)}
+          @contextmenu=${(e: Event) => e.preventDefault()}
+        >
+          ${orb}
+          <span class="txt">
+            <span class="val">${v.value}</span>
+            <span class="lab">${v.label}</span>
+          </span>
+          ${
+            clickable
+              ? html`<svg
+                  class="chev"
+                  width="14"
+                  height="14"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2.4"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  aria-hidden="true"
+                >
+                  <path d=${CHEVRON}></path>
+                </svg>`
+              : nothing
+          }
+        </div>`;
+      })}
+    </div>`;
+  }
+
+  static styles = [
+    ...GlowStatusBase.styles,
+    statusTokens,
+    dotStyles,
+    avatarStyles,
+    css`
+      :host {
+        display: block;
+        container-type: inline-size;
+        font-family: var(--glow-font);
+        color: var(--glow-text);
+      }
+      .dock {
+        height: 72px;
+        box-sizing: border-box;
+        border-radius: 999px;
+        padding: 8px;
+        display: flex;
+        align-items: stretch;
+        gap: 4px;
+        background: var(--gc-glass);
+        border: 1px solid var(--gc-glass-border);
+        backdrop-filter: var(--glow-blur);
+        -webkit-backdrop-filter: var(--glow-blur);
+        box-shadow: var(--gc-dock-shadow);
+      }
+      .seg {
+        flex: 1 1 0;
+        min-width: 0;
+        border-radius: 999px;
+        padding: 0 12px 0 8px;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        text-align: left;
+        cursor: default;
+        user-select: none;
+        -webkit-user-select: none;
+        -webkit-tap-highlight-color: transparent;
+        outline: none;
+        transition:
+          background 0.2s,
+          box-shadow 0.2s;
+      }
+      .seg.clickable {
+        cursor: pointer;
+      }
+      .seg.selected {
+        background: rgba(var(--c), var(--gc-seg-sel));
+        box-shadow: inset 0 0 0 1px rgba(var(--c), 0.38);
+      }
+      .seg:focus-visible {
+        box-shadow: inset 0 0 0 2px rgba(var(--c), 0.6);
+      }
+      .seg.unavailable {
+        opacity: 0.6;
+      }
+      .txt {
+        flex-grow: 1;
+        display: flex;
+        flex-direction: column;
+        min-width: 0;
+      }
+      .val {
+        font-size: 16px;
+        font-weight: 800;
+        letter-spacing: -0.02em;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+      .warning .val {
+        color: rgb(var(--c));
+      }
+      .lab {
+        font-size: 12px;
+        font-weight: 600;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        color: var(--glow-muted);
+      }
+      .chev {
+        flex-shrink: 0;
+        opacity: 0.7;
+        color: var(--glow-muted);
+      }
+      /* Narrow (phones): segments keep their text and the bar scrolls sideways.
+         The icon-only chips are the compact alternative. */
+      @container (max-width: 600px) {
+        .dock {
+          overflow-x: auto;
+          scrollbar-width: none;
+          scroll-snap-type: x proximity;
+        }
+        .dock::-webkit-scrollbar {
+          display: none;
+        }
+        .seg {
+          flex: 1 0 auto;
+          scroll-snap-align: start;
+        }
+        .chev {
+          display: none;
+        }
+      }
+    `,
+  ];
+}
+
+registerCard(
+  {
+    type: 'glowcard-status',
+    name: 'GlowCard Status bar',
+    description: 'Glass status bar: weather, lights, energy, security and alerts with popups',
+  },
+  GlowStatusCard,
+);
