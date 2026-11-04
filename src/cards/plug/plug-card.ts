@@ -8,6 +8,7 @@ import {
   configForm,
   lookFields,
   nameIconFields,
+  sizeField,
   variantField,
 } from '../../core/editor';
 import { language, localize } from '../../core/localize';
@@ -73,6 +74,7 @@ export class GlowPlugCard extends GlowCardBase<PlugCardConfig> {
         variantField(['small', 'wide']),
         nameIconFields,
         lookFields,
+        sizeField,
         {
           name: '',
           type: 'grid',
@@ -325,7 +327,7 @@ export class GlowPlugCard extends GlowCardBase<PlugCardConfig> {
   private wrap(extra: string, inner: unknown) {
     const s = this.isUnavailable ? 'unavailable' : this.drawing ? 'active' : '';
     return html`<div
-      class="glass ${extra} ${s}"
+      class="glass sized ${extra} ${s}"
       @pointerdown=${this.press.down}
       @pointerup=${this.press.up}
       @pointermove=${this.press.move}
@@ -578,10 +580,10 @@ export class GlowPlugCard extends GlowCardBase<PlugCardConfig> {
         opacity: 0.6;
       }
       .small {
-        height: 164px;
+        height: var(--glow-card-h);
       }
       .wide {
-        height: 200px;
+        height: var(--glow-card-h-wide);
         padding-bottom: 0;
         overflow: hidden;
         justify-content: flex-start;
@@ -605,7 +607,7 @@ export class GlowPlugCard extends GlowCardBase<PlugCardConfig> {
         min-width: 0;
       }
       .small-name {
-        font-size: 15px;
+        font-size: var(--glow-name-small);
       }
       .name,
       .sub {
@@ -614,7 +616,7 @@ export class GlowPlugCard extends GlowCardBase<PlugCardConfig> {
         white-space: nowrap;
       }
       .watts {
-        font-size: 24px;
+        font-size: var(--glow-word-size);
         font-weight: 800;
         letter-spacing: -0.04em;
         line-height: 1;
@@ -622,7 +624,7 @@ export class GlowPlugCard extends GlowCardBase<PlugCardConfig> {
         color: var(--glow-muted);
       }
       .watts.big {
-        font-size: 32px;
+        font-size: var(--glow-word-big);
       }
       .watts.on {
         color: var(--glow-text);
@@ -632,8 +634,8 @@ export class GlowPlugCard extends GlowCardBase<PlugCardConfig> {
       }
       .card-chart {
         display: block;
-        width: calc(100% + 36px);
-        margin: auto -18px 0;
+        width: calc(100% + 2 * var(--glow-pad));
+        margin: auto calc(-1 * var(--glow-pad)) 0;
         height: 92px;
         overflow: visible;
       }
