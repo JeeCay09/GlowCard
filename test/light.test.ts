@@ -1,0 +1,82 @@
+import { describe, expect, it } from 'vitest';
+import {
+  SWATCHES,
+  brightnessPct,
+  kelvinRange,
+  lightCaps,
+  matchSwatch,
+  swatchServiceData,
+  swatchesFor,
+} from '../src/cards/light/light-logic';
+import type { HassEntity } from '../src/types/hass';
+
+const light = (state: string, attributes: HassEntity['attributes'] = {}): HassEntity => ({
+  entity_id: 'light.x',
+  state,
+  attributes,
+  last_changed: '',
+  last_updated: '',
+});
+
+describe('light logic', () => {
+  it('reads what the light can do', () => {
+    expect(lightCaps(light('on', { supported_color_modes: ['onoff'] }))).toEqual({
+      brightness: false,
+      colorTemp: false,
+      color: false,
+    });
+    expect(lightCaps(light('on', { supported_color_modes: ['color_temp', 'hs'] }))).toEqual({
+      brightness: true,
+      colorTemp: true,
+      color: true,
+    });
+    expect(lightCaps(light('on', { supported_color_modes: ['brightness'] })).brightness).toBe(true);
+  });
+
+  it('gives brightness in percent and 0 when off', () => {
+    expect(brightnessPct(light('on', { brightness: 184 }))).toBe(72);
+    expect(brightnessPct(light('on', { brightness: 1 }))).toBe(1);
+    expect(brightnessPct(light('off', { brightness: 184 }))).toBe(0);
+    expect(brightnessPct(light('on'))).toBe(100);
+  });
+
+  it('uses the light kelvin range with a fallback', () => {
+    expect(
+      kelvinRange(light('on', { min_color_temp_kelvin: 2700, max_color_temp_kelvin: 6000 })),
+    ).toEqual([2700, 6000]);
+    expect(kelvinRange(light('on'))).toEqual([2000, 6500]);
+  });
+
+  it('shows only the swatches the light can do', () => {
+    expect(swatchesFor({ brightness: true, colorTemp: true, color: true })).toHaveLength(7);
+    expect(
+      swatchesFor({ brightness: true, colorTemp: true, color: false }).map((s) => s.key),
+    ).toEqual(['warm_white', 'neutral_white', 'cool_white']);
+    expect(swatchesFor({ brightness: true, colorTemp: false, color: false })).toHaveLength(0);
+  });
+
+  it('finds the current swatch by colour or colour temperature', () => {
+    expect(matchSwatch(light('on', { rgb_color: [255, 200, 114] }))?.key).toBe('warm_white');
+    expect(matchSwatch(light('on', { rgb_color: [140, 92, 245] }))?.key).toBe('violet');
+    expect(matchSwatch(light('on', { rgb_color: [10, 200, 10] }))).toBeUndefined();
+    expect(
+      matchSwatch(light('on', { color_mode: 'color_temp', color_temp_kelvin: 4100 }))?.key,
+    ).toBe('neutral_white');
+    expect(matchSwatch(light('off', { rgb_color: [255, 200, 114] }))).toBeUndefined();
+  });
+
+  it('sets whites as colour temperature where possible', () => {
+    const warm = SWATCHES[0];
+    expect(swatchServiceData(warm, { brightness: true, colorTemp: true, color: true })).toEqual({
+      color_temp_kelvin: 2700,
+    });
+    expect(swatchServiceData(warm, { brightness: true, colorTemp: false, color: true })).toEqual({
+      rgb_color: [255, 200, 114],
+    });
+    expect(
+      swatchServiceData(SWATCHES[6], { brightness: true, colorTemp: true, color: true }),
+    ).toEqual({
+      rgb_color: [59, 130, 246],
+    });
+  });
+});

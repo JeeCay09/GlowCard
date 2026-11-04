@@ -5,7 +5,7 @@
 import { css, html } from 'lit';
 import { GlowCardBase, type GlowCardConfig } from '../src/core/base-card';
 import { defineOnce } from '../src/core/define';
-import { hexToRgb, lightColor, type Rgb } from '../src/core/color';
+import { hexToRgb, hsToRgb, kelvinToRgb, lightColor, type Rgb } from '../src/core/color';
 import { LIGHT_SWATCHES, type Swatch } from '../src/components/swatches';
 import type { HassEntity, HomeAssistant } from '../src/types/hass';
 import '../src/components/orb';
@@ -60,6 +60,28 @@ const states: Record<string, HassEntity> = {
     friendly_name: 'Deckenlicht Wohnzimmer',
     brightness: 184,
     rgb_color: [255, 200, 114],
+    color_mode: 'hs',
+    supported_color_modes: ['color_temp', 'hs'],
+    min_color_temp_kelvin: 2200,
+    max_color_temp_kelvin: 6500,
+  }),
+  'light.kitchen': entity('light.kitchen', 'on', {
+    friendly_name: 'Küche Arbeitsfläche',
+    brightness: 120,
+    color_mode: 'color_temp',
+    color_temp_kelvin: 4000,
+    rgb_color: [255, 206, 166],
+    supported_color_modes: ['color_temp'],
+    min_color_temp_kelvin: 2700,
+    max_color_temp_kelvin: 6500,
+  }),
+  'light.hall': entity('light.hall', 'on', {
+    friendly_name: 'Flur',
+    brightness: 255,
+    color_mode: 'hs',
+    hs_color: [262, 63],
+    rgb_color: [139, 92, 246],
+    supported_color_modes: ['hs'],
   }),
   'switch.sprinkler': entity('switch.sprinkler', 'off', { friendly_name: 'Rasensprenger' }, 63),
   'input_boolean.f1_live': entity('input_boolean.f1_live', 'on', { friendly_name: 'F1 Live' }, 133),
@@ -83,7 +105,10 @@ const states: Record<string, HassEntity> = {
     20,
   ),
   'switch.dishwasher': entity('switch.dishwasher', 'off', { friendly_name: 'Geschirrspüler' }, 5),
-  'light.tv_wall': entity('light.tv_wall', 'off', { friendly_name: 'TV Wand' }),
+  'light.tv_wall': entity('light.tv_wall', 'off', {
+    friendly_name: 'TV Wand',
+    supported_color_modes: ['brightness'],
+  }),
   'switch.office_plug': entity('switch.office_plug', 'off', { friendly_name: 'Home Office' }),
   'switch.terrace': entity('switch.terrace', 'unavailable', { friendly_name: 'Terrasse' }),
 };
@@ -143,12 +168,15 @@ leds.forEach((room, i) => {
 
 const areas = {
   living: { area_id: 'living', name: 'Wohnzimmer' },
+  hall: { area_id: 'hall', name: 'Flur' },
   utility: { area_id: 'utility', name: 'Hauswirtschaftsraum' },
   kitchen: { area_id: 'kitchen', name: 'Küche' },
   terrace: { area_id: 'terrace', name: 'Terrasse' },
 };
 const entities: HomeAssistant['entities'] = {
   'input_boolean.tv_warm': { entity_id: 'input_boolean.tv_warm', area_id: 'living' },
+  'light.living': { entity_id: 'light.living', area_id: 'living' },
+  'light.kitchen': { entity_id: 'light.kitchen', area_id: 'kitchen' },
   'switch.carpet_boost': { entity_id: 'switch.carpet_boost', area_id: 'utility' },
   'switch.dishwasher': { entity_id: 'switch.dishwasher', area_id: 'kitchen' },
   'switch.fairy_lights': { entity_id: 'switch.fairy_lights', area_id: 'terrace' },
@@ -216,6 +244,18 @@ export function fakeHass(darkMode: boolean): HomeAssistant {
         if (service === 'turn_off') e.state = 'off';
         if (domain === 'light' && service === 'turn_on' && Array.isArray(data?.rgb_color)) {
           e.attributes.rgb_color = data.rgb_color as [number, number, number];
+          e.attributes.color_mode = 'rgb';
+        }
+        if (domain === 'light' && typeof data?.color_temp_kelvin === 'number') {
+          e.attributes.color_temp_kelvin = data.color_temp_kelvin;
+          e.attributes.color_mode = 'color_temp';
+          e.attributes.rgb_color = kelvinToRgb(data.color_temp_kelvin).map(Math.round) as Rgb;
+        }
+        if (domain === 'light' && Array.isArray(data?.hs_color)) {
+          const [h, sat] = data.hs_color as [number, number];
+          e.attributes.hs_color = [h, sat];
+          e.attributes.color_mode = 'hs';
+          e.attributes.rgb_color = hsToRgb(h, sat).map(Math.round) as Rgb;
         }
         if (
           domain === 'light' &&
