@@ -69,7 +69,7 @@ export class GlowOrb extends LitElement {
 
   render() {
     return html`<button
-      style="width:${this.size}px;height:${this.size}px;--orb-size:${this.size}px"
+      style="--orb-size:var(--glow-card-orb, ${this.size}px);width:var(--orb-size);height:var(--orb-size)"
       aria-label=${this.label}
       aria-pressed=${this.active ? 'true' : 'false'}
     >
