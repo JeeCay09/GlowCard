@@ -19,14 +19,14 @@
 
 ## Cards
 
-| Card | Type | Entities | Status |
-| --- | --- | --- | --- |
-| Switch | `custom:glowcard-switch` | `switch.*`, `input_boolean.*` | planned for v0.1 |
-| Plug | `custom:glowcard-plug` | `switch.*` + optional power/energy `sensor.*` | planned for v0.1 |
-| Light | `custom:glowcard-light` | `light.*` | planned for v0.2 |
-| Header | `custom:glowcard-header` | `person.*`, greeting, date/time | planned for v0.3 |
-| Status bar | `custom:glowcard-status` | any entities, grouped into segments | planned for v0.3 |
-| Chip | `custom:glowcard-chip` | any entity | planned for v0.3 |
+| Card           | Type                     | Entities                                        | Status           |
+| -------------- | ------------------------ | ----------------------------------------------- | ---------------- |
+| Switch         | `custom:glowcard-switch` | `switch.*`, `input_boolean.*`                   | planned for v0.1 |
+| Plug           | `custom:glowcard-plug`   | `switch.*` + optional power/energy `sensor.*`   | planned for v0.1 |
+| Light          | `custom:glowcard-light`  | `light.*`                                       | planned for v0.2 |
+| Header         | `custom:glowcard-header` | `person.*`, greeting, date/time                 | planned for v0.3 |
+| Status bar     | `custom:glowcard-status` | any entities, grouped into segments             | planned for v0.3 |
+| Chip           | `custom:glowcard-chip`   | any entity                                      | planned for v0.3 |
 | Energy "House" | `custom:glowcard-energy` | power `sensor.*` for solar, battery, grid, home | planned for v0.4 |
 
 Visual editors for all cards are planned for v1.0. See the [roadmap](#roadmap).
@@ -67,15 +67,15 @@ After an update, change the URL to e.g. `/local/glowcard/glowcard.js?v=0.1.0` so
 
 All cards share these options:
 
-| Option | Type | Default | Description |
-| --- | --- | --- | --- |
-| `entity` | string | required | Main entity of the card |
-| `name` | string | friendly name | Title shown on the card |
-| `icon` | string | entity icon | Any `mdi:` icon |
-| `color` | string | per card type | Accent colour (`amber`, `teal`, `sky`, `violet`, … or hex) |
-| `variant` | string | `small` | Card layout, depends on the card |
-| `tap_action` | action | open popup | Standard Home Assistant action |
-| `hold_action` | action | `more-info` | Standard Home Assistant action |
+| Option        | Type   | Default       | Description                                                |
+| ------------- | ------ | ------------- | ---------------------------------------------------------- |
+| `entity`      | string | required      | Main entity of the card                                    |
+| `name`        | string | friendly name | Title shown on the card                                    |
+| `icon`        | string | entity icon   | Any `mdi:` icon                                            |
+| `color`       | string | per card type | Accent colour (`amber`, `teal`, `sky`, `violet`, … or hex) |
+| `variant`     | string | `small`       | Card layout, depends on the card                           |
+| `tap_action`  | action | open popup    | Standard Home Assistant action                             |
+| `hold_action` | action | `more-info`   | Standard Home Assistant action                             |
 
 The examples below show the planned options. Details may still change before v1.0.
 
@@ -86,7 +86,7 @@ type: custom:glowcard-switch
 entity: switch.garden_sprinkler
 name: Sprinkler
 color: sky
-variant: wide        # small | wide (7-day on/off strip) | row
+variant: wide # small | wide (7-day on/off strip) | row
 ```
 
 Group of switches (the orb toggles all of them):
@@ -109,7 +109,7 @@ entity: switch.office_plug
 power: sensor.office_plug_power
 energy: sensor.office_plug_energy
 name: Home office
-variant: wide        # small | wide (live power curve)
+variant: wide # small | wide (live power curve)
 ```
 
 ### Light
@@ -132,7 +132,7 @@ type: custom:glowcard-status
 segments:
   - type: weather
     entity: weather.home
-  - type: lights            # counts lights that are on, popup lists them
+  - type: lights # counts lights that are on, popup lists them
     entities: all
   - type: energy
     solar: sensor.pv_power
@@ -148,9 +148,9 @@ segments:
 ```yaml
 type: custom:glowcard-energy
 solar: sensor.pv_power
-battery: sensor.battery_power          # positive = charging
+battery: sensor.battery_power # positive = charging
 battery_soc: sensor.battery_state_of_charge
-grid: sensor.grid_power                # negative = export
+grid: sensor.grid_power # negative = export
 home: sensor.home_load_power
 ```
 
@@ -169,7 +169,8 @@ Later: room card, binary sensor, irrigation/plant, media, cover and vacuum popup
 
 ```bash
 npm install
-npm run dev     # preview page with sample data
+npm run watch   # rebuild on every change
+npm test        # unit tests
 npm run build   # creates dist/glowcard.js
 ```
 
