@@ -73,7 +73,75 @@
     <script type="module">
       import '../dist/glowcard.js';
       import { mount } from './build/demo.js';
-      const cards = [
+      const lights = [1, 2, 3].map((n) => `light.tv_wand_streifen_${n}`);
+      const energy = {
+        solar: 'sensor.sigen_plant_pv_power',
+        battery: 'sensor.sigen_battery_soc',
+        battery_power: 'sensor.sigen_battery_power',
+        grid: 'sensor.sigen_grid_power',
+        home: 'sensor.sigen_home_power',
+      };
+      const security = [
+        { entity: 'binary_sensor.fenster_bad', name: 'Fenster Bad' },
+        { entity: 'binary_sensor.rauchmelder_alle', name: 'Rauchmelder' },
+        { entity: 'binary_sensor.basisstation_alarm', name: 'Basisstation' },
+      ];
+      const weather = {
+        type: 'weather',
+        entity: 'weather.wetter_schuttorf',
+        tap_action: { action: 'none' },
+      };
+      const statusCards = [
+        ['glowcard-header', { persons: ['person.gilbert', 'person.maureen'] }, 'span4'],
+        [
+          'glowcard-status',
+          {
+            segments: [
+              weather,
+              { type: 'lights', entities: lights },
+              { type: 'energy', ...energy },
+              { type: 'security', entities: security },
+              { type: 'alert', entity: 'binary_sensor.vesta_problem' },
+            ],
+          },
+          'span4',
+        ],
+        [
+          'glowcard-chip',
+          {
+            chips: [
+              weather,
+              { type: 'lights', entities: lights },
+              { type: 'person', entity: 'person.gilbert', tap_action: { action: 'none' } },
+              { type: 'battery', ...energy },
+              { type: 'security', entities: security },
+              { type: 'alert', entity: 'binary_sensor.vesta_problem' },
+              {
+                type: 'entity',
+                entity: 'switch.terrace',
+                name: 'Steckdose Terrasse',
+                icon: 'mdi:power-plug',
+              },
+            ],
+          },
+          'span4',
+        ],
+        [
+          'glowcard-chip',
+          {
+            icon_only: true,
+            chips: [
+              weather,
+              { type: 'lights', entities: lights },
+              { type: 'energy', ...energy },
+              { type: 'security', entities: security },
+              { type: 'alert', entity: 'binary_sensor.vesta_problem' },
+            ],
+          },
+          'span4',
+        ],
+      ];
+      const classicCards = [
         ['glowcard-light', { entity: 'light.living' }, 'span2'],
         [
           'glowcard-light',
@@ -141,6 +209,13 @@
         ['glowcard-plug', { entity: 'switch.fairy_lights' }, ''],
         ['glowcard-plug', { entity: 'switch.home_office', variant: 'wide' }, 'span4'],
       ];
+      const set = new URLSearchParams(location.search).get('set');
+      const cards =
+        set === 'status'
+          ? statusCards
+          : set === 'classic'
+            ? classicCards
+            : [...statusCards, ...classicCards];
       for (const grid of document.querySelectorAll('.grid')) {
         for (const [tag, config, cls] of cards) {
           const el = document.createElement(tag);

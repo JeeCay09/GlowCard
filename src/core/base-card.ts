@@ -172,6 +172,14 @@ export abstract class GlowCardBase<C extends GlowCardConfig = GlowCardConfig> ex
   /** Called when the popup opens, e.g. to load history. */
   protected popupOpened(): void {}
 
+  /** Called after the popup was closed. */
+  protected popupClosed(): void {}
+
+  /** Popup orb in the soft "calm" style (tinted background, coloured icon). */
+  protected get popupCalm(): boolean {
+    return false;
+  }
+
   protected get popupOpen(): boolean {
     return this.popup !== undefined;
   }
@@ -204,7 +212,10 @@ export abstract class GlowCardBase<C extends GlowCardConfig = GlowCardConfig> ex
     if (!view) return;
     this.closePopup();
     this.popup = openPopup({ contentStyles: this.popupStyles() });
-    this.popup.addEventListener('closed', () => (this.popup = undefined));
+    this.popup.addEventListener('closed', () => {
+      this.popup = undefined;
+      this.popupClosed();
+    });
     this.popup.addEventListener('orb-tap', () => void this.toggle());
     this.syncPopup();
     this.popupOpened();
@@ -231,6 +242,7 @@ export abstract class GlowCardBase<C extends GlowCardConfig = GlowCardConfig> ex
     this.popup.icon = this.icon;
     this.popup.active = this.isActive;
     this.popup.darkIcon = this.darkIcon;
+    this.popup.calm = this.popupCalm;
     this.popup.toggleAttribute('glow-only', this.popupStyle === 'glow');
     this.popup.toggleAttribute('unavailable', this.isUnavailable);
     this.popup.content = view?.content ?? nothing;
