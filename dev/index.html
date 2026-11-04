@@ -1,0 +1,151 @@
+<!doctype html>
+<html lang="de">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>GlowCard Vorschau</title>
+    <style>
+      body {
+        margin: 0;
+        font-family: system-ui, sans-serif;
+        color: #888;
+      }
+      .wall {
+        position: relative;
+        overflow: hidden;
+        padding: 28px 40px;
+        background: #e7e9ef;
+      }
+      .wall[data-dark] {
+        background: #07080b;
+      }
+      .wall::before,
+      .wall::after {
+        content: '';
+        position: absolute;
+        width: 760px;
+        height: 760px;
+        border-radius: 50%;
+        z-index: 0;
+      }
+      .wall::before {
+        left: -200px;
+        top: -200px;
+        background: radial-gradient(circle, rgba(99, 102, 241, 0.22) 0%, rgba(99, 102, 241, 0) 65%);
+      }
+      .wall::after {
+        left: 520px;
+        top: 160px;
+        background: radial-gradient(circle, rgba(245, 165, 36, 0.2) 0%, rgba(245, 165, 36, 0) 65%);
+      }
+      .wall > * {
+        position: relative;
+        z-index: 1;
+      }
+      .grid {
+        width: 888px;
+        max-width: 100%;
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 16px;
+      }
+      .span2 {
+        grid-column: span 2;
+      }
+      .span4 {
+        grid-column: span 4;
+      }
+      h1 {
+        margin: 0 0 16px;
+        font-size: 14px;
+      }
+    </style>
+  </head>
+  <body>
+    <section class="wall" data-dark>
+      <h1>Dunkel</h1>
+      <div class="grid"></div>
+    </section>
+    <section class="wall">
+      <h1>Hell</h1>
+      <div class="grid"></div>
+    </section>
+    <script type="module">
+      import '../dist/glowcard.js';
+      import { mount } from './build/demo.js';
+      const cards = [
+        ['glowcard-dev-demo', { entity: 'light.living', icon: 'mdi:lightbulb' }, 'span2'],
+        ['glowcard-dev-demo', { entity: 'light.tv_wall', icon: 'mdi:television' }, ''],
+        ['glowcard-dev-demo', { entity: 'switch.terrace', icon: 'mdi:power-socket-eu' }, ''],
+        [
+          'glowcard-switch',
+          { entity: 'switch.sprinkler', icon: 'mdi:sprinkler', color: 'sky' },
+          '',
+        ],
+        [
+          'glowcard-switch',
+          { entity: 'input_boolean.f1_live', icon: 'mdi:flag-checkered', color: 'heat' },
+          '',
+        ],
+        [
+          'glowcard-switch',
+          { entity: 'switch.night_light', icon: 'mdi:lightbulb', color: 'amber' },
+          '',
+        ],
+        [
+          'glowcard-switch',
+          { entity: 'switch.dnd', icon: 'mdi:moon-waning-crescent', color: 'violet' },
+          '',
+        ],
+        [
+          'glowcard-switch',
+          {
+            entity: 'input_boolean.tv_warm',
+            icon: 'mdi:television',
+            color: '#FFC872',
+            variant: 'wide',
+          },
+          'span2',
+        ],
+        [
+          'glowcard-switch',
+          {
+            name: 'Rauchmelder-LEDs',
+            icon: 'mdi:smoke-detector',
+            color: 'green',
+            entities: [0, 1, 2, 3, 4, 5].map((i) => ({
+              entity: `switch.led_${i}`,
+              name: ['Esszimmer', 'Flur oben', 'Dachboden', 'Kinderzimmer', 'Büro', 'Schlafzimmer'][i],
+            })),
+          },
+          'span2',
+        ],
+        [
+          'glowcard-switch',
+          { entity: 'switch.carpet_boost', icon: 'mdi:flash', color: 'cyan', variant: 'row' },
+          'span2',
+        ],
+        [
+          'glowcard-switch',
+          { entity: 'switch.dishwasher', icon: 'mdi:dishwasher', color: 'indigo', variant: 'row' },
+          'span2',
+        ],
+        ['glowcard-plug', { entity: 'switch.home_office' }, ''],
+        ['glowcard-plug', { entity: 'switch.dryer' }, ''],
+        ['glowcard-plug', { entity: 'switch.bedroom_plug' }, ''],
+        ['glowcard-plug', { entity: 'switch.fairy_lights' }, ''],
+        ['glowcard-plug', { entity: 'switch.home_office', variant: 'wide' }, 'span4'],
+      ];
+      for (const grid of document.querySelectorAll('.grid')) {
+        for (const [tag, config, cls] of cards) {
+          const el = document.createElement(tag);
+          el.dataset.card = '';
+          if (cls) el.className = cls;
+          el.setConfig({ type: `custom:${tag}`, ...config });
+          grid.appendChild(el);
+        }
+      }
+      mount(document);
+    </script>
+  </body>
+</html>

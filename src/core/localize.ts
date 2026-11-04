@@ -1,0 +1,90 @@
+import type { HomeAssistant } from '../types/hass';
+
+const de = {
+  on: 'An',
+  off: 'Aus',
+  unavailable: 'Nicht verfügbar',
+  unreachable: 'nicht erreichbar',
+  since: 'seit',
+  on_since: 'AN SEIT',
+  off_since: 'AUS SEIT',
+  just_now: 'gerade eben',
+  last_7_days: 'Letzte 7 Tage',
+  on_7_days: '7 Tage an',
+  switched_on_count: 'Eingeschaltet',
+  last_changes: 'Letzte Schaltungen',
+  turned_on: 'Eingeschaltet',
+  turned_off: 'Ausgeschaltet',
+  today: 'Heute',
+  yesterday: 'Gestern',
+  group: 'GRUPPE',
+  of: 'von',
+  switch: 'Schalter',
+  helper: 'Helfer',
+  plug: 'Steckdose',
+  hours_short: 'Std',
+  minutes_short: 'Min',
+  days_short: 'T.',
+  hour_axis: 'Uhr',
+  power_now: 'LEISTUNG JETZT',
+  drawing: 'zieht Strom',
+  no_draw: 'kein Verbrauch',
+  turn_off_in: 'Ausschalten in',
+  child_lock: 'Kindersicherung',
+  power_on_behavior: 'Nach Stromausfall',
+  indicator: 'LED an der Steckdose',
+  now: 'jetzt',
+  today_lower: 'heute',
+  no_history: 'Kein Verlauf verfügbar',
+  previous_state: 'Letzter Zustand',
+};
+
+const en: typeof de = {
+  on: 'On',
+  off: 'Off',
+  unavailable: 'Unavailable',
+  unreachable: 'unreachable',
+  since: 'since',
+  on_since: 'ON SINCE',
+  off_since: 'OFF SINCE',
+  just_now: 'just now',
+  last_7_days: 'Last 7 days',
+  on_7_days: '7 days on',
+  switched_on_count: 'Turned on',
+  last_changes: 'Recent changes',
+  turned_on: 'Turned on',
+  turned_off: 'Turned off',
+  today: 'Today',
+  yesterday: 'Yesterday',
+  group: 'GROUP',
+  of: 'of',
+  switch: 'Switch',
+  helper: 'Helper',
+  plug: 'Plug',
+  hours_short: 'h',
+  minutes_short: 'min',
+  days_short: 'd',
+  hour_axis: 'h',
+  power_now: 'POWER NOW',
+  drawing: 'drawing power',
+  no_draw: 'no consumption',
+  turn_off_in: 'Turn off in',
+  child_lock: 'Child lock',
+  power_on_behavior: 'After power loss',
+  indicator: 'LED on the plug',
+  now: 'now',
+  today_lower: 'today',
+  no_history: 'No history available',
+  previous_state: 'Previous state',
+};
+
+export type LocalizeKey = keyof typeof de;
+
+export function language(hass?: HomeAssistant): string {
+  return hass?.locale?.language ?? hass?.language ?? 'en';
+}
+
+export function localize(hass: HomeAssistant | undefined, key: LocalizeKey): string {
+  const dict = language(hass).startsWith('de') ? de : en;
+  return dict[key];
+}

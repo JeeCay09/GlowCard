@@ -15,14 +15,14 @@
 - Funktioniert **nur mit Standard-Entitäten von Home Assistant**. Keine Helfer, Template-Sensoren oder Automationen nötig.
 
 > [!NOTE]
-> GlowCard ist in früher Entwicklung. Das erste Beta-Release (v0.1.0) enthält die Schalter- und die Steckdosen-Karte. Die Installation über HACS funktioniert, sobald dieses Release veröffentlicht ist.
+> GlowCard ist in der Beta. v0.1.0 enthält die Schalter- und die Steckdosen-Karte; weitere Karten folgen (siehe Roadmap). Optionen können sich bis v1.0 noch ändern.
 
 ## Karten
 
 | Karte          | Typ                      | Entitäten                                           | Status           |
 | -------------- | ------------------------ | --------------------------------------------------- | ---------------- |
-| Schalter       | `custom:glowcard-switch` | `switch.*`, `input_boolean.*`                       | geplant für v0.1 |
-| Steckdose      | `custom:glowcard-plug`   | `switch.*` + optional Leistungs-/Energie-`sensor.*` | geplant für v0.1 |
+| Schalter       | `custom:glowcard-switch` | `switch.*`, `input_boolean.*`                       | Beta (v0.1)      |
+| Steckdose      | `custom:glowcard-plug`   | `switch.*` + optional Leistungs-/Energie-`sensor.*` | Beta (v0.1)      |
 | Licht          | `custom:glowcard-light`  | `light.*`                                           | geplant für v0.2 |
 | Kopfzeile      | `custom:glowcard-header` | `person.*`, Begrüßung, Datum/Uhrzeit                | geplant für v0.3 |
 | Status-Leiste  | `custom:glowcard-status` | beliebige Entitäten, in Segmenten gruppiert         | geplant für v0.3 |
@@ -106,11 +106,12 @@ entities:
 ```yaml
 type: custom:glowcard-plug
 entity: switch.office_plug
-power: sensor.office_plug_power
-energy: sensor.office_plug_energy
 name: Home Office
 variant: wide # small | wide (Live-Leistungskurve)
+threshold: 1 # leuchtet ab so vielen Watt (Standard 1)
 ```
+
+Die Karte findet Leistungs- und Energie-Sensor, Countdown, Kindersicherung sowie die Selects für „Nach Stromausfall“ und die LED selbst über das Gerät der Steckdose. Zeilen im Popup erscheinen nur, wenn die Steckdose die passende Entität hat. Falls die Erkennung danebenliegt, lassen sie sich festlegen: `power_entity`, `energy_entity`, `countdown_entity`, `child_lock_entity`, `power_on_entity`, `indicator_entity`.
 
 ### Licht
 
@@ -170,6 +171,7 @@ Später: Raum-Karte, Binärsensor, Bewässerung/Pflanze, Popups für Medien, Rol
 ```bash
 npm install
 npm run watch   # baut bei jeder Änderung neu
+npm run dev     # baut inkl. Vorschauseite, dann: npm run serve → http://localhost:5050/dev/
 npm test        # Unit-Tests
 npm run build   # erzeugt dist/glowcard.js
 ```
@@ -178,4 +180,4 @@ Releases werden per GitHub Actions gebaut; `glowcard.js` wird an jedes GitHub-Re
 
 ## Lizenz
 
-MIT
+MIT. Die eingebettete Schrift [Plus Jakarta Sans](https://github.com/tokotype/PlusJakartaSans) steht unter der SIL Open Font License 1.1 (siehe `src/assets/OFL-PlusJakartaSans.txt`).
