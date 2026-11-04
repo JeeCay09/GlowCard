@@ -2,6 +2,7 @@ import { css, html, nothing, svg, type PropertyValues } from 'lit';
 import { state } from 'lit/decorators.js';
 import { GlowCardBase, type GlowCardConfig } from '../../core/base-card';
 import { registerCard } from '../../core/register';
+import { areaField, configForm, lookFields, nameIconFields, variantField } from '../../core/editor';
 import { language, localize } from '../../core/localize';
 import { formatNumber } from '../../core/format';
 import { fireEvent } from '../../core/fire-event';
@@ -53,6 +54,52 @@ export class GlowPlugCard extends GlowCardBase<PlugCardConfig> {
 
   protected defaultColor = 'teal';
   protected popupStyle = 'glow' as const;
+
+  static getConfigForm() {
+    const pick = (name: string, domain: string[], device_class?: string) => ({
+      name,
+      selector: { entity: device_class ? { domain, device_class } : { domain } },
+    });
+    return configForm(
+      [
+        { name: 'entity', required: true, selector: { entity: { domain: ['switch'] } } },
+        variantField(['small', 'wide']),
+        nameIconFields,
+        lookFields,
+        {
+          name: '',
+          type: 'grid',
+          schema: [
+            areaField,
+            { name: 'threshold', selector: { number: { min: 0, step: 0.5, mode: 'box' } } },
+          ],
+        },
+        {
+          name: '',
+          type: 'expandable',
+          title: 'entities_section',
+          schema: [
+            pick('power_entity', ['sensor'], 'power'),
+            pick('energy_entity', ['sensor'], 'energy'),
+            pick('countdown_entity', ['number']),
+            pick('child_lock_entity', ['switch', 'lock']),
+            pick('power_on_entity', ['select']),
+            pick('indicator_entity', ['select']),
+          ],
+        },
+      ],
+      {
+        color: 'color_helper',
+        area: 'area_helper',
+        power_entity: 'auto_helper',
+        energy_entity: 'auto_helper',
+        countdown_entity: 'auto_helper',
+        child_lock_entity: 'auto_helper',
+        power_on_entity: 'auto_helper',
+        indicator_entity: 'auto_helper',
+      },
+    );
+  }
 
   static getStubConfig(hass: HomeAssistant): Partial<PlugCardConfig> {
     const ids = Object.keys(hass.states).filter((id) => id.startsWith('switch.'));

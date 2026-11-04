@@ -2,6 +2,7 @@ import { css, html, nothing, type PropertyValues } from 'lit';
 import { state } from 'lit/decorators.js';
 import { GlowCardBase, type GlowCardConfig } from '../../core/base-card';
 import { registerCard } from '../../core/register';
+import { configForm, lookFields, nameIconFields, variantField } from '../../core/editor';
 import { localize } from '../../core/localize';
 import { lightColor, mix, rgbTriplet, type Rgb } from '../../core/color';
 import type { HomeAssistant } from '../../types/hass';
@@ -36,6 +37,18 @@ export class GlowLightCard extends GlowCardBase<LightCardConfig> {
   @state() private tab: Tab = 'brightness';
 
   protected defaultColor = 'warm';
+
+  static getConfigForm() {
+    return configForm(
+      [
+        { name: 'entity', required: true, selector: { entity: { domain: ['light'] } } },
+        variantField(['wide', 'small']),
+        nameIconFields,
+        lookFields,
+      ],
+      { color: 'color_light_helper' },
+    );
+  }
 
   static getStubConfig(hass: HomeAssistant): Partial<LightCardConfig> {
     const entity = Object.keys(hass.states).find((id) => id.startsWith('light.'));
