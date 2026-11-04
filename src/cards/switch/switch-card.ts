@@ -3,10 +3,12 @@ import { state } from 'lit/decorators.js';
 import { GlowCardBase, type GlowCardConfig } from '../../core/base-card';
 import { registerCard } from '../../core/register';
 import {
+  actionsField,
   areaField,
   configForm,
   editorLabel,
   lookFields,
+  sizeField,
   nameIconFields,
   variantField,
 } from '../../core/editor';
@@ -59,8 +61,10 @@ export class GlowSwitchCard extends GlowCardBase<SwitchCardConfig> {
         variantField(['small', 'wide', 'row']),
         nameIconFields,
         lookFields,
+        sizeField,
         areaField,
         { name: 'entities', selector: { entity: { domain: SWITCH_DOMAINS, multiple: true } } },
+        actionsField,
       ],
       { color: 'color_helper', area: 'area_helper', entities: 'entities_helper' },
       (config) => {
@@ -232,7 +236,7 @@ export class GlowSwitchCard extends GlowCardBase<SwitchCardConfig> {
 
   private cardClass(extra: string): string {
     const s = this.isUnavailable ? 'unavailable' : this.isActive ? 'active' : '';
-    return `glass ${extra} ${s}`;
+    return `glass sized ${extra} ${s}`;
   }
 
   private wrap(extra: string, inner: unknown) {
@@ -486,10 +490,10 @@ export class GlowSwitchCard extends GlowCardBase<SwitchCardConfig> {
         -webkit-user-select: none;
       }
       .small {
-        height: 164px;
+        height: var(--glow-card-h);
       }
       .wide {
-        height: 200px;
+        height: var(--glow-card-h-wide);
       }
       .row {
         height: 68px;
@@ -522,7 +526,7 @@ export class GlowSwitchCard extends GlowCardBase<SwitchCardConfig> {
         gap: 1px;
       }
       .small-name {
-        font-size: 15px;
+        font-size: var(--glow-name-small);
       }
       .name,
       .sub,
@@ -544,7 +548,7 @@ export class GlowSwitchCard extends GlowCardBase<SwitchCardConfig> {
         color: color-mix(in srgb, rgb(var(--glow-accent)) 62%, #ffffff);
       }
       .word.big {
-        font-size: 32px;
+        font-size: var(--glow-word-big);
       }
       .row-name {
         font-size: 14px;

@@ -39,6 +39,9 @@ export class GlowSlider extends LitElement {
     }
     .hit {
       position: relative;
+      /* Own compositing layer: iOS/WebKit otherwise often skips repainting the fill and
+         knob inside the backdrop-filter glass card until the card itself changes. */
+      transform: translateZ(0);
       touch-action: none;
       user-select: none;
       outline: none;

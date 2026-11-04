@@ -17,6 +17,9 @@ describe('visual editor', () => {
       'icon',
       'color',
       'font',
+      'size',
+      'tap_action',
+      'hold_action',
     ]);
     expect(names(card('glowcard-switch').getConfigForm().schema)).toContain('entities');
     expect(names(card('glowcard-plug').getConfigForm().schema)).toEqual(
@@ -37,6 +40,22 @@ describe('visual editor', () => {
     const assert = card('glowcard-switch').getConfigForm().assertConfig!;
     expect(() => assert({ entities: ['switch.a', 'switch.b'] })).not.toThrow();
     expect(() => assert({ entities: [{ entity: 'switch.a', name: 'A' }] })).toThrow();
+  });
+
+  it('offers the card size on switch, plug, light and status bar', () => {
+    for (const type of ['glowcard-switch', 'glowcard-plug', 'glowcard-light', 'glowcard-status']) {
+      expect(names(card(type).getConfigForm().schema)).toContain('size');
+    }
+    expect(editorLabel('compact', 'de')).toBe('Kompakt');
+  });
+
+  it('offers tap and hold actions with the popup as tap default', () => {
+    for (const type of ['glowcard-switch', 'glowcard-plug', 'glowcard-light']) {
+      const form = card(type).getConfigForm();
+      expect(names(form.schema)).toEqual(expect.arrayContaining(['tap_action', 'hold_action']));
+      expect(form.computeHelper({ name: 'tap_action' })).toBeTruthy();
+    }
+    expect(editorLabel('tap_action', 'de')).toBe('Tippen');
   });
 
   it('drops cleared fields so defaults apply again', () => {

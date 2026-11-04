@@ -1,7 +1,7 @@
-import { css, html, nothing } from 'lit';
+import { css, html, nothing, type PropertyValues } from 'lit';
 import type { GlowCardConfig } from '../../core/base-card';
 import { registerCard } from '../../core/register';
-import { configForm, editorLabel, fontField, type FormSchema } from '../../core/editor';
+import { configForm, editorLabel, fontField, sizeField, type FormSchema } from '../../core/editor';
 import type { HomeAssistant } from '../../types/hass';
 import { paletteColor, validateSegment, type SegmentConfig } from './status-logic';
 import { GlowStatusBase, avatar, dot, toneDot } from './status-base';
@@ -53,6 +53,32 @@ export function simpleSegments(c: StatusCardConfig): SegmentConfig[] {
 
 /** Status bar ("Status-Leiste") from the GlowChips board: one glass capsule with segments. */
 export class GlowStatusCard extends GlowStatusBase<StatusCardConfig> {
+  private resizeObserver?: ResizeObserver;
+
+  /** Narrow screens: fade the right edge while more segments are hidden there. */
+  private updateFade = (): void => {
+    const track = this.renderRoot.querySelector<HTMLElement>('.track');
+    if (!track) return;
+    const more = track.scrollWidth - track.clientWidth - track.scrollLeft > 2;
+    track.classList.toggle('more', more);
+  };
+
+  protected updated(changed: PropertyValues): void {
+    super.updated(changed);
+    const track = this.renderRoot.querySelector<HTMLElement>('.track');
+    if (track && !this.resizeObserver && typeof ResizeObserver !== 'undefined') {
+      this.resizeObserver = new ResizeObserver(this.updateFade);
+      this.resizeObserver.observe(track);
+    }
+    this.updateFade();
+  }
+
+  disconnectedCallback(): void {
+    super.disconnectedCallback();
+    this.resizeObserver?.disconnect();
+    this.resizeObserver = undefined;
+  }
+
   private segs: SegmentConfig[] = [];
 
   static getConfigForm() {
@@ -97,6 +123,7 @@ export class GlowStatusCard extends GlowStatusBase<StatusCardConfig> {
           selector: { entity: { domain: ['binary_sensor', 'vacuum'], multiple: true } },
         },
         fontField,
+        sizeField,
       ],
       {
         lights: 'lights_helper',
@@ -146,54 +173,56 @@ export class GlowStatusCard extends GlowStatusBase<StatusCardConfig> {
     if (!this.config || !this.hass) return nothing;
     const green = paletteColor('green', this.dark);
     return html`<div class="dock" role="toolbar" aria-label="Status">
-      ${this.segs.map((cfg, i) => {
-        const v = this.viewOf(cfg);
-        if (!v || v.hidden) return nothing;
-        const clickable = this.isClickable(cfg, v);
-        const selected = clickable && this.openSeg === i;
-        const orb = v.avatar
-          ? avatar(v, 40, 15, green)
-          : dot(v.icon, toneDot(v), v.rgb, 40, 19, 22, v.pulse);
-        return html`<div
-          class="seg ${selected ? 'selected' : ''} ${clickable ? 'clickable' : ''} ${v.tone}"
-          style="--c:${rgbTriplet(v.rgb)}"
-          role="button"
-          tabindex=${clickable ? 0 : -1}
-          aria-disabled=${clickable ? 'false' : 'true'}
-          aria-pressed=${selected ? 'true' : 'false'}
-          aria-label=${`${v.value}, ${v.label}`}
-          @pointerdown=${(e: PointerEvent) => clickable && this.segDown(i, e)}
-          @pointerup=${() => clickable && this.segUp(i)}
-          @pointercancel=${this.segCancel}
-          @pointerleave=${this.segCancel}
-          @keydown=${(e: KeyboardEvent) => clickable && this.segKey(i, e)}
-          @contextmenu=${(e: Event) => e.preventDefault()}
-        >
-          ${orb}
-          <span class="txt">
-            <span class="val">${v.value}</span>
-            <span class="lab">${v.label}</span>
-          </span>
-          ${
-            clickable
-              ? html`<svg
-                  class="chev"
-                  width="14"
-                  height="14"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  stroke-width="2.4"
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  aria-hidden="true"
-                >
-                  <path d=${CHEVRON}></path>
-                </svg>`
-              : nothing
-          }
-        </div>`;
-      })}
+      <div class="track" @scroll=${this.updateFade}>
+        ${this.segs.map((cfg, i) => {
+          const v = this.viewOf(cfg);
+          if (!v || v.hidden) return nothing;
+          const clickable = this.isClickable(cfg, v);
+          const selected = clickable && this.openSeg === i;
+          const orb = v.avatar
+            ? avatar(v, 40, 15, green)
+            : dot(v.icon, toneDot(v), v.rgb, 40, 19, 22, v.pulse);
+          return html`<div
+            class="seg ${selected ? 'selected' : ''} ${clickable ? 'clickable' : ''} ${v.tone}"
+            style="--c:${rgbTriplet(v.rgb)}"
+            role="button"
+            tabindex=${clickable ? 0 : -1}
+            aria-disabled=${clickable ? 'false' : 'true'}
+            aria-pressed=${selected ? 'true' : 'false'}
+            aria-label=${`${v.value}, ${v.label}`}
+            @pointerdown=${(e: PointerEvent) => clickable && this.segDown(i, e)}
+            @pointerup=${() => clickable && this.segUp(i)}
+            @pointercancel=${this.segCancel}
+            @pointerleave=${this.segCancel}
+            @keydown=${(e: KeyboardEvent) => clickable && this.segKey(i, e)}
+            @contextmenu=${(e: Event) => e.preventDefault()}
+          >
+            ${orb}
+            <span class="txt">
+              <span class="val">${v.value}</span>
+              <span class="lab">${v.label}</span>
+            </span>
+            ${
+              clickable
+                ? html`<svg
+                    class="chev"
+                    width="14"
+                    height="14"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2.4"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    aria-hidden="true"
+                  >
+                    <path d=${CHEVRON}></path>
+                  </svg>`
+                : nothing
+            }
+          </div>`;
+        })}
+      </div>
     </div>`;
   }
 
@@ -210,27 +239,34 @@ export class GlowStatusCard extends GlowStatusBase<StatusCardConfig> {
         color: var(--glow-text);
       }
       .dock {
-        height: 72px;
+        height: var(--glow-dock-h);
         box-sizing: border-box;
         border-radius: 999px;
-        padding: 8px;
         display: flex;
-        align-items: stretch;
-        gap: 4px;
         background: var(--gc-glass);
         border: 1px solid var(--gc-glass-border);
         backdrop-filter: var(--glow-blur);
         -webkit-backdrop-filter: var(--glow-blur);
         box-shadow: var(--gc-dock-shadow);
       }
+      .track {
+        flex: 1 1 auto;
+        min-width: 0;
+        box-sizing: border-box;
+        padding: var(--glow-dock-pad);
+        display: flex;
+        align-items: stretch;
+        gap: 4px;
+      }
       .seg {
+        --dot-scale: var(--glow-dot-scale);
         flex: 1 1 0;
         min-width: 0;
         border-radius: 999px;
-        padding: 0 12px 0 8px;
+        padding: var(--glow-seg-pad);
         display: flex;
         align-items: center;
-        gap: 10px;
+        gap: var(--glow-seg-gap);
         text-align: left;
         cursor: default;
         user-select: none;
@@ -261,7 +297,7 @@ export class GlowStatusCard extends GlowStatusBase<StatusCardConfig> {
         min-width: 0;
       }
       .val {
-        font-size: 16px;
+        font-size: var(--glow-seg-val);
         font-weight: 800;
         letter-spacing: -0.02em;
         white-space: nowrap;
@@ -272,7 +308,7 @@ export class GlowStatusCard extends GlowStatusBase<StatusCardConfig> {
         color: rgb(var(--c));
       }
       .lab {
-        font-size: 12px;
+        font-size: var(--glow-seg-lab);
         font-weight: 600;
         white-space: nowrap;
         overflow: hidden;
@@ -287,13 +323,19 @@ export class GlowStatusCard extends GlowStatusBase<StatusCardConfig> {
       /* Narrow (phones): segments keep their text and the bar scrolls sideways.
          The icon-only chips are the compact alternative. */
       @container (max-width: 600px) {
-        .dock {
+        .track {
           overflow-x: auto;
           scrollbar-width: none;
           scroll-snap-type: x proximity;
+          border-radius: 999px;
         }
-        .dock::-webkit-scrollbar {
+        .track::-webkit-scrollbar {
           display: none;
+        }
+        /* More segments to the right: let the cut one fade out softly. */
+        .track.more {
+          -webkit-mask-image: linear-gradient(90deg, #000 calc(100% - 56px), transparent);
+          mask-image: linear-gradient(90deg, #000 calc(100% - 56px), transparent);
         }
         .seg {
           flex: 1 0 auto;
