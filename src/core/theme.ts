@@ -1,9 +1,10 @@
 import { css } from 'lit';
 
 /**
- * Glow design tokens, set on a card's (or popup's) host and inherited by its parts.
+ * Glow design tokens, taken 1:1 from the approved mockups (GlowCards, GlowPopups,
+ * GlowSwitches). Set on a card's or popup's host and inherited by its parts.
  * The host sets the `dark` attribute from hass.themes.darkMode and `--glow-accent`
- * as an "r g b" triplet.
+ * as an "r, g, b" triplet (used as rgba(var(--glow-accent), a)).
  */
 export const glowTokens = css`
   :host {
@@ -12,69 +13,122 @@ export const glowTokens = css`
       var(--primary-font-family, system-ui, sans-serif);
     --glow-radius: 28px;
     --glow-radius-popup: 32px;
-    --glow-blur: 24px;
+    --glow-blur: blur(24px);
+    --glow-blur-popup: blur(30px);
 
     /* light */
-    --glow-wall: #e7e9ef;
-    --glow-glass: rgb(255 255 255 / 0.62);
-    --glow-glass-strong: rgb(255 255 255 / 0.8);
-    --glow-border: rgb(255 255 255 / 0.85);
-    --glow-text: #14161b;
-    --glow-text-2: rgb(20 22 27 / 0.6);
-    --glow-track: rgb(20 22 27 / 0.08);
-    --glow-shadow: 0 10px 30px -12px rgb(20 22 27 / 0.18);
-    --glow-tint: 0.14;
-    --glow-glow: 0.35;
+    --glow-text: #14161a;
+    --glow-muted: #4e5562;
+    --glow-inset: rgba(20, 22, 26, 0.06);
+    --glow-track: rgba(20, 22, 26, 0.08);
+    --glow-glass: rgba(255, 255, 255, 0.62);
+    --glow-glass-border: rgba(255, 255, 255, 0.9);
+    --glow-glass-shadow: 0 10px 30px -8px rgba(20, 24, 40, 0.12);
+    --glow-lit-base: rgba(255, 255, 255, 0.72);
+    --glow-lit-tint: 0.2;
+    --glow-lit-border: 0.4;
+    --glow-lit-shadow: 0 20px 48px -14px rgba(var(--glow-accent), 0.55);
+    --glow-orb-glow: 0 0 20px rgba(var(--glow-accent), 0.55);
+    --glow-pop-glass: rgba(255, 255, 255, 0.7);
+    --glow-pop-border: rgba(255, 255, 255, 0.95);
+    --glow-pop-shadow: 0 40px 80px -20px rgba(0, 0, 0, 0.25);
+    --glow-pop-lit-base: rgba(255, 255, 255, 0.78);
+    --glow-pop-lit-tint: 0.18;
+    --glow-pop-lit-border: 0.35;
+    --glow-pop-lit-shadow:
+      0 30px 70px -20px rgba(20, 24, 40, 0.25), 0 0 80px -24px rgba(var(--glow-accent), 0.6);
+    --glow-dim: rgba(231, 233, 239, 0.35);
+    --glow-tab-active: #ffffff;
+    --glow-knob-ring: #ffffff;
+    --glow-halo: 0.6;
   }
   :host([dark]) {
-    --glow-wall: #07080b;
-    --glow-glass: rgb(255 255 255 / 0.06);
-    --glow-glass-strong: rgb(28 30 36 / 0.82);
-    --glow-border: rgb(255 255 255 / 0.1);
-    --glow-text: #f5f6f8;
-    --glow-text-2: rgb(245 246 248 / 0.6);
-    --glow-track: rgb(255 255 255 / 0.08);
-    --glow-shadow: 0 10px 30px -12px rgb(0 0 0 / 0.6);
-    --glow-tint: 0.16;
-    --glow-glow: 0.5;
+    --glow-text: #f3f4f6;
+    --glow-muted: rgba(255, 255, 255, 0.66);
+    --glow-inset: rgba(255, 255, 255, 0.08);
+    --glow-track: rgba(255, 255, 255, 0.1);
+    --glow-glass: rgba(20, 22, 28, 0.55);
+    --glow-glass-border: rgba(255, 255, 255, 0.08);
+    --glow-glass-shadow: 0 1px 0 rgba(255, 255, 255, 0.04) inset;
+    --glow-lit-base: rgba(20, 22, 28, 0.55);
+    --glow-lit-tint: 0.24;
+    --glow-lit-border: 0.32;
+    --glow-lit-shadow: 0 24px 60px -14px rgba(var(--glow-accent), 0.5);
+    --glow-orb-glow: 0 0 28px rgba(var(--glow-accent), 0.8);
+    --glow-pop-glass: rgba(24, 26, 32, 0.62);
+    --glow-pop-border: rgba(255, 255, 255, 0.08);
+    --glow-pop-shadow: 0 40px 80px -20px rgba(0, 0, 0, 0.8);
+    --glow-pop-lit-base: rgba(24, 26, 32, 0.66);
+    --glow-pop-lit-tint: 0.22;
+    --glow-pop-lit-border: 0.28;
+    --glow-pop-lit-shadow:
+      0 40px 80px -20px rgba(0, 0, 0, 0.8), 0 0 90px -20px rgba(var(--glow-accent), 0.55);
+    --glow-dim: rgba(0, 0, 0, 0.45);
+    --glow-tab-active: rgba(255, 255, 255, 0.14);
+    --glow-knob-ring: #16181d;
+    --glow-halo: 0.75;
   }
   :host([font='theme']) {
     --glow-font: var(--primary-font-family, inherit);
   }
 `;
 
-/** Frosted glass surface; add the `active` class for the tinted, glowing state. */
+/**
+ * Card surface: frosted glass; `.active` tints it in the accent colour (160° gradient),
+ * colours the border and casts a coloured shadow. `.unavailable` = dashed + dimmed.
+ * Typography helpers: `.value` (big number top right), `.word` (An/Aus), `.name`, `.sub`.
+ */
 export const glassStyles = css`
   .glass {
     position: relative;
     box-sizing: border-box;
+    border-radius: var(--glow-radius);
+    padding: 18px;
     font-family: var(--glow-font);
     color: var(--glow-text);
     background: var(--glow-glass);
-    border: 1px solid var(--glow-border);
-    border-radius: var(--glow-radius);
-    box-shadow: var(--glow-shadow);
-    backdrop-filter: blur(var(--glow-blur)) saturate(140%);
-    -webkit-backdrop-filter: blur(var(--glow-blur)) saturate(140%);
+    border: 1px solid var(--glow-glass-border);
+    box-shadow: var(--glow-glass-shadow);
+    backdrop-filter: var(--glow-blur);
+    -webkit-backdrop-filter: var(--glow-blur);
     transition:
-      background 240ms ease,
-      border-color 240ms ease,
-      box-shadow 240ms ease;
+      background 0.3s,
+      border-color 0.3s,
+      box-shadow 0.3s;
   }
   .glass.active {
-    background:
-      linear-gradient(
-        rgb(var(--glow-accent) / var(--glow-tint)),
-        rgb(var(--glow-accent) / var(--glow-tint))
-      ),
-      var(--glow-glass);
-    border-color: rgb(var(--glow-accent) / 0.4);
-    box-shadow:
-      var(--glow-shadow),
-      0 14px 40px -10px rgb(var(--glow-accent) / var(--glow-glow));
+    background: linear-gradient(
+      160deg,
+      rgba(var(--glow-accent), var(--glow-lit-tint)),
+      var(--glow-lit-base) 62%
+    );
+    border-color: rgba(var(--glow-accent), var(--glow-lit-border));
+    box-shadow: var(--glow-lit-shadow);
   }
   .glass.unavailable {
     border-style: dashed;
     opacity: 0.55;
+  }
+  .value {
+    font-size: 44px;
+    font-weight: 800;
+    letter-spacing: -0.04em;
+    line-height: 1;
+  }
+  .word {
+    font-size: 24px;
+    font-weight: 800;
+    letter-spacing: -0.04em;
+    line-height: 1;
+  }
+  .name {
+    font-size: 16px;
+    font-weight: 700;
+    line-height: 1.25;
+  }
+  .sub {
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--glow-muted);
   }
 `;

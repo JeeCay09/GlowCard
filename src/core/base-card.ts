@@ -2,7 +2,7 @@ import { LitElement, nothing, type CSSResult, type PropertyValues, type Template
 import { property, state } from 'lit/decorators.js';
 import type { HassEntity, HomeAssistant } from '../types/hass';
 import { handleAction, type ActionConfig } from './action';
-import { rgbTriplet, resolveAccent, type Rgb } from './color';
+import { isBright, mix, rgbTriplet, resolveAccent, type Rgb } from './color';
 import { ensureFont } from './font';
 import { PressController } from './press';
 import { glassStyles, glowTokens } from './theme';
@@ -21,6 +21,28 @@ export interface GlowCardConfig {
 }
 
 const UNAVAILABLE = new Set(['unavailable', 'unknown']);
+
+const DEFAULT_ICONS: Record<string, string> = {
+  light: 'mdi:lightbulb',
+  switch: 'mdi:toggle-switch-variant',
+  input_boolean: 'mdi:toggle-switch-variant',
+  fan: 'mdi:fan',
+};
+
+/** Accent-derived colours from the mockups, applied to card and popup. */
+function applyAccent(el: HTMLElement, accent: Rgb): void {
+  const css = (c: Rgb) => `rgb(${c.join(',')})`;
+  el.style.setProperty('--glow-accent', rgbTriplet(accent));
+  el.style.setProperty(
+    '--glow-fill-h',
+    `linear-gradient(90deg, ${css(mix(accent, [0, 0, 0], 0.25))}, ${css(mix(accent, [255, 255, 255], 0.3))})`,
+  );
+  el.style.setProperty(
+    '--glow-fill-v',
+    `linear-gradient(180deg, ${css(mix(accent, [255, 255, 255], 0.35))}, ${css(accent)} 60%, ${css(mix(accent, [0, 0, 0], 0.22))})`,
+  );
+  el.style.setProperty('--glow-knob', css(mix(accent, [255, 255, 255], 0.75)));
+}
 
 /** Shared behaviour of all GlowCard cards. */
 export abstract class GlowCardBase<C extends GlowCardConfig = GlowCardConfig> extends LitElement {
@@ -84,8 +106,22 @@ export abstract class GlowCardBase<C extends GlowCardConfig = GlowCardConfig> ex
     return resolveAccent(this.config?.color, this.dark, this.defaultColor);
   }
 
-  /** Popup heading + content; return undefined when the card has no popup. */
-  protected renderPopup(): { heading: string; content: TemplateResult } | undefined {
+  /** True for very light accents (e.g. warm white): icons and labels on them turn dark. */
+  protected get darkIcon(): boolean {
+    return isBright(this.accent);
+  }
+
+  protected get icon(): string {
+    const fromEntity = this.stateObj?.attributes.icon;
+    if (this.config?.icon) return this.config.icon;
+    if (typeof fromEntity === 'string') return fromEntity;
+    const domain = this.config?.entity?.split('.')[0] ?? '';
+    return DEFAULT_ICONS[domain] ?? 'mdi:circle-outline';
+  }
+
+  /** Popup title, subtitle and body; return undefined when the card has no popup. */
+  protected renderPopup():
+    { heading: string; subtitle?: string; content: TemplateResult } | undefined {
     return undefined;
   }
 
@@ -113,7 +149,7 @@ export abstract class GlowCardBase<C extends GlowCardConfig = GlowCardConfig> ex
     this.toggleAttribute('dark', this.dark);
     if (this.config?.font === 'theme') this.setAttribute('font', 'theme');
     else this.removeAttribute('font');
-    this.style.setProperty('--glow-accent', rgbTriplet(this.accent));
+    applyAccent(this, this.accent);
     this.syncPopup();
   }
 
@@ -121,8 +157,9 @@ export abstract class GlowCardBase<C extends GlowCardConfig = GlowCardConfig> ex
     const view = this.renderPopup();
     if (!view) return;
     this.closePopup();
-    this.popup = openPopup({ ...view, contentStyles: this.popupStyles() });
+    this.popup = openPopup({ contentStyles: this.popupStyles() });
     this.popup.addEventListener('closed', () => (this.popup = undefined));
+    this.popup.addEventListener('orb-tap', () => void this.toggle());
     this.syncPopup();
   };
 
@@ -136,8 +173,12 @@ export abstract class GlowCardBase<C extends GlowCardConfig = GlowCardConfig> ex
     const view = this.renderPopup();
     this.popup.dark = this.dark;
     this.popup.font = this.config?.font;
-    this.popup.style.setProperty('--glow-accent', rgbTriplet(this.accent));
+    applyAccent(this.popup, this.accent);
     this.popup.heading = view?.heading ?? '';
+    this.popup.subtitle = view?.subtitle ?? '';
+    this.popup.icon = this.icon;
+    this.popup.active = this.isActive;
+    this.popup.darkIcon = this.darkIcon;
     this.popup.content = view?.content ?? nothing;
   }
 
