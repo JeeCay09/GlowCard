@@ -1,5 +1,7 @@
 # GlowCard
 
+**English** · [Deutsch](README.de.md)
+
 [![HACS Custom](https://img.shields.io/badge/HACS-Custom-41BDF5.svg)](https://hacs.xyz/docs/faq/custom_repositories/)
 ![Status](https://img.shields.io/badge/status-in%20development-orange)
 
