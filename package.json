@@ -11,7 +11,9 @@
     "lint": "eslint . && prettier --check .",
     "format": "prettier --write .",
     "typecheck": "tsc --noEmit",
-    "test": "vitest run"
+    "test": "vitest run",
+    "dev": "GLOWCARD_DEV=1 rollup -c --watch",
+    "serve": "node dev/serve.mjs"
   },
   "dependencies": {
     "lit": "^3.2.1"

@@ -1,0 +1,112 @@
+<!doctype html>
+<html lang="de">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>GlowCard Vorschau</title>
+    <style>
+      body {
+        margin: 0;
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(420px, 1fr));
+        min-height: 100vh;
+        font-family: system-ui, sans-serif;
+        color: #888;
+      }
+      .wall {
+        position: relative;
+        overflow: hidden;
+        padding: 40px;
+        display: grid;
+        align-content: start;
+        gap: 16px;
+        background: #e7e9ef;
+      }
+      .wall[data-dark] {
+        background: #07080b;
+      }
+      .wall::before,
+      .wall::after {
+        content: '';
+        position: absolute;
+        width: 720px;
+        height: 720px;
+        border-radius: 50%;
+        z-index: 0;
+      }
+      .wall::before {
+        left: -180px;
+        top: -40px;
+        background: radial-gradient(circle, rgba(245, 165, 36, 0.38) 0%, rgba(245, 165, 36, 0) 65%);
+      }
+      .wall::after {
+        left: 320px;
+        top: 260px;
+        background: radial-gradient(circle, rgba(139, 92, 246, 0.3) 0%, rgba(139, 92, 246, 0) 65%);
+      }
+      .wall[data-dark]::before {
+        background: radial-gradient(circle, rgba(245, 165, 36, 0.3) 0%, rgba(245, 165, 36, 0) 65%);
+      }
+      .wall[data-dark]::after {
+        background: radial-gradient(circle, rgba(139, 92, 246, 0.28) 0%, rgba(139, 92, 246, 0) 65%);
+      }
+      .wall > * {
+        position: relative;
+        z-index: 1;
+      }
+      .grid {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 16px;
+      }
+      .span2 {
+        grid-column: span 2;
+      }
+      h1 {
+        margin: 0;
+        font-size: 14px;
+        color: #888;
+      }
+    </style>
+  </head>
+  <body>
+    <section class="wall" data-dark>
+      <h1>Dunkel</h1>
+      <div class="grid">
+        <glowcard-dev-demo id="d1" class="span2"></glowcard-dev-demo>
+        <glowcard-dev-demo id="d2"></glowcard-dev-demo>
+        <glowcard-dev-demo id="d3"></glowcard-dev-demo>
+        <glowcard-dev-demo id="d4"></glowcard-dev-demo>
+        <glowcard-dev-demo id="d5"></glowcard-dev-demo>
+      </div>
+    </section>
+    <section class="wall">
+      <h1>Hell</h1>
+      <div class="grid">
+        <glowcard-dev-demo id="l1" class="span2"></glowcard-dev-demo>
+        <glowcard-dev-demo id="l2"></glowcard-dev-demo>
+        <glowcard-dev-demo id="l3"></glowcard-dev-demo>
+        <glowcard-dev-demo id="l4"></glowcard-dev-demo>
+        <glowcard-dev-demo id="l5"></glowcard-dev-demo>
+      </div>
+    </section>
+    <script type="module">
+      import '../dist/glowcard.js';
+      import { mount } from './build/demo.js';
+      const configs = [
+        { entity: 'light.living', icon: 'mdi:lightbulb' },
+        { entity: 'light.tv_wall', icon: 'mdi:television' },
+        { entity: 'switch.sprinkler', icon: 'mdi:sprinkler', color: 'sky' },
+        { entity: 'switch.office_plug', icon: 'mdi:power-socket-eu', color: 'teal' },
+        { entity: 'switch.terrace', icon: 'mdi:power-socket-eu', color: 'teal' },
+      ];
+      for (const p of ['d', 'l'])
+        configs.forEach((c, i) =>
+          document
+            .getElementById(`${p}${i + 1}`)
+            .setConfig({ type: 'custom:glowcard-dev-demo', ...c }),
+        );
+      mount(document);
+    </script>
+  </body>
+</html>
