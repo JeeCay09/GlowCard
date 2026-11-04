@@ -1,0 +1,53 @@
+name: PR-Regeln
+
+# Prüft jeden Pull Request nach main oder develop:
+#   - PR nach main nur aus develop
+#   - PR nach develop nur aus feature/<Nummer>
+#   - PR-Beschreibung enthält "Closes #<Nummer>" (auch Fixes/Resolves)
+# Der Job-Name "pr-rules" wird in den Rulesets als Status-Check verlangt.
+
+on:
+  pull_request:
+    types: [opened, edited, reopened, synchronize]
+    branches: [main, develop]
+
+permissions:
+  contents: read
+
+jobs:
+  pr-rules:
+    name: pr-rules
+    runs-on: ubuntu-latest
+    steps:
+      - name: Branch und Issue-Verknüpfung prüfen
+        env:
+          BASE: ${{ github.event.pull_request.base.ref }}
+          HEAD: ${{ github.event.pull_request.head.ref }}
+          BODY: ${{ github.event.pull_request.body }}
+        run: |
+          fail=0
+
+          case "$BASE" in
+            main)
+              if [ "$HEAD" != "develop" ]; then
+                echo "::error::PRs nach 'main' sind nur aus 'develop' erlaubt (Quelle: '$HEAD')."
+                fail=1
+              fi
+              ;;
+            develop)
+              if ! printf '%s' "$HEAD" | grep -Eq '^feature/[0-9]+$'; then
+                echo "::error::PRs nach 'develop' sind nur aus 'feature/<Nummer>' erlaubt (Quelle: '$HEAD')."
+                fail=1
+              fi
+              ;;
+          esac
+
+          if ! printf '%s' "$BODY" | grep -Eiq '(close[sd]?|fix(e[sd])?|resolve[sd]?)[[:space:]]+#[0-9]+'; then
+            echo "::error::Die PR-Beschreibung muss 'Closes #<Nummer>' enthalten."
+            fail=1
+          fi
+
+          if [ "$fail" -eq 0 ]; then
+            echo "Alle PR-Regeln erfüllt: $HEAD -> $BASE"
+          fi
+          exit "$fail"
