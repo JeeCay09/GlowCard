@@ -6,16 +6,16 @@ import { css } from 'lit';
  * always with `size: compact`, never with `size: normal`.
  */
 const compactSizes = css`
-  --glow-pad: 14px;
-  --glow-radius: 24px;
-  --glow-card-h: 120px;
-  --glow-card-h-wide: 164px;
-  --glow-orb-size: 40px;
-  --glow-value-size: 30px;
-  --glow-word-size: 20px;
-  --glow-word-big: 24px;
-  --glow-name-size: 15px;
-  --glow-name-small: 14px;
+  --glow-pad: 12px;
+  --glow-radius: 22px;
+  --glow-card-h: 104px;
+  --glow-card-h-wide: 144px;
+  --glow-orb-size: 36px;
+  --glow-value-size: 26px;
+  --glow-word-size: 18px;
+  --glow-word-big: 22px;
+  --glow-name-size: 14px;
+  --glow-name-small: 13px;
   --glow-sub-size: 12px;
   --glow-dock-h: 48px;
   --glow-dock-pad: 5px;
