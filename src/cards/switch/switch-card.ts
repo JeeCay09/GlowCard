@@ -34,7 +34,6 @@ import {
   type DayStrip,
   type StatePoint,
 } from '../../core/history';
-import type { HomeAssistant } from '../../types/hass';
 import '../../components/orb';
 
 export interface SwitchCardConfig extends GlowCardConfig {
@@ -83,8 +82,8 @@ export class GlowSwitchCard extends GlowCardBase<SwitchCardConfig> {
   }
 
   /** No entity is picked for the user; "by entity" passes the chosen ones. */
-  static getStubConfig(_hass: HomeAssistant, entities: string[] = []): Partial<SwitchCardConfig> {
-    return stubEntity(entities, SWITCH_DOMAINS);
+  static getStubConfig(): Partial<SwitchCardConfig> {
+    return stubEntity();
   }
 
   /** Groups have no popup and no single entity: tap switches all, hold does nothing. */

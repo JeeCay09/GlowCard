@@ -204,13 +204,17 @@ describe('light card bar', () => {
 
   it('shows "choose an entity" on a new card without entity', async () => {
     await import('../src/glowcard');
-    for (const type of ['glowcard-light', 'glowcard-switch', 'glowcard-plug']) {
+    const cases = ['glowcard-light', 'glowcard-switch', 'glowcard-plug'].flatMap((type) => [
+      [type, {}],
+      [type, { entity: '' }],
+    ]) as [string, Record<string, unknown>][];
+    for (const [type, extra] of cases) {
       const el = document.createElement(type) as HTMLElement & {
         setConfig(c: unknown): void;
         hass: unknown;
         updateComplete: Promise<boolean>;
       };
-      el.setConfig({ type: `custom:${type}` });
+      el.setConfig({ type: `custom:${type}`, ...extra });
       el.hass = { states: {}, language: 'de', locale: { language: 'de' }, themes: {} };
       document.body.appendChild(el);
       await el.updateComplete;
