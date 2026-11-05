@@ -13,6 +13,14 @@ import '../src/components/slider';
 import '../src/components/segments';
 
 const ICON_PATHS: Record<string, string> = {
+  'mdi:sofa-outline':
+    'M5 11V8a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v3M3 12a2 2 0 0 1 4 0v2h10v-2a2 2 0 0 1 4 0v5H3zM5 17v2M19 17v2',
+  'mdi:flower-outline':
+    'M12 21v-8M12 13c0-4 3-6.5 7-6.5 0 4-3 6.5-7 6.5zM12 13c0-3.2-2.4-5.5-6-5.5 0 3.2 2.4 5.5 6 5.5zM8 21h8',
+  'mdi:thermometer': 'M14 14.76V5a2 2 0 0 0-4 0v9.76a4 4 0 1 0 4 0z',
+  'mdi:water-percent': 'M12 3s6 6.5 6 11a6 6 0 0 1-12 0c0-4.5 6-11 6-11z',
+  'mdi:battery-alert-variant-outline':
+    'M5 8h12a1 1 0 0 1 1 1v6a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V9a1 1 0 0 1 1-1zM21 11v2M7 11v2',
   'mdi:lightbulb': 'M9 18h6M10 21h4M12 3a6 6 0 0 0-3.5 10.9V16h7v-2.1A6 6 0 0 0 12 3z',
   'mdi:sprinkler': 'M12 3.5c3 4 6 7.3 6 10.5a6 6 0 0 1-12 0c0-3.2 3-6.5 6-10.5z',
   'mdi:power-socket-eu':
@@ -124,6 +132,11 @@ const states: Record<string, HassEntity> = {
   'light.tv_wall': entity('light.tv_wall', 'off', {
     friendly_name: 'TV Wand',
     supported_color_modes: ['brightness'],
+  }),
+  'light.led_strip': entity('light.led_strip', 'on', {
+    friendly_name: 'LED Leiste',
+    color_mode: 'onoff',
+    supported_color_modes: ['onoff'],
   }),
   'switch.office_plug': entity('switch.office_plug', 'off', { friendly_name: 'Home Office' }),
   'switch.terrace': entity('switch.terrace', 'unavailable', { friendly_name: 'Terrasse' }),
@@ -260,6 +273,40 @@ Object.assign(states, {
   );
 });
 
+// Heading (GlowHeading board, Gilbert's real entities)
+Object.assign(states, {
+  'sensor.temperatursensor_wohnzimmer_temperature': entity(
+    'sensor.temperatursensor_wohnzimmer_temperature',
+    '21.5',
+    { device_class: 'temperature', unit_of_measurement: '°C', friendly_name: 'Temperatur' },
+  ),
+  'sensor.temperatursensor_wohnzimmer_humidity': entity(
+    'sensor.temperatursensor_wohnzimmer_humidity',
+    '60',
+    { device_class: 'humidity', unit_of_measurement: '%', friendly_name: 'Luftfeuchtigkeit' },
+  ),
+  'sensor.temperatursensor_wohnzimmer_battery': entity(
+    'sensor.temperatursensor_wohnzimmer_battery',
+    '0',
+    { device_class: 'battery', unit_of_measurement: '%', friendly_name: 'Batterie' },
+  ),
+  'sensor.bodenfeuchte_vorbeet_temperature': entity(
+    'sensor.bodenfeuchte_vorbeet_temperature',
+    '14.03',
+    { device_class: 'temperature', unit_of_measurement: '°C', friendly_name: 'Boden Vorbeet' },
+  ),
+  'sensor.temperatursensor_bad_temperature': entity(
+    'sensor.temperatursensor_bad_temperature',
+    '23.9',
+    { device_class: 'temperature', unit_of_measurement: '°C', friendly_name: 'Bad' },
+  ),
+  'light.tv_wand': entity('light.tv_wand', 'on', {
+    friendly_name: 'TV Wand',
+    rgb_color: [255, 165, 110],
+    entity_id: [1, 2, 3].map((n) => `light.tv_wand_streifen_${n}`),
+  }),
+});
+
 const leds = ['Esszimmer', 'Flur oben', 'Dachboden', 'Kinderzimmer', 'Büro', 'Schlafzimmer'];
 leds.forEach((room, i) => {
   const id = `switch.led_${i}`;
@@ -277,6 +324,7 @@ const entities: HomeAssistant['entities'] = {
   'input_boolean.tv_warm': { entity_id: 'input_boolean.tv_warm', area_id: 'living' },
   'light.living': { entity_id: 'light.living', area_id: 'living' },
   'light.kitchen': { entity_id: 'light.kitchen', area_id: 'kitchen' },
+  'light.led_strip': { entity_id: 'light.led_strip', area_id: 'kitchen' },
   'switch.carpet_boost': { entity_id: 'switch.carpet_boost', area_id: 'utility' },
   'switch.dishwasher': { entity_id: 'switch.dishwasher', area_id: 'kitchen' },
   'switch.fairy_lights': { entity_id: 'switch.fairy_lights', area_id: 'terrace' },

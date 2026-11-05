@@ -14,7 +14,7 @@
 ![GlowCard switch and plug cards in light mode](https://raw.githubusercontent.com/JeeCay09/GlowCard/main/docs/images/cards-light.jpg)
 
 - Frosted glass cards; an active device tints its card and casts a soft glow in its own colour.
-- Round "orb" icons: tap the orb to switch on/off. No extra toggle rows.
+- Tap a card (orb included) to switch it on/off, hold it to open the GlowCard popup. No extra toggle rows.
 - Values like brightness are set by dragging the bar itself.
 - Lights use their **current** colour for orb, bar and tint.
 - Built-in popups (no Bubble Card or browser_mod needed).
@@ -25,17 +25,20 @@
 
 ## Cards
 
-| Card           | Type                     | Entities                                        | Status           |
-| -------------- | ------------------------ | ----------------------------------------------- | ---------------- |
-| Switch         | `custom:glowcard-switch` | `switch.*`, `input_boolean.*`                   | beta (v0.1)      |
-| Plug           | `custom:glowcard-plug`   | `switch.*` + optional power/energy `sensor.*`   | beta (v0.1)      |
-| Light          | `custom:glowcard-light`  | `light.*`                                       | beta (v0.2)      |
-| Header         | `custom:glowcard-header` | `person.*`, greeting, date/time                 | beta (v0.3)      |
-| Status bar     | `custom:glowcard-status` | weather, lights, energy, security, alerts       | beta (v0.3)      |
-| Chip           | `custom:glowcard-chip`   | like the status bar, plus people and battery    | beta (v0.3)      |
-| Energy "House" | `custom:glowcard-energy` | power `sensor.*` for solar, battery, grid, home | planned for v0.4 |
+| Card           | Type                      | Entities                                        | Status           |
+| -------------- | ------------------------- | ----------------------------------------------- | ---------------- |
+| Switch         | `custom:glowcard-switch`  | `switch.*`, `input_boolean.*`                   | beta (v0.1)      |
+| Plug           | `custom:glowcard-plug`    | `switch.*` + optional power/energy `sensor.*`   | beta (v0.1)      |
+| Light          | `custom:glowcard-light`   | `light.*`                                       | beta (v0.2)      |
+| Header         | `custom:glowcard-header`  | `person.*`, greeting, date/time                 | beta (v0.3)      |
+| Status bar     | `custom:glowcard-status`  | weather, lights, energy, security, alerts       | beta (v0.3)      |
+| Chip           | `custom:glowcard-chip`    | like the status bar, plus people and battery    | beta (v0.3)      |
+| Heading        | `custom:glowcard-heading` | any entities as badges                          | beta (v0.4)      |
+| Energy "House" | `custom:glowcard-energy`  | power `sensor.*` for solar, battery, grid, home | planned for v0.4 |
 
-All cards have a visual editor (Home Assistant 2025.1 or newer). In a sections dashboard, each card takes its width from its variant: small = 1/4, wide = 1/2, wide plug, header, status bar and chip rows = full width, single chip = 1/2, icon-only chip = 1/4. You can still resize it in the dashboard editor.
+All cards have a visual editor (Home Assistant 2025.1 or newer). In a sections dashboard, each card takes its width from its variant: small = 1/4, wide = 1/2, wide plug, header, status bar, heading and chip rows = full width, single chip = 1/2, icon-only chip = 1/4. You can still resize it in the dashboard editor. New cards start without an entity; when you add a card "by entity", it uses the entity you picked.
+
+In the editor, "Tap behaviour" offers toggle, GlowCard popup, more info, nothing or any other Home Assistant action for tap and hold.
 
 ## Installation
 
@@ -67,7 +70,7 @@ lovelace:
    - Type: **JavaScript module**
 4. Reload your browser.
 
-After an update, change the URL to e.g. `/local/glowcard/glowcard.js?v=0.3.1` so browsers load the new file.
+After an update, change the URL to e.g. `/local/glowcard/glowcard.js?v=0.4.0` so browsers load the new file.
 
 ## Configuration
 
@@ -81,8 +84,8 @@ All cards share these options:
 | `color`       | string | per card type | Accent colour (`amber`, `teal`, `sky`, `violet`, … or hex)                                      |
 | `variant`     | string | `small`       | Card layout, depends on the card                                                                |
 | `size`        | string | `auto`        | Switch, plug, light, status bar: `auto` (compact on phones under 600 px), `compact` or `normal` |
-| `tap_action`  | action | open popup    | Standard Home Assistant action                                                                  |
-| `hold_action` | action | `more-info`   | Standard Home Assistant action                                                                  |
+| `tap_action`  | action | `toggle`      | Home Assistant action, or `action: popup` for the GlowCard popup                                |
+| `hold_action` | action | `popup`       | Home Assistant action, or `action: popup` for the GlowCard popup                                |
 
 The examples below show the planned options. Details may still change before v1.0.
 
@@ -96,7 +99,7 @@ color: sky
 variant: wide # small | wide (7-day on/off strip) | row
 ```
 
-Group of switches (the orb toggles all of them):
+Group of switches (tapping the card toggles all of them, holding does nothing by default):
 
 ```yaml
 type: custom:glowcard-switch
@@ -125,10 +128,9 @@ The card finds the plug's power and energy sensors, countdown, child lock, "powe
 ```yaml
 type: custom:glowcard-light
 entity: light.living_room
-variant: wide # wide (2 columns, drag bar) | small (1 column)
 ```
 
-Orb, bar and tint use the light's current colour. Drag the bar to set the brightness; dragging to 0 turns the light off. The popup has a tall brightness bar, tabs for colour temperature and colour (only what the light supports, from `supported_color_modes`) and colour presets from warm white to blue.
+Orb, bar and tint use the light's current colour. Drag the bar to set the brightness; dragging to 0 turns the light off. The card is always 2 columns wide (the former `variant: small` is shown wide). Top right it shows the brightness while the light is on; lights without dimming show nothing there. The popup has a tall brightness bar (lights without dimming get a big on/off switch instead), tabs for colour temperature and colour (only what the light supports, from `supported_color_modes`) and colour presets from warm white to blue.
 
 ### Header
 
@@ -236,6 +238,33 @@ chips:
 
 Unavailable entities are shown dashed and faded. An alert chip without a problem disappears (`hide_when_ok: false` shows it in green).
 
+### Heading
+
+A section title with a round icon, a line below and small glass badges, or a small caps subtitle to group sections. The icon stays neutral by default; with `glow_entity` it glows while that entity is on, in `glow_color` (colour picker in the editor) or else the light's own colour.
+
+```yaml
+type: custom:glowcard-heading
+heading: Living room
+subtitle: Ground floor
+icon: mdi:sofa-outline
+badges:
+  - sensor.living_room_temperature
+  - sensor.living_room_humidity
+  - sensor.living_room_sensor_battery # red and pulsing at 15 % or less
+  - type: lights # YAML: same entries as the status bar, opens the lights popup
+    entities: [light.tv_wall]
+glow_entity: light.living_room # optional
+glow_color: [255, 165, 110] # optional
+tap_action: # optional, shows an arrow next to the title
+  action: navigate
+  navigation_path: /dashboard-home/living
+---
+type: custom:glowcard-heading
+heading_style: subtitle
+heading: Ground floor
+subtitle: 6 rooms
+```
+
 ### Energy "House"
 
 ```yaml
@@ -253,7 +282,7 @@ home: sensor.home_load_power
 2. Switch and plug cards → v0.1.0 (beta)
 3. Light card and popup → v0.2.0 (beta)
 4. Header, status bar and chips, visual editor and default widths → **v0.3.0 (beta)**
-5. Energy "House" card and popup → v0.4.0
+5. Heading card (section titles with badges, added to the plan) and Energy "House" card and popup → v0.4.0
 6. Visual editors for all cards, full docs, submission to the HACS default list → v1.0.0
 
 Later: room card, binary sensor, irrigation/plant, media, cover and vacuum popups.

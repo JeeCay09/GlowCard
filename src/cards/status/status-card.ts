@@ -2,7 +2,6 @@ import { css, html, nothing, type PropertyValues } from 'lit';
 import type { GlowCardConfig } from '../../core/base-card';
 import { registerCard } from '../../core/register';
 import { configForm, editorLabel, fontField, sizeField, type FormSchema } from '../../core/editor';
-import type { HomeAssistant } from '../../types/hass';
 import { paletteColor, validateSegment, type SegmentConfig } from './status-logic';
 import { GlowStatusBase, avatar, dot, toneDot } from './status-base';
 import { avatarStyles, dotStyles, statusTokens } from './status-styles';
@@ -94,6 +93,7 @@ export class GlowStatusCard extends GlowStatusBase<StatusCardConfig> {
           name: '',
           type: 'expandable',
           title: 'energy_section',
+          icon: 'mdi:lightning-bolt-outline',
           schema: [
             {
               name: '',
@@ -139,9 +139,9 @@ export class GlowStatusCard extends GlowStatusBase<StatusCardConfig> {
     );
   }
 
-  static getStubConfig(hass: HomeAssistant): Partial<StatusCardConfig> {
-    const weather = Object.keys(hass.states).find((id) => id.startsWith('weather.'));
-    return { ...(weather ? { weather } : {}), all_lights: true };
+  /** No entity is picked for the user; counting all lights is a setting, not an entity. */
+  static getStubConfig(): Partial<StatusCardConfig> {
+    return { all_lights: true };
   }
 
   protected validateConfig(config: StatusCardConfig): void {
