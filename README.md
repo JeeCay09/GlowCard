@@ -25,15 +25,16 @@
 
 ## Cards
 
-| Card           | Type                     | Entities                                        | Status           |
-| -------------- | ------------------------ | ----------------------------------------------- | ---------------- |
-| Switch         | `custom:glowcard-switch` | `switch.*`, `input_boolean.*`                   | beta (v0.1)      |
-| Plug           | `custom:glowcard-plug`   | `switch.*` + optional power/energy `sensor.*`   | beta (v0.1)      |
-| Light          | `custom:glowcard-light`  | `light.*`                                       | beta (v0.2)      |
-| Header         | `custom:glowcard-header` | `person.*`, greeting, date/time                 | beta (v0.3)      |
-| Status bar     | `custom:glowcard-status` | weather, lights, energy, security, alerts       | beta (v0.3)      |
-| Chip           | `custom:glowcard-chip`   | like the status bar, plus people and battery    | beta (v0.3)      |
-| Energy "House" | `custom:glowcard-energy` | power `sensor.*` for solar, battery, grid, home | planned for v0.4 |
+| Card           | Type                      | Entities                                        | Status           |
+| -------------- | ------------------------- | ----------------------------------------------- | ---------------- |
+| Switch         | `custom:glowcard-switch`  | `switch.*`, `input_boolean.*`                   | beta (v0.1)      |
+| Plug           | `custom:glowcard-plug`    | `switch.*` + optional power/energy `sensor.*`   | beta (v0.1)      |
+| Light          | `custom:glowcard-light`   | `light.*`                                       | beta (v0.2)      |
+| Header         | `custom:glowcard-header`  | `person.*`, greeting, date/time                 | beta (v0.3)      |
+| Status bar     | `custom:glowcard-status`  | weather, lights, energy, security, alerts       | beta (v0.3)      |
+| Chip           | `custom:glowcard-chip`    | like the status bar, plus people and battery    | beta (v0.3)      |
+| Heading        | `custom:glowcard-heading` | any entities as badges                          | new (next)       |
+| Energy "House" | `custom:glowcard-energy`  | power `sensor.*` for solar, battery, grid, home | planned for v0.4 |
 
 All cards have a visual editor (Home Assistant 2025.1 or newer). In a sections dashboard, each card takes its width from its variant: small = 1/4, wide = 1/2, wide plug, header, status bar and chip rows = full width, single chip = 1/2, icon-only chip = 1/4. You can still resize it in the dashboard editor.
 
@@ -235,6 +236,33 @@ chips:
 ```
 
 Unavailable entities are shown dashed and faded. An alert chip without a problem disappears (`hide_when_ok: false` shows it in green).
+
+### Heading
+
+A section title with a round icon, a line below and small glass badges, or a small caps subtitle to group sections. The icon stays neutral by default; with `glow_entity` it glows while that entity is on, in `glow_color` (colour picker in the editor) or else the light's own colour.
+
+```yaml
+type: custom:glowcard-heading
+heading: Living room
+subtitle: Ground floor
+icon: mdi:sofa-outline
+badges:
+  - sensor.living_room_temperature
+  - sensor.living_room_humidity
+  - sensor.living_room_sensor_battery # red and pulsing at 15 % or less
+  - type: lights # YAML: same entries as the status bar, opens the lights popup
+    entities: [light.tv_wall]
+glow_entity: light.living_room # optional
+glow_color: [255, 165, 110] # optional
+tap_action: # optional, shows an arrow next to the title
+  action: navigate
+  navigation_path: /dashboard-home/living
+---
+type: custom:glowcard-heading
+heading_style: subtitle
+heading: Ground floor
+subtitle: 6 rooms
+```
 
 ### Energy "House"
 

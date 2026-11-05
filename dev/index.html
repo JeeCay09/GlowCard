@@ -141,6 +141,67 @@
           'span4',
         ],
       ];
+      const living = 'sensor.temperatursensor_wohnzimmer';
+      const headingCards = [
+        [
+          'glowcard-heading',
+          {
+            heading: 'Wohnzimmer',
+            subtitle: 'Erdgeschoss',
+            icon: 'mdi:sofa-outline',
+            badges: [
+              `${living}_temperature`,
+              `${living}_humidity`,
+              { type: 'lights', entities: lights },
+              `${living}_battery`,
+            ],
+          },
+          'span4',
+        ],
+        [
+          'glowcard-heading',
+          {
+            heading: 'Wohnzimmer',
+            subtitle: 'Optional: Symbol leuchtet bei TV Wand',
+            icon: 'mdi:sofa-outline',
+            glow_entity: 'light.tv_wand',
+            badges: [`${living}_temperature`, { type: 'lights', entities: lights }],
+          },
+          'span4',
+        ],
+        [
+          'glowcard-heading',
+          {
+            heading_style: 'subtitle',
+            heading: 'Erdgeschoss',
+            subtitle: '6 Räume · 3 Lichter an',
+            glow_entity: 'light.tv_wand',
+          },
+          'span4',
+        ],
+        [
+          'glowcard-heading',
+          {
+            heading_style: 'subtitle',
+            heading: '1. Etage',
+            badges: ['sensor.temperatursensor_bad_temperature'],
+          },
+          'span4',
+        ],
+        [
+          'glowcard-heading',
+          {
+            heading: 'Garten',
+            subtitle: 'Draußen · Vorbeet · Schuppen',
+            icon: 'mdi:flower-outline',
+            glow_entity: 'light.tv_wand',
+            glow_color: 'green',
+            tap_action: { action: 'navigate', navigation_path: '#garten' },
+            badges: [weather, 'sensor.bodenfeuchte_vorbeet_temperature'],
+          },
+          'span4',
+        ],
+      ];
       const classicCards = [
         ['glowcard-light', { entity: 'light.living' }, 'span2'],
         [
@@ -213,9 +274,11 @@
       const cards =
         set === 'status'
           ? statusCards
-          : set === 'classic'
-            ? classicCards
-            : [...statusCards, ...classicCards];
+          : set === 'heading'
+            ? headingCards
+            : set === 'classic'
+              ? classicCards
+              : [...statusCards, ...headingCards, ...classicCards];
       for (const grid of document.querySelectorAll('.grid')) {
         for (const [tag, config, cls] of cards) {
           const el = document.createElement(tag);

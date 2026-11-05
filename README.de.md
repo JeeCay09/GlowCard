@@ -25,15 +25,16 @@
 
 ## Karten
 
-| Karte          | Typ                      | Entitäten                                           | Status           |
-| -------------- | ------------------------ | --------------------------------------------------- | ---------------- |
-| Schalter       | `custom:glowcard-switch` | `switch.*`, `input_boolean.*`                       | Beta (v0.1)      |
-| Steckdose      | `custom:glowcard-plug`   | `switch.*` + optional Leistungs-/Energie-`sensor.*` | Beta (v0.1)      |
-| Licht          | `custom:glowcard-light`  | `light.*`                                           | Beta (v0.2)      |
-| Kopfzeile      | `custom:glowcard-header` | `person.*`, Begrüßung, Datum/Uhrzeit                | Beta (v0.3)      |
-| Status-Leiste  | `custom:glowcard-status` | Wetter, Lichter, Energie, Sicherheit, Warnungen     | Beta (v0.3)      |
-| Chip           | `custom:glowcard-chip`   | wie die Status-Leiste, plus Personen und Akku       | Beta (v0.3)      |
-| Energie „Haus“ | `custom:glowcard-energy` | Leistungs-`sensor.*` für Solar, Akku, Netz, Haus    | geplant für v0.4 |
+| Karte          | Typ                       | Entitäten                                           | Status           |
+| -------------- | ------------------------- | --------------------------------------------------- | ---------------- |
+| Schalter       | `custom:glowcard-switch`  | `switch.*`, `input_boolean.*`                       | Beta (v0.1)      |
+| Steckdose      | `custom:glowcard-plug`    | `switch.*` + optional Leistungs-/Energie-`sensor.*` | Beta (v0.1)      |
+| Licht          | `custom:glowcard-light`   | `light.*`                                           | Beta (v0.2)      |
+| Kopfzeile      | `custom:glowcard-header`  | `person.*`, Begrüßung, Datum/Uhrzeit                | Beta (v0.3)      |
+| Status-Leiste  | `custom:glowcard-status`  | Wetter, Lichter, Energie, Sicherheit, Warnungen     | Beta (v0.3)      |
+| Chip           | `custom:glowcard-chip`    | wie die Status-Leiste, plus Personen und Akku       | Beta (v0.3)      |
+| Überschrift    | `custom:glowcard-heading` | beliebige Entitäten als Badges                      | neu (nächste)    |
+| Energie „Haus“ | `custom:glowcard-energy`  | Leistungs-`sensor.*` für Solar, Akku, Netz, Haus    | geplant für v0.4 |
 
 Alle Karten haben einen visuellen Editor (ab Home Assistant 2025.1). In einem Sections-Dashboard richtet sich die Breite nach der Variante: klein = 1/4, breit = 1/2, breite Steckdose, Kopfzeile, Status-Leiste und Chip-Reihen = ganze Breite, einzelner Chip = 1/2, Symbol-Chip = 1/4. Im Dashboard-Editor kannst du die Größe weiterhin selbst ändern.
 
@@ -235,6 +236,33 @@ chips:
 ```
 
 Nicht erreichbare Entitäten erscheinen gestrichelt und blass. Ein Warn-Chip ohne Meldung verschwindet (`hide_when_ok: false` zeigt ihn grün).
+
+### Überschrift
+
+Ein Abschnittstitel mit rundem Symbol, einer Zeile darunter und kleinen Glas-Badges, oder ein Untertitel in Großbuchstaben zum Gliedern. Das Symbol bleibt standardmäßig neutral; mit `glow_entity` leuchtet es, solange diese Entität an ist, in `glow_color` (Farbwähler im Editor) oder sonst in der Farbe des Lichts.
+
+```yaml
+type: custom:glowcard-heading
+heading: Wohnzimmer
+subtitle: Erdgeschoss
+icon: mdi:sofa-outline
+badges:
+  - sensor.wohnzimmer_temperatur
+  - sensor.wohnzimmer_luftfeuchtigkeit
+  - sensor.wohnzimmer_sensor_batterie # ab 15 % und weniger rot und pulsierend
+  - type: lights # YAML: dieselben Einträge wie bei der Status-Leiste, öffnet das Licht-Popup
+    entities: [light.tv_wand]
+glow_entity: light.wohnzimmer # optional
+glow_color: [255, 165, 110] # optional
+tap_action: # optional, zeigt einen Pfeil neben dem Titel
+  action: navigate
+  navigation_path: /dashboard-home/wohnzimmer
+---
+type: custom:glowcard-heading
+heading_style: subtitle
+heading: Erdgeschoss
+subtitle: 6 Räume
+```
 
 ### Energie „Haus“
 
