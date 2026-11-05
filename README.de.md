@@ -126,10 +126,9 @@ Die Karte findet Leistungs- und Energie-Sensor, Countdown, Kindersicherung sowie
 ```yaml
 type: custom:glowcard-light
 entity: light.living_room
-variant: wide # wide (2 Spalten, Ziehbalken) | small (1 Spalte)
 ```
 
-Orb, Balken und Kartentönung nutzen die aktuelle Farbe der Lampe. Den Balken ziehen stellt die Helligkeit ein, ganz nach links schaltet aus. Das Popup hat einen hohen Helligkeitsbalken, Reiter für Farbtemperatur und Farbe (nur was die Lampe laut `supported_color_modes` kann) und Farbkreise von Warmweiß bis Blau.
+Orb, Balken und Kartentönung nutzen die aktuelle Farbe der Lampe. Den Balken ziehen stellt die Helligkeit ein, ganz nach links schaltet aus. Die Karte ist immer 2 Spalten breit (das frühere `variant: small` wird breit angezeigt). Oben rechts steht die Helligkeit, solange das Licht an ist; Lampen ohne Dimmung zeigen dort nichts. Das Popup hat einen hohen Helligkeitsbalken (Lampen ohne Dimmung bekommen stattdessen einen großen An/Aus-Schalter), Reiter für Farbtemperatur und Farbe (nur was die Lampe laut `supported_color_modes` kann) und Farbkreise von Warmweiß bis Blau.
 
 ### Kopfzeile
 

@@ -127,4 +127,36 @@ describe('light card bar', () => {
     expect(value()).toBe('40%');
     el.remove();
   });
+
+  it('shows only the brightness top right, never on/off', async () => {
+    await import('../src/glowcard');
+    const make = async (state: HassEntity) => {
+      const el = document.createElement('glowcard-light') as HTMLElement & {
+        setConfig(c: unknown): void;
+        hass: unknown;
+        updateComplete: Promise<boolean>;
+      };
+      el.setConfig({ type: 'custom:glowcard-light', entity: 'light.x' });
+      el.hass = {
+        states: { 'light.x': state },
+        language: 'de',
+        locale: { language: 'de' },
+        themes: { darkMode: true },
+        callService: async () => undefined,
+      };
+      document.body.appendChild(el);
+      await el.updateComplete;
+      return { el, value: el.shadowRoot!.querySelector('.value')!.textContent };
+    };
+
+    const off = await make(light('off', { supported_color_modes: ['brightness'] }));
+    expect(off.value).toBe('');
+    expect(off.el.shadowRoot!.querySelector('.sub')!.textContent).toBe('Aus');
+    off.el.remove();
+
+    const onoff = await make(light('on', { supported_color_modes: ['onoff'] }));
+    expect(onoff.value).toBe('');
+    expect(onoff.el.shadowRoot!.querySelector('glowcard-slider')).toBeNull();
+    onoff.el.remove();
+  });
 });
