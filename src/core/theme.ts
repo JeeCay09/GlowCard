@@ -114,10 +114,10 @@ export const glowTokens = css`
     --glow-lit-border: 0.32;
     --glow-lit-shadow: 0 24px 60px -14px rgba(var(--glow-accent), 0.5);
     --glow-orb-glow: 0 0 28px rgba(var(--glow-accent), 0.8);
-    --glow-pop-glass: rgba(24, 26, 32, 0.62);
+    --glow-pop-glass: rgba(24, 26, 32, 0.8);
     --glow-pop-border: rgba(255, 255, 255, 0.08);
     --glow-pop-shadow: 0 40px 80px -20px rgba(0, 0, 0, 0.8);
-    --glow-pop-lit-base: rgba(24, 26, 32, 0.66);
+    --glow-pop-lit-base: rgba(24, 26, 32, 0.82);
     --glow-pop-lit-tint: 0.22;
     --glow-pop-lit-border: 0.28;
     --glow-pop-lit-shadow:
@@ -125,8 +125,8 @@ export const glowTokens = css`
     --glow-dim: rgba(0, 0, 0, 0.45);
     --glow-tab-active: rgba(255, 255, 255, 0.14);
     --glow-knob-ring: #16181d;
-    --glow-halo: 0.75;
-    --glow-pop-plain: rgba(24, 26, 32, 0.68);
+    --glow-halo: 0.55;
+    --glow-pop-plain: rgba(24, 26, 32, 0.82);
     --glow-pop-glow: 0 0 90px -30px rgba(var(--glow-accent), 0.5);
     --glow-line: rgba(255, 255, 255, 0.07);
     --glow-calm: 0.14;
