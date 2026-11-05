@@ -2,14 +2,7 @@ import { css, html, nothing, type PropertyValues } from 'lit';
 import { state } from 'lit/decorators.js';
 import { GlowCardBase, type GlowCardConfig } from '../../core/base-card';
 import { registerCard } from '../../core/register';
-import {
-  actionsField,
-  configForm,
-  lookFields,
-  nameIconFields,
-  sizeField,
-  variantField,
-} from '../../core/editor';
+import { actionsField, configForm, lookFields, nameIconFields, sizeField } from '../../core/editor';
 import { localize } from '../../core/localize';
 import { lightColor, mix, rgbTriplet, type Rgb } from '../../core/color';
 import type { HomeAssistant } from '../../types/hass';
@@ -31,7 +24,7 @@ import '../../components/segments';
 import '../../components/swatches';
 
 export interface LightCardConfig extends GlowCardConfig {
-  /** wide (default, 2 columns with drag bar) or small (1 column, no bar). */
+  /** Only `wide` (2 columns with drag bar). The former `small` variant is shown as `wide`. */
   variant?: 'wide' | 'small';
 }
 
@@ -52,7 +45,6 @@ export class GlowLightCard extends GlowCardBase<LightCardConfig> {
     return configForm(
       [
         { name: 'entity', required: true, selector: { entity: { domain: ['light'] } } },
-        variantField(['wide', 'small']),
         nameIconFields,
         lookFields,
         sizeField,
@@ -72,8 +64,7 @@ export class GlowLightCard extends GlowCardBase<LightCardConfig> {
   }
 
   getGridOptions() {
-    const small = this.config?.variant === 'small';
-    return { columns: small ? 3 : 6, rows: 'auto', min_columns: small ? 3 : 6 };
+    return { columns: 6, rows: 'auto', min_columns: 6 };
   }
 
   /** Orb, bar and tint follow the light's current colour while it is on. */
@@ -178,12 +169,12 @@ export class GlowLightCard extends GlowCardBase<LightCardConfig> {
     return on;
   }
 
+  /** Brightness top right; empty when off or not dimmable (the state is shown under the name). */
   private valueText(): string {
     if (this.isUnavailable) return '';
-    if (this.cardDrag !== undefined)
-      return this.cardDrag > 0 ? `${this.cardDrag}%` : localize(this.hass, 'off');
-    if (!this.isActive) return localize(this.hass, 'off');
-    return this.caps.brightness ? `${this.bright}%` : localize(this.hass, 'on');
+    if (this.cardDrag !== undefined) return this.cardDrag > 0 ? `${this.cardDrag}%` : '';
+    if (!this.isActive || !this.caps.brightness) return '';
+    return `${this.bright}%`;
   }
 
   private orb() {
@@ -200,12 +191,11 @@ export class GlowLightCard extends GlowCardBase<LightCardConfig> {
 
   render() {
     if (!this.config) return nothing;
-    const small = this.config.variant === 'small';
     const s = this.isUnavailable ? 'unavailable' : this.isActive ? 'active' : '';
-    const showBar = !small && this.caps.brightness && !this.isUnavailable;
-    const value = small && !this.isActive ? '' : this.valueText();
+    const showBar = this.caps.brightness && !this.isUnavailable;
+    const value = this.valueText();
     return html`<div
-      class="glass sized ${small ? 'small' : 'wide'} ${s}"
+      class="glass sized wide ${s}"
       @pointerdown=${this.press.down}
       @pointerup=${this.press.up}
       @pointermove=${this.press.move}
@@ -248,8 +238,24 @@ export class GlowLightCard extends GlowCardBase<LightCardConfig> {
     return t;
   }
 
+  /** Big on/off switch in the shape of the column, for lights without brightness. */
+  private switchColumn() {
+    const on = this.isActive;
+    return html`<button
+      class="onoff ${on ? 'on' : ''} ${this.darkIcon ? 'dark-text' : ''}"
+      aria-pressed=${on ? 'true' : 'false'}
+      ?disabled=${this.isUnavailable}
+      @click=${this.toggle}
+    >
+      <span class="onoff-halo"></span>
+      <span class="onoff-fill"></span>
+      <span class="onoff-word">${localize(this.hass, on ? 'on' : 'off')}</span>
+    </button>`;
+  }
+
   private column() {
     const tabs = this.tabs;
+    if (!tabs.length) return this.switchColumn();
     const tab = tabs.includes(this.tab) ? this.tab : (tabs[0] ?? 'brightness');
     const on = this.isActive;
     const dragging = this.dragging;
@@ -294,7 +300,6 @@ export class GlowLightCard extends GlowCardBase<LightCardConfig> {
       .value=${this.bright}
       caption=${v > 0 ? `${v}%` : localize(this.hass, 'off')}
       ?dark-text=${this.darkIcon}
-      ?disabled=${!this.caps.brightness}
       label=${localize(this.hass, 'brightness')}
       @value-changing=${this.dragColumn}
       @value-changed=${this.setColumn}
@@ -344,8 +349,63 @@ export class GlowLightCard extends GlowCardBase<LightCardConfig> {
   protected popupStyles() {
     return [
       css`
-        glowcard-slider {
+        glowcard-slider,
+        .onoff {
           align-self: center;
+        }
+        .onoff {
+          position: relative;
+          width: 128px;
+          height: 300px;
+          margin: 6px 4px;
+          padding: 0;
+          border: 0;
+          border-radius: 40px;
+          background: var(--glow-track);
+          font: inherit;
+          color: var(--glow-text);
+          cursor: pointer;
+          -webkit-tap-highlight-color: transparent;
+        }
+        .onoff:disabled {
+          opacity: 0.5;
+          cursor: default;
+        }
+        .onoff:focus-visible {
+          outline: 2px solid rgb(var(--glow-accent));
+          outline-offset: 3px;
+        }
+        .onoff-fill,
+        .onoff-halo {
+          position: absolute;
+          inset: 0;
+          border-radius: inherit;
+          opacity: 0;
+          transition: opacity 0.3s;
+          pointer-events: none;
+        }
+        .onoff-fill {
+          background: var(--glow-fill-v, rgb(var(--glow-accent)));
+        }
+        .onoff-halo {
+          inset: 10px 10px 0;
+          background: rgba(var(--glow-accent), var(--glow-halo, 0.75));
+          filter: blur(22px);
+        }
+        .onoff.on .onoff-fill,
+        .onoff.on .onoff-halo {
+          opacity: 1;
+        }
+        .onoff-word {
+          position: relative;
+          font: 800 30px var(--glow-font);
+          letter-spacing: -0.03em;
+        }
+        .onoff.on .onoff-word {
+          color: #ffffff;
+        }
+        .onoff.on.dark-text .onoff-word {
+          color: #1f1a12;
         }
       `,
     ];
@@ -384,10 +444,6 @@ export class GlowLightCard extends GlowCardBase<LightCardConfig> {
         min-width: 0;
         flex-shrink: 0;
         max-width: 60%;
-      }
-      .small .titles {
-        max-width: 100%;
-        flex-shrink: 1;
       }
       .name,
       .sub {
