@@ -29,6 +29,8 @@ export interface ConfigForm {
   computeLabel: (schema: FormSchema) => string | undefined;
   computeHelper: (schema: FormSchema) => string | undefined;
   assertConfig?: (config: Record<string, unknown>) => void;
+  /** Rewrites old keys into what the editor shows (e.g. `variant: wide` → `show_power`). */
+  normalize?: (config: Record<string, unknown>) => Record<string, unknown>;
 }
 
 const LABELS = {
@@ -65,6 +67,8 @@ const LABELS = {
     mode_default: 'Standard',
     area: 'Text unter dem Namen',
     threshold: 'Glüht ab (W)',
+    show_power: 'Leistung/Verbrauch anzeigen',
+    show_power_helper: 'Live-Leistungskurve und heutiger Verbrauch, die Karte wird ganz breit',
     entities_section: 'Entitäten der Steckdose',
     power_entity: 'Leistung',
     energy_entity: 'Energie',
@@ -164,6 +168,8 @@ const LABELS = {
     mode_default: 'default',
     area: 'Text under the name',
     threshold: 'Glows from (W)',
+    show_power: 'Show power/usage',
+    show_power_helper: "Live power curve and today's usage; the card goes full width",
     entities_section: 'Plug entities',
     power_entity: 'Power',
     energy_entity: 'Energy',
@@ -503,8 +509,10 @@ export function configForm(
   schema: FormSchema[],
   helpers: Partial<Record<string, EditorLabel>> = {},
   assertConfig?: (config: Record<string, unknown>) => void,
+  normalize?: (config: Record<string, unknown>) => Record<string, unknown>,
 ): ConfigForm {
   return {
+    normalize,
     schema: translateTitles(schema),
     computeLabel: (s) => {
       if (s.type === 'expandable') return s.title;
