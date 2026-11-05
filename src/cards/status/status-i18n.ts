@@ -61,6 +61,7 @@ const de = {
   details: 'Details',
   ok: 'OK',
   unreachable: 'nicht erreichbar',
+  battery_low: 'Batterie {v}',
   sensors: 'Sensoren',
   // device classes (status bar label "Fenster, Rauch")
   dc_window: 'Fenster',
@@ -162,6 +163,7 @@ const en: typeof de = {
   details: 'Details',
   ok: 'OK',
   unreachable: 'unreachable',
+  battery_low: 'Battery {v}',
   sensors: 'Sensors',
   dc_window: 'Windows',
   dc_door: 'Doors',
