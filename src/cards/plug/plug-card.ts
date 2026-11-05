@@ -1,12 +1,13 @@
 import { css, html, nothing, svg, type PropertyValues } from 'lit';
 import { state } from 'lit/decorators.js';
-import { GlowCardBase, type GlowCardConfig } from '../../core/base-card';
+import { GlowCardBase, stubEntity, type GlowCardConfig } from '../../core/base-card';
 import { registerCard } from '../../core/register';
 import {
   actionsField,
   areaField,
   configForm,
   lookFields,
+  lookSection,
   nameIconFields,
   sizeField,
   variantField,
@@ -71,22 +72,19 @@ export class GlowPlugCard extends GlowCardBase<PlugCardConfig> {
     return configForm(
       [
         { name: 'entity', required: true, selector: { entity: { domain: ['switch'] } } },
-        variantField(['small', 'wide']),
-        nameIconFields,
-        lookFields,
-        sizeField,
-        {
+        lookSection(variantField(['small', 'wide']), nameIconFields, lookFields, sizeField, {
           name: '',
           type: 'grid',
           schema: [
             areaField,
             { name: 'threshold', selector: { number: { min: 0, step: 0.5, mode: 'box' } } },
           ],
-        },
+        }),
         {
           name: '',
           type: 'expandable',
           title: 'entities_section',
+          icon: 'mdi:power-plug-outline',
           schema: [
             pick('power_entity', ['sensor'], 'power'),
             pick('energy_entity', ['sensor'], 'energy'),
@@ -111,10 +109,9 @@ export class GlowPlugCard extends GlowCardBase<PlugCardConfig> {
     );
   }
 
-  static getStubConfig(hass: HomeAssistant): Partial<PlugCardConfig> {
-    const ids = Object.keys(hass.states).filter((id) => id.startsWith('switch.'));
-    const withPower = ids.find((id) => findPlugParts(hass, id).power);
-    return { entity: withPower ?? ids[0] ?? 'switch.example' };
+  /** No entity is picked for the user; "by entity" passes the chosen ones. */
+  static getStubConfig(_hass: HomeAssistant, entities: string[] = []): Partial<PlugCardConfig> {
+    return stubEntity(entities, ['switch']);
   }
 
   getCardSize(): number {
@@ -318,9 +315,6 @@ export class GlowPlugCard extends GlowCardBase<PlugCardConfig> {
       .icon=${this.icon}
       ?active=${this.isActive}
       label=${this.displayName}
-      @pointerdown=${(e: Event) => e.stopPropagation()}
-      @pointerup=${(e: Event) => e.stopPropagation()}
-      @click=${this.toggle}
     ></glowcard-orb>`;
   }
 

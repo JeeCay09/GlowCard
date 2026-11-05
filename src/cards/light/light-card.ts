@@ -1,8 +1,15 @@
 import { css, html, nothing, type PropertyValues } from 'lit';
 import { state } from 'lit/decorators.js';
-import { GlowCardBase, type GlowCardConfig } from '../../core/base-card';
+import { GlowCardBase, stubEntity, type GlowCardConfig } from '../../core/base-card';
 import { registerCard } from '../../core/register';
-import { actionsField, configForm, lookFields, nameIconFields, sizeField } from '../../core/editor';
+import {
+  actionsField,
+  configForm,
+  lookFields,
+  lookSection,
+  nameIconFields,
+  sizeField,
+} from '../../core/editor';
 import { localize } from '../../core/localize';
 import { lightColor, mix, rgbTriplet, type Rgb } from '../../core/color';
 import type { HomeAssistant } from '../../types/hass';
@@ -45,18 +52,16 @@ export class GlowLightCard extends GlowCardBase<LightCardConfig> {
     return configForm(
       [
         { name: 'entity', required: true, selector: { entity: { domain: ['light'] } } },
-        nameIconFields,
-        lookFields,
-        sizeField,
+        lookSection(nameIconFields, lookFields, sizeField),
         actionsField,
       ],
       { color: 'color_light_helper' },
     );
   }
 
-  static getStubConfig(hass: HomeAssistant): Partial<LightCardConfig> {
-    const entity = Object.keys(hass.states).find((id) => id.startsWith('light.'));
-    return { entity: entity ?? 'light.example' };
+  /** No entity is picked for the user; "by entity" passes the chosen ones. */
+  static getStubConfig(_hass: HomeAssistant, entities: string[] = []): Partial<LightCardConfig> {
+    return stubEntity(entities, ['light']);
   }
 
   getCardSize(): number {
@@ -183,9 +188,6 @@ export class GlowLightCard extends GlowCardBase<LightCardConfig> {
       ?active=${this.isActive}
       ?dark-icon=${this.darkIcon}
       label=${this.displayName}
-      @pointerdown=${(e: Event) => e.stopPropagation()}
-      @pointerup=${(e: Event) => e.stopPropagation()}
-      @click=${this.toggle}
     ></glowcard-orb>`;
   }
 

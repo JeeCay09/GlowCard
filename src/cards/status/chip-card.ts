@@ -75,6 +75,7 @@ export class GlowChipCard extends GlowStatusBase<ChipCardConfig> {
           name: '',
           type: 'expandable',
           title: 'energy_section',
+          icon: 'mdi:lightning-bolt-outline',
           schema: [
             {
               name: '',
@@ -101,9 +102,9 @@ export class GlowChipCard extends GlowStatusBase<ChipCardConfig> {
     );
   }
 
-  static getStubConfig(hass: HomeAssistant): Partial<ChipCardConfig> {
-    const weather = Object.keys(hass.states).find((id) => id.startsWith('weather.'));
-    return weather ? { chip: 'weather', entity: weather } : { chip: 'lights' };
+  /** No entity is picked for the user: a lights chip, or the entity chosen "by entity". */
+  static getStubConfig(_hass: HomeAssistant, entities: string[] = []): Partial<ChipCardConfig> {
+    return entities[0] ? { chip: 'entity', entity: entities[0] } : { chip: 'lights' };
   }
 
   setConfig(config: ChipCardConfig): void {
