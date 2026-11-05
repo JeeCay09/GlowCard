@@ -20,6 +20,8 @@ export interface FormSchema {
   selector?: Record<string, unknown>;
   context?: Record<string, string>;
   schema?: FormSchema[];
+  /** What the card uses when the key is not set; the editor shows it instead of an empty field. */
+  default?: unknown;
 }
 
 export interface ConfigForm {
@@ -40,6 +42,7 @@ const LABELS = {
     font: 'Schrift',
     size: 'Größe',
     auto: 'Automatisch (kompakt am Handy)',
+    color_auto: 'Automatisch',
     compact: 'Kompakt',
     normal: 'Normal',
     look_section: 'Darstellung',
@@ -138,6 +141,7 @@ const LABELS = {
     font: 'Font',
     size: 'Size',
     auto: 'Automatic (compact on phones)',
+    color_auto: 'Automatic',
     compact: 'Compact',
     normal: 'Normal',
     look_section: 'Appearance',
@@ -252,6 +256,7 @@ export const entityField = (domain: string[]): FormSchema => ({
 
 export const variantField = (variants: string[]): FormSchema => ({
   name: 'variant',
+  default: variants[0],
   selector: {
     select: {
       mode: 'dropdown',
@@ -277,16 +282,23 @@ export const lookFields: FormSchema = {
   schema: [
     {
       name: 'color',
+      default: 'auto',
       selector: {
         select: {
           mode: 'dropdown',
           custom_value: true,
-          options: Object.keys(ACCENTS).filter((k) => k !== 'heat'),
+          options: [
+            { value: 'auto', label: editorLabel('color_auto') },
+            ...Object.keys(ACCENTS)
+              .filter((k) => k !== 'heat')
+              .map((k) => ({ value: k, label: k })),
+          ],
         },
       },
     },
     {
       name: 'font',
+      default: 'glow',
       selector: {
         select: {
           mode: 'dropdown',
@@ -303,6 +315,7 @@ export const lookFields: FormSchema = {
 /** Font only (cards without an accent colour). */
 export const fontField: FormSchema = {
   name: 'font',
+  default: 'glow',
   selector: {
     select: {
       mode: 'dropdown',
@@ -314,6 +327,7 @@ export const fontField: FormSchema = {
 /** Card size: auto (compact on phones), compact or normal. */
 export const sizeField: FormSchema = {
   name: 'size',
+  default: 'auto',
   selector: {
     select: {
       mode: 'dropdown',
@@ -517,5 +531,32 @@ function translateTitles(schema: FormSchema[]): FormSchema[] {
 export function cleanConfig<C extends object>(config: C): C {
   return Object.fromEntries(
     Object.entries(config).filter(([, v]) => v !== '' && v !== null && v !== undefined),
+  ) as C;
+}
+
+/** Defaults of all fields in a schema (sections and grids included). */
+export function schemaDefaults(schema: FormSchema[]): Record<string, unknown> {
+  const out: Record<string, unknown> = {};
+  for (const s of schema) {
+    if (s.schema) Object.assign(out, schemaDefaults(s.schema));
+    else if (s.name && s.default !== undefined) out[s.name] = s.default;
+  }
+  return out;
+}
+
+/** Fills unset fields with the card's defaults, so the editor never shows them empty. */
+export function withDefaults(
+  data: Record<string, unknown>,
+  defaults: Record<string, unknown>,
+): Record<string, unknown> {
+  const out = { ...data };
+  for (const [k, v] of Object.entries(defaults)) if (out[k] === undefined) out[k] = v;
+  return out;
+}
+
+/** Drops values that equal the default, so the YAML stays short and defaults can change. */
+export function withoutDefaults<C extends object>(config: C, defaults: Record<string, unknown>): C {
+  return Object.fromEntries(
+    Object.entries(config).filter(([k, v]) => !(k in defaults) || v !== defaults[k]),
   ) as C;
 }

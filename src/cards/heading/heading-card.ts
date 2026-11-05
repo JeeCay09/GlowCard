@@ -43,6 +43,7 @@ export class GlowHeadingCard extends GlowStatusBase<HeadingCardConfig> {
           schema: [
             {
               name: 'heading_style',
+              default: 'title',
               selector: {
                 select: {
                   mode: 'dropdown',
