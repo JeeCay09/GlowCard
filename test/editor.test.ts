@@ -6,7 +6,10 @@ import {
   editorLabel,
   fromFormData,
   gestureSchema,
+  schemaDefaults,
   toFormData,
+  withDefaults,
+  withoutDefaults,
   type FormSchema,
   type GestureSpec,
 } from '../src/core/editor';
@@ -241,5 +244,27 @@ describe('visual editor', () => {
     const chip = card('glowcard-chip').getConfigForm();
     expect(names(chip.schema)).toEqual(expect.arrayContaining(['chip', 'entity', 'icon_only']));
     expect(() => chip.assertConfig!({ chips: [] })).toThrow();
+  });
+
+  it('shows defaults instead of empty fields and keeps them out of the YAML', () => {
+    const defaults = (type: string) => schemaDefaults(card(type).getConfigForm().schema);
+    expect(defaults('glowcard-light')).toEqual({ color: 'auto', font: 'glow', size: 'auto' });
+    expect(defaults('glowcard-switch')).toMatchObject({ variant: 'small', font: 'glow' });
+    expect(defaults('glowcard-plug')).toMatchObject({ variant: 'small', threshold: 1 });
+    expect(defaults('glowcard-heading')).toMatchObject({ heading_style: 'title', size: 'auto' });
+    expect(defaults('glowcard-header')).toEqual({ font: 'glow' });
+    expect(defaults('glowcard-status')).toEqual({ font: 'glow', size: 'auto' });
+    expect(defaults('glowcard-chip')).toEqual({ color: 'auto', font: 'glow' });
+
+    const d = defaults('glowcard-light');
+    expect(withDefaults({ entity: 'light.a', font: 'theme' }, d)).toEqual({
+      entity: 'light.a',
+      font: 'theme',
+      color: 'auto',
+      size: 'auto',
+    });
+    expect(withoutDefaults({ type: 'x', font: 'glow', color: 'auto', size: 'compact' }, d)).toEqual(
+      { type: 'x', size: 'compact' },
+    );
   });
 });
