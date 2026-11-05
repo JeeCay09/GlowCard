@@ -14,7 +14,7 @@
 ![GlowCard Schalter- und Steckdosen-Karten im hellen Modus](https://raw.githubusercontent.com/JeeCay09/GlowCard/main/docs/images/cards-light.jpg)
 
 - Karten aus Milchglas; ein aktives Gerät färbt seine Karte ein und leuchtet in seiner eigenen Farbe.
-- Runde „Orb“-Symbole: Tippen auf den Orb schaltet ein/aus. Keine extra Schalterzeilen.
+- Tippen auf die Karte (auch auf den Orb) schaltet ein/aus, Gedrückthalten öffnet das GlowCard-Popup. Keine extra Schalterzeilen.
 - Werte wie Helligkeit stellt man ein, indem man den Balken selbst zieht.
 - Lichter nutzen ihre **aktuelle** Farbe für Orb, Balken und Kartentönung.
 - Eingebaute Popups (kein Bubble Card oder browser_mod nötig).
@@ -36,7 +36,9 @@
 | Überschrift    | `custom:glowcard-heading` | beliebige Entitäten als Badges                      | neu (nächste)    |
 | Energie „Haus“ | `custom:glowcard-energy`  | Leistungs-`sensor.*` für Solar, Akku, Netz, Haus    | geplant für v0.4 |
 
-Alle Karten haben einen visuellen Editor (ab Home Assistant 2025.1). In einem Sections-Dashboard richtet sich die Breite nach der Variante: klein = 1/4, breit = 1/2, breite Steckdose, Kopfzeile, Status-Leiste und Chip-Reihen = ganze Breite, einzelner Chip = 1/2, Symbol-Chip = 1/4. Im Dashboard-Editor kannst du die Größe weiterhin selbst ändern.
+Alle Karten haben einen visuellen Editor (ab Home Assistant 2025.1). In einem Sections-Dashboard richtet sich die Breite nach der Variante: klein = 1/4, breit = 1/2, breite Steckdose, Kopfzeile, Status-Leiste und Chip-Reihen = ganze Breite, einzelner Chip = 1/2, Symbol-Chip = 1/4. Im Dashboard-Editor kannst du die Größe weiterhin selbst ändern. Neue Karten starten ohne Entität; fügst du eine Karte „nach Entität“ hinzu, nimmt sie die gewählte Entität.
+
+Im Editor bietet „Tippverhalten“ für Antippen und Gedrückthalten: Ein/Aus, GlowCard-Popup, Detailansicht, Nichts oder eine andere Aktion von Home Assistant.
 
 ## Installation
 
@@ -82,8 +84,8 @@ Alle Karten teilen diese Optionen:
 | `color`       | String | je Kartentyp       | Akzentfarbe (`amber`, `teal`, `sky`, `violet`, … oder Hex)                                                 |
 | `variant`     | String | `small`            | Layout der Karte, abhängig vom Kartentyp                                                                   |
 | `size`        | String | `auto`             | Schalter, Steckdose, Licht, Status-Leiste: `auto` (kompakt am Handy unter 600 px), `compact` oder `normal` |
-| `tap_action`  | Aktion | Popup öffnen       | Standard-Aktion von Home Assistant                                                                         |
-| `hold_action` | Aktion | `more-info`        | Standard-Aktion von Home Assistant                                                                         |
+| `tap_action`  | Aktion | `toggle`           | Aktion von Home Assistant oder `action: popup` für das GlowCard-Popup                                      |
+| `hold_action` | Aktion | `popup`            | Aktion von Home Assistant oder `action: popup` für das GlowCard-Popup                                      |
 
 Die Beispiele zeigen die geplanten Optionen. Details können sich bis v1.0 noch ändern.
 
@@ -97,7 +99,7 @@ color: sky
 variant: wide # small | wide (7-Tage-Streifen) | row
 ```
 
-Gruppe von Schaltern (der Orb schaltet alle):
+Gruppe von Schaltern (Tippen auf die Karte schaltet alle, Gedrückthalten macht standardmäßig nichts):
 
 ```yaml
 type: custom:glowcard-switch

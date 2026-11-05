@@ -14,7 +14,7 @@
 ![GlowCard switch and plug cards in light mode](https://raw.githubusercontent.com/JeeCay09/GlowCard/main/docs/images/cards-light.jpg)
 
 - Frosted glass cards; an active device tints its card and casts a soft glow in its own colour.
-- Round "orb" icons: tap the orb to switch on/off. No extra toggle rows.
+- Tap a card (orb included) to switch it on/off, hold it to open the GlowCard popup. No extra toggle rows.
 - Values like brightness are set by dragging the bar itself.
 - Lights use their **current** colour for orb, bar and tint.
 - Built-in popups (no Bubble Card or browser_mod needed).
@@ -36,7 +36,9 @@
 | Heading        | `custom:glowcard-heading` | any entities as badges                          | new (next)       |
 | Energy "House" | `custom:glowcard-energy`  | power `sensor.*` for solar, battery, grid, home | planned for v0.4 |
 
-All cards have a visual editor (Home Assistant 2025.1 or newer). In a sections dashboard, each card takes its width from its variant: small = 1/4, wide = 1/2, wide plug, header, status bar and chip rows = full width, single chip = 1/2, icon-only chip = 1/4. You can still resize it in the dashboard editor.
+All cards have a visual editor (Home Assistant 2025.1 or newer). In a sections dashboard, each card takes its width from its variant: small = 1/4, wide = 1/2, wide plug, header, status bar and chip rows = full width, single chip = 1/2, icon-only chip = 1/4. You can still resize it in the dashboard editor. New cards start without an entity; when you add a card "by entity", it uses the entity you picked.
+
+In the editor, "Tap behaviour" offers toggle, GlowCard popup, more info, nothing or any other Home Assistant action for tap and hold.
 
 ## Installation
 
@@ -82,8 +84,8 @@ All cards share these options:
 | `color`       | string | per card type | Accent colour (`amber`, `teal`, `sky`, `violet`, … or hex)                                      |
 | `variant`     | string | `small`       | Card layout, depends on the card                                                                |
 | `size`        | string | `auto`        | Switch, plug, light, status bar: `auto` (compact on phones under 600 px), `compact` or `normal` |
-| `tap_action`  | action | open popup    | Standard Home Assistant action                                                                  |
-| `hold_action` | action | `more-info`   | Standard Home Assistant action                                                                  |
+| `tap_action`  | action | `toggle`      | Home Assistant action, or `action: popup` for the GlowCard popup                                |
+| `hold_action` | action | `popup`       | Home Assistant action, or `action: popup` for the GlowCard popup                                |
 
 The examples below show the planned options. Details may still change before v1.0.
 
@@ -97,7 +99,7 @@ color: sky
 variant: wide # small | wide (7-day on/off strip) | row
 ```
 
-Group of switches (the orb toggles all of them):
+Group of switches (tapping the card toggles all of them, holding does nothing by default):
 
 ```yaml
 type: custom:glowcard-switch

@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import {
   SWATCHES,
   brightnessPct,
@@ -158,5 +158,64 @@ describe('light card bar', () => {
     expect(onoff.value).toBe('');
     expect(onoff.el.shadowRoot!.querySelector('glowcard-slider')).toBeNull();
     onoff.el.remove();
+  });
+
+  it('switches on tap anywhere on the card, orb included, and opens the popup on hold', async () => {
+    vi.useFakeTimers();
+    await import('../src/glowcard');
+    const calls: unknown[] = [];
+    const el = document.createElement('glowcard-light') as HTMLElement & {
+      setConfig(c: unknown): void;
+      hass: unknown;
+      updateComplete: Promise<boolean>;
+    };
+    el.setConfig({ type: 'custom:glowcard-light', entity: 'light.x' });
+    el.hass = {
+      states: {
+        'light.x': light('on', { brightness: 100, supported_color_modes: ['brightness'] }),
+      },
+      language: 'de',
+      locale: { language: 'de' },
+      themes: { darkMode: true },
+      callService: async (...args: unknown[]) => void calls.push(args),
+    };
+    document.body.appendChild(el);
+    await el.updateComplete;
+    const press = async (target: Element, ms: number) => {
+      target.dispatchEvent(
+        new PointerEvent('pointerdown', { button: 0, bubbles: true, composed: true }),
+      );
+      vi.advanceTimersByTime(ms);
+      target.dispatchEvent(new PointerEvent('pointerup', { bubbles: true, composed: true }));
+      await Promise.resolve();
+    };
+    const toggle = ['homeassistant', 'toggle', { entity_id: 'light.x' }];
+    await press(el.shadowRoot!.querySelector('.name')!, 50);
+    expect(calls).toEqual([toggle]);
+    await press(el.shadowRoot!.querySelector('glowcard-orb')!, 50);
+    expect(calls).toEqual([toggle, toggle]);
+    await press(el.shadowRoot!.querySelector('.name')!, 600);
+    expect(calls).toHaveLength(2);
+    expect(document.body.querySelector('glowcard-popup')).not.toBeNull();
+    document.body.querySelector('glowcard-popup')!.remove();
+    el.remove();
+    vi.useRealTimers();
+  });
+
+  it('shows "choose an entity" on a new card without entity', async () => {
+    await import('../src/glowcard');
+    for (const type of ['glowcard-light', 'glowcard-switch', 'glowcard-plug']) {
+      const el = document.createElement(type) as HTMLElement & {
+        setConfig(c: unknown): void;
+        hass: unknown;
+        updateComplete: Promise<boolean>;
+      };
+      el.setConfig({ type: `custom:${type}` });
+      el.hass = { states: {}, language: 'de', locale: { language: 'de' }, themes: {} };
+      document.body.appendChild(el);
+      await el.updateComplete;
+      expect(el.shadowRoot!.textContent).toContain('Entität wählen');
+      el.remove();
+    }
   });
 });

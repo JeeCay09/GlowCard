@@ -1,14 +1,21 @@
+import type { ActionConfig } from './action';
 import { ACCENTS } from './color';
 
 /**
- * Visual editor support. Home Assistant (2024.11+) builds the editor from the schema that
- * `static getConfigForm()` returns, using its own `ha-form` and selectors.
+ * Visual editor support. Each card describes its form in `static getConfigForm()`; the
+ * editor element (editor-element.ts) shows it with Home Assistant's own `ha-form` and
+ * selectors, and adds the GlowCard gesture choices (tap / hold) that HA's action picker
+ * cannot offer (e.g. "GlowCard popup").
  */
 
 export interface FormSchema {
   name: string;
   type?: 'grid' | 'expandable';
   title?: string;
+  /** Expandable sections: icon in front of the title. */
+  icon?: string;
+  /** Expandable sections: open when the editor opens. */
+  expanded?: boolean;
   required?: boolean;
   selector?: Record<string, unknown>;
   context?: Record<string, string>;
@@ -35,11 +42,18 @@ const LABELS = {
     auto: 'Automatisch (kompakt am Handy)',
     compact: 'Kompakt',
     normal: 'Normal',
-    actions_section: 'Aktionen',
-    tap_action: 'Tippen',
-    hold_action: 'Gedrückt halten',
-    tap_helper: 'Standardaktion = GlowCard-Popup (bei Gruppen: keine)',
-    hold_helper: 'Standardaktion = Weitere Infos (Popup von Home Assistant)',
+    look_section: 'Darstellung',
+    actions_section: 'Tippverhalten',
+    tap_mode: 'Antippen',
+    hold_mode: 'Gedrückt halten',
+    tap_action: 'Aktion beim Antippen',
+    hold_action: 'Aktion beim Gedrückthalten',
+    mode_toggle: 'Ein/Aus',
+    mode_popup: 'GlowCard-Popup',
+    mode_more_info: 'Detailansicht',
+    mode_none: 'Nichts',
+    mode_other: 'Andere Aktion …',
+    mode_default: 'Standard',
     area: 'Text unter dem Namen',
     threshold: 'Glüht ab (W)',
     entities_section: 'Entitäten der Steckdose',
@@ -120,11 +134,18 @@ const LABELS = {
     auto: 'Automatic (compact on phones)',
     compact: 'Compact',
     normal: 'Normal',
-    actions_section: 'Actions',
-    tap_action: 'Tap',
-    hold_action: 'Hold',
-    tap_helper: 'Default action = GlowCard popup (groups: none)',
-    hold_helper: 'Default action = more info (Home Assistant dialog)',
+    look_section: 'Appearance',
+    actions_section: 'Tap behaviour',
+    tap_mode: 'Tap',
+    hold_mode: 'Hold',
+    tap_action: 'Tap action',
+    hold_action: 'Hold action',
+    mode_toggle: 'Toggle',
+    mode_popup: 'GlowCard popup',
+    mode_more_info: 'More info',
+    mode_none: 'Nothing',
+    mode_other: 'Other action …',
+    mode_default: 'default',
     area: 'Text under the name',
     threshold: 'Glows from (W)',
     entities_section: 'Plug entities',
@@ -292,24 +313,137 @@ export const sizeField: FormSchema = {
   },
 };
 
+/** HA actions offered under "Other action …" (the simple ones have their own choice). */
+export const OTHER_ACTIONS = ['navigate', 'url', 'perform-action'];
+
 /**
- * Tap and hold actions with Home Assistant's own action picker. The picker cannot list
- * our `popup` action, so the popup is the tap default ("Default action" = key removed);
- * an `action: popup` set in YAML is kept as it is.
+ * Tap and hold behaviour. The editor element replaces each `*_action` field with a
+ * choice (toggle, GlowCard popup, more info, nothing, other action …) and shows HA's own
+ * action picker only for "other action".
  */
-const CARD_ACTIONS = ['more-info', 'toggle', 'navigate', 'url', 'perform-action', 'none'];
 export const actionsField: FormSchema = {
   name: '',
   type: 'expandable',
   title: 'actions_section',
+  icon: 'mdi:gesture-tap',
   schema: [
-    { name: 'tap_action', selector: { ui_action: { actions: CARD_ACTIONS } } },
-    {
-      name: 'hold_action',
-      selector: { ui_action: { actions: CARD_ACTIONS, default_action: 'more-info' } },
-    },
+    { name: 'tap_action', selector: { ui_action: { actions: OTHER_ACTIONS } } },
+    { name: 'hold_action', selector: { ui_action: { actions: OTHER_ACTIONS } } },
   ],
 };
+
+/** Section with name, icon, colour, font and size (plus card specific fields). */
+export const lookSection = (...fields: FormSchema[]): FormSchema => ({
+  name: '',
+  type: 'expandable',
+  title: 'look_section',
+  icon: 'mdi:palette-outline',
+  expanded: true,
+  schema: fields,
+});
+
+// ---------- gestures (tap / hold) ----------
+
+export type GestureMode = 'toggle' | 'popup' | 'more-info' | 'none' | 'other';
+export type Gesture = 'tap' | 'hold';
+
+export interface GestureSpec {
+  /** Choices per gesture, in this order. */
+  modes: Record<Gesture, GestureMode[]>;
+  /** What happens when the key is not set. */
+  defaults: Record<Gesture, Exclude<GestureMode, 'other'>>;
+}
+
+export const DEFAULT_GESTURES: GestureSpec = {
+  modes: {
+    tap: ['toggle', 'popup', 'more-info', 'none', 'other'],
+    hold: ['popup', 'toggle', 'more-info', 'none', 'other'],
+  },
+  defaults: { tap: 'toggle', hold: 'popup' },
+};
+
+const SIMPLE_MODES: GestureMode[] = ['toggle', 'popup', 'more-info', 'none'];
+const GESTURES: Gesture[] = ['tap', 'hold'];
+
+/** The editor choice that shows an action (unset = the card's default). */
+export function gestureMode(action: ActionConfig | undefined, fallback: GestureMode): GestureMode {
+  if (!action) return fallback;
+  const simple = SIMPLE_MODES.includes(action.action as GestureMode);
+  return simple && Object.keys(action).length === 1 ? (action.action as GestureMode) : 'other';
+}
+
+/** Card config → form data: adds `tap_mode` / `hold_mode`. */
+export function toFormData(
+  config: Record<string, unknown>,
+  spec: GestureSpec,
+): Record<string, unknown> {
+  const data: Record<string, unknown> = { ...config };
+  for (const g of GESTURES) {
+    data[`${g}_mode`] = gestureMode(
+      config[`${g}_action`] as ActionConfig | undefined,
+      spec.defaults[g],
+    );
+  }
+  return data;
+}
+
+/** Form data → card config: turns the choices back into `tap_action` / `hold_action`. */
+export function fromFormData(
+  data: Record<string, unknown>,
+  spec: GestureSpec,
+): Record<string, unknown> {
+  const config: Record<string, unknown> = { ...data };
+  for (const g of GESTURES) {
+    const mode = config[`${g}_mode`] as GestureMode | undefined;
+    delete config[`${g}_mode`];
+    const key = `${g}_action`;
+    if (mode === undefined) continue;
+    if (mode !== 'other') {
+      if (mode === spec.defaults[g]) delete config[key];
+      else config[key] = { action: mode };
+    } else if (!config[key] || gestureMode(config[key] as ActionConfig, mode) !== 'other') {
+      // Just switched to "other action": start with navigation, HA's picker shows its fields.
+      config[key] = { action: 'navigate', navigation_path: '' };
+    }
+  }
+  return config;
+}
+
+const modeLabel = (m: GestureMode, lang?: string): string =>
+  editorLabel(`mode_${m.replace('-', '_')}` as EditorLabel, lang);
+
+/**
+ * Replaces the `tap_action` / `hold_action` fields with the gesture choice; HA's action
+ * picker only stays for "other action".
+ */
+export function gestureSchema(
+  schema: FormSchema[],
+  spec: GestureSpec,
+  data: Record<string, unknown>,
+  lang?: string,
+): FormSchema[] {
+  return schema.flatMap((s): FormSchema[] => {
+    if (s.schema) return [{ ...s, schema: gestureSchema(s.schema, spec, data, lang) }];
+    const g = GESTURES.find((x) => s.name === `${x}_action`);
+    if (!g) return [s];
+    const choice: FormSchema = {
+      name: `${g}_mode`,
+      selector: {
+        select: {
+          mode: 'dropdown',
+          options: spec.modes[g].map((m) => ({
+            value: m,
+            label:
+              m === spec.defaults[g]
+                ? `${modeLabel(m, lang)} (${editorLabel('mode_default', lang)})`
+                : modeLabel(m, lang),
+          })),
+        },
+      },
+    };
+    return data[`${g}_mode`] === 'other' ? [choice, s] : [choice];
+  });
+}
 
 export const areaField: FormSchema = { name: 'area', selector: { text: {} } };
 
@@ -320,18 +454,26 @@ export function configForm(
   assertConfig?: (config: Record<string, unknown>) => void,
 ): ConfigForm {
   return {
-    schema,
+    schema: translateTitles(schema),
     computeLabel: (s) => {
-      if (s.type === 'expandable' && s.title && isLabel(s.title)) return editorLabel(s.title);
+      if (s.type === 'expandable') return s.title;
       return isLabel(s.name) ? editorLabel(s.name) : undefined;
     },
     computeHelper: (s) => {
-      const key = { tap_action: 'tap_helper', hold_action: 'hold_helper', ...helpers }[s.name] as
-        EditorLabel | undefined;
+      const key = helpers[s.name];
       return key ? editorLabel(key) : undefined;
     },
     assertConfig,
   };
+}
+
+/** HA shows an expandable's `title` as it is, so section titles are translated up front. */
+function translateTitles(schema: FormSchema[]): FormSchema[] {
+  return schema.map((s) => ({
+    ...s,
+    ...(s.title && isLabel(s.title) ? { title: editorLabel(s.title) } : {}),
+    ...(s.schema ? { schema: translateTitles(s.schema) } : {}),
+  }));
 }
 
 /** Drops keys the editor clears to an empty value, so defaults apply again. */

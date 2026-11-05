@@ -47,10 +47,12 @@ export async function handleAction(
       ctx.openPopup();
       return true;
     case 'navigate':
+      if (!config.navigation_path) return false;
       history.pushState(null, '', config.navigation_path);
       fireEvent(window, 'location-changed', { replace: false });
       return true;
     case 'url':
+      if (!config.url_path) return false;
       window.open(config.url_path, '_blank', 'noopener');
       return true;
     case 'perform-action':
