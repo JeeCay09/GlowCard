@@ -33,10 +33,10 @@
 | Kopfzeile      | `custom:glowcard-header`  | `person.*`, Begrüßung, Datum/Uhrzeit                | Beta (v0.3)      |
 | Status-Leiste  | `custom:glowcard-status`  | Wetter, Lichter, Energie, Sicherheit, Warnungen     | Beta (v0.3)      |
 | Chip           | `custom:glowcard-chip`    | wie die Status-Leiste, plus Personen und Akku       | Beta (v0.3)      |
-| Überschrift    | `custom:glowcard-heading` | beliebige Entitäten als Badges                      | neu (nächste)    |
+| Überschrift    | `custom:glowcard-heading` | beliebige Entitäten als Badges                      | Beta (v0.4)      |
 | Energie „Haus“ | `custom:glowcard-energy`  | Leistungs-`sensor.*` für Solar, Akku, Netz, Haus    | geplant für v0.4 |
 
-Alle Karten haben einen visuellen Editor (ab Home Assistant 2025.1). In einem Sections-Dashboard richtet sich die Breite nach der Variante: klein = 1/4, breit = 1/2, breite Steckdose, Kopfzeile, Status-Leiste und Chip-Reihen = ganze Breite, einzelner Chip = 1/2, Symbol-Chip = 1/4. Im Dashboard-Editor kannst du die Größe weiterhin selbst ändern. Neue Karten starten ohne Entität; fügst du eine Karte „nach Entität“ hinzu, nimmt sie die gewählte Entität.
+Alle Karten haben einen visuellen Editor (ab Home Assistant 2025.1). In einem Sections-Dashboard richtet sich die Breite nach der Variante: klein = 1/4, breit = 1/2, breite Steckdose, Kopfzeile, Status-Leiste, Überschrift und Chip-Reihen = ganze Breite, einzelner Chip = 1/2, Symbol-Chip = 1/4. Im Dashboard-Editor kannst du die Größe weiterhin selbst ändern. Neue Karten starten ohne Entität; fügst du eine Karte „nach Entität“ hinzu, nimmt sie die gewählte Entität.
 
 Im Editor bietet „Tippverhalten“ für Antippen und Gedrückthalten: Ein/Aus, GlowCard-Popup, Detailansicht, Nichts oder eine andere Aktion von Home Assistant.
 
@@ -282,7 +282,7 @@ home: sensor.home_load_power
 2. Schalter- und Steckdosen-Karte → v0.1.0 (Beta)
 3. Licht-Karte und Popup → v0.2.0 (Beta)
 4. Kopfzeile, Status-Leiste und Chips, visueller Editor und Standard-Breiten → **v0.3.0 (Beta)**
-5. Energie-Karte „Haus“ und Popup → v0.4.0
+5. Überschrift-Karte (Abschnittstitel mit Badges, zusätzlich zum Plan) und Energie-Karte „Haus“ mit Popup → v0.4.0
 6. Visuelle Editoren für alle Karten, vollständige Doku, Antrag auf HACS-Standardliste → v1.0.0
 
 Später: Raum-Karte, Binärsensor, Bewässerung/Pflanze, Popups für Medien, Rollos und Saugroboter.

@@ -33,10 +33,10 @@
 | Header         | `custom:glowcard-header`  | `person.*`, greeting, date/time                 | beta (v0.3)      |
 | Status bar     | `custom:glowcard-status`  | weather, lights, energy, security, alerts       | beta (v0.3)      |
 | Chip           | `custom:glowcard-chip`    | like the status bar, plus people and battery    | beta (v0.3)      |
-| Heading        | `custom:glowcard-heading` | any entities as badges                          | new (next)       |
+| Heading        | `custom:glowcard-heading` | any entities as badges                          | beta (v0.4)      |
 | Energy "House" | `custom:glowcard-energy`  | power `sensor.*` for solar, battery, grid, home | planned for v0.4 |
 
-All cards have a visual editor (Home Assistant 2025.1 or newer). In a sections dashboard, each card takes its width from its variant: small = 1/4, wide = 1/2, wide plug, header, status bar and chip rows = full width, single chip = 1/2, icon-only chip = 1/4. You can still resize it in the dashboard editor. New cards start without an entity; when you add a card "by entity", it uses the entity you picked.
+All cards have a visual editor (Home Assistant 2025.1 or newer). In a sections dashboard, each card takes its width from its variant: small = 1/4, wide = 1/2, wide plug, header, status bar, heading and chip rows = full width, single chip = 1/2, icon-only chip = 1/4. You can still resize it in the dashboard editor. New cards start without an entity; when you add a card "by entity", it uses the entity you picked.
 
 In the editor, "Tap behaviour" offers toggle, GlowCard popup, more info, nothing or any other Home Assistant action for tap and hold.
 
@@ -282,7 +282,7 @@ home: sensor.home_load_power
 2. Switch and plug cards → v0.1.0 (beta)
 3. Light card and popup → v0.2.0 (beta)
 4. Header, status bar and chips, visual editor and default widths → **v0.3.0 (beta)**
-5. Energy "House" card and popup → v0.4.0
+5. Heading card (section titles with badges, added to the plan) and Energy "House" card and popup → v0.4.0
 6. Visual editors for all cards, full docs, submission to the HACS default list → v1.0.0
 
 Later: room card, binary sensor, irrigation/plant, media, cover and vacuum popups.
