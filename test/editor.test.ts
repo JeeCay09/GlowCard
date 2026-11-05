@@ -69,7 +69,14 @@ describe('visual editor', () => {
   it('shows translated section titles with icons', () => {
     const sections = (schema: FormSchema[]): FormSchema[] =>
       schema.flatMap((s) => (s.type === 'expandable' ? [s, ...sections(s.schema!)] : []));
-    for (const type of ['glowcard-switch', 'glowcard-plug', 'glowcard-light', 'glowcard-status']) {
+    for (const type of [
+      'glowcard-switch',
+      'glowcard-plug',
+      'glowcard-light',
+      'glowcard-status',
+      'glowcard-chip',
+      'glowcard-heading',
+    ]) {
       const form = card(type).getConfigForm();
       for (const s of sections(form.schema)) {
         expect(s.title).toBeTruthy();
