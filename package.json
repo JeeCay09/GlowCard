@@ -1,6 +1,6 @@
 {
   "name": "glowcard",
-  "version": "0.3.1",
+  "version": "0.4.0",
   "private": true,
   "description": "Glow dashboard cards for Home Assistant",
   "license": "MIT",
