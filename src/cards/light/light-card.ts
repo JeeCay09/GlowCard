@@ -60,8 +60,8 @@ export class GlowLightCard extends GlowCardBase<LightCardConfig> {
   }
 
   /** No entity is picked for the user; "by entity" passes the chosen ones. */
-  static getStubConfig(_hass: HomeAssistant, entities: string[] = []): Partial<LightCardConfig> {
-    return stubEntity(entities, ['light']);
+  static getStubConfig(): Partial<LightCardConfig> {
+    return stubEntity();
   }
 
   getCardSize(): number {

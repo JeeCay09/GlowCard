@@ -16,7 +16,6 @@ import { language, localize } from '../../core/localize';
 import { formatNumber } from '../../core/format';
 import { fireEvent } from '../../core/fire-event';
 import { fetchHistory, meterIncrease, numericBuckets, type StatePoint } from '../../core/history';
-import type { HomeAssistant } from '../../types/hass';
 import {
   TIMER_OPTIONS,
   chartPaths,
@@ -110,8 +109,8 @@ export class GlowPlugCard extends GlowCardBase<PlugCardConfig> {
   }
 
   /** No entity is picked for the user; "by entity" passes the chosen ones. */
-  static getStubConfig(_hass: HomeAssistant, entities: string[] = []): Partial<PlugCardConfig> {
-    return stubEntity(entities, ['switch']);
+  static getStubConfig(): Partial<PlugCardConfig> {
+    return stubEntity();
   }
 
   getCardSize(): number {
