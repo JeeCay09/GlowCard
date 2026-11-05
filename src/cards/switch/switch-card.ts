@@ -12,6 +12,7 @@ import {
   sizeField,
   nameIconFields,
   DEFAULT_GESTURES,
+  GROUP_GESTURES,
   type GestureSpec,
   variantField,
 } from '../../core/editor';
@@ -89,11 +90,7 @@ export class GlowSwitchCard extends GlowCardBase<SwitchCardConfig> {
   /** Groups have no popup and no single entity: tap switches all, hold does nothing. */
   static gestureSpec(config: Record<string, unknown> = {}): GestureSpec {
     const group = Array.isArray(config.entities) && config.entities.length > 0;
-    if (!group) return DEFAULT_GESTURES;
-    return {
-      modes: { tap: ['toggle', 'none', 'other'], hold: ['none', 'toggle', 'other'] },
-      defaults: { tap: 'toggle', hold: 'none' },
-    };
+    return group ? GROUP_GESTURES : DEFAULT_GESTURES;
   }
 
   setConfig(config: SwitchCardConfig): void {
