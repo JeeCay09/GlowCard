@@ -102,7 +102,7 @@ describe('visual editor', () => {
         },
         spec,
       ),
-    ).toMatchObject({ tap_mode: 'popup', hold_mode: 'other' });
+    ).toMatchObject({ tap_mode: 'popup', hold_mode: 'navigate', hold_path: '/x' });
 
     // Choosing the default removes the key, other simple choices are stored.
     expect(
@@ -115,15 +115,31 @@ describe('visual editor', () => {
       ),
     ).toEqual({ tap_action: { action: 'more-info' }, hold_action: { action: 'none' } });
 
-    // "Other action" starts with navigation and keeps what HA's picker sets afterwards.
-    expect(fromFormData({ tap_mode: 'other' }, spec)).toEqual({
-      tap_action: { action: 'navigate', navigation_path: '' },
+    // Navigate and URL: the choice plus their own field.
+    expect(fromFormData({ tap_mode: 'navigate', tap_path: '/lovelace/2' }, spec)).toEqual({
+      tap_action: { action: 'navigate', navigation_path: '/lovelace/2' },
     });
-    const url = { action: 'url', url_path: 'https://example.com' };
-    expect(fromFormData({ tap_mode: 'other', tap_action: url }, spec)).toEqual({ tap_action: url });
+    expect(fromFormData({ hold_mode: 'url', hold_url: 'https://example.com' }, spec)).toEqual({
+      hold_action: { action: 'url', url_path: 'https://example.com' },
+    });
+    // Perform action: HA's picker edits the action; it is kept while the choice stays.
+    const service = { action: 'perform-action', perform_action: 'light.turn_on', data: { x: 1 } };
+    expect(fromFormData({ tap_mode: 'perform-action', tap_action: service }, spec)).toEqual({
+      tap_action: service,
+    });
+    expect(fromFormData({ tap_mode: 'perform-action' }, spec)).toEqual({
+      tap_action: { action: 'perform-action' },
+    });
+    // Extra keys of an existing action survive, e.g. toggle of another entity.
+    const other = { action: 'toggle', entity: 'light.b' };
+    expect(fromFormData({ tap_mode: 'toggle', tap_action: other }, spec)).toEqual({
+      tap_action: other,
+    });
+    // Clearing the choice brings the default back.
+    expect(fromFormData({ tap_action: { action: 'none' } }, spec)).toEqual({});
   });
 
-  it('shows the action picker only for "other action" and marks the default', () => {
+  it('shows all actions in one list and only the fields they need', () => {
     const form = card('glowcard-light').getConfigForm();
     const plain = gestureSchema(form.schema, DEFAULT_GESTURES, { tap_mode: 'toggle' }, 'de');
     expect(names(plain)).toEqual(expect.arrayContaining(['tap_mode', 'hold_mode']));
@@ -131,9 +147,19 @@ describe('visual editor', () => {
     const choice = JSON.stringify(plain);
     expect(choice).toContain('Ein/Aus (Standard)');
     expect(choice).toContain('GlowCard-Popup (Standard)');
-    const other = gestureSchema(form.schema, DEFAULT_GESTURES, { tap_mode: 'other' }, 'de');
-    expect(names(other)).toContain('tap_action');
-    expect(names(other)).not.toContain('hold_action');
+    expect(choice).toContain('Navigieren');
+    expect(choice).toContain('Aktion ausführen');
+    expect(choice).not.toContain('Andere Aktion');
+    expect(names(gestureSchema(form.schema, DEFAULT_GESTURES, { tap_mode: 'navigate' }))).toContain(
+      'tap_path',
+    );
+    expect(names(gestureSchema(form.schema, DEFAULT_GESTURES, { hold_mode: 'url' }))).toContain(
+      'hold_url',
+    );
+    expect(
+      names(gestureSchema(form.schema, DEFAULT_GESTURES, { tap_mode: 'perform-action' })),
+    ).toContain('tap_action');
+    expect(form.computeLabel({ name: 'tap_path' })).toBeTruthy();
   });
 
   it('switch groups have no popup choice and do nothing on hold by default', () => {

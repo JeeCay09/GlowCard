@@ -38,7 +38,7 @@
 
 All cards have a visual editor (Home Assistant 2025.1 or newer). In a sections dashboard, each card takes its width from its variant: small = 1/4, wide = 1/2, wide plug, header, status bar, heading and chip rows = full width, single chip = 1/2, icon-only chip = 1/4. You can still resize it in the dashboard editor. New cards start without an entity; when you add a card "by entity", it uses the entity you picked.
 
-In the editor, "Tap behaviour" offers toggle, GlowCard popup, more info, nothing or any other Home Assistant action for tap and hold.
+In the editor, "Tap behaviour" offers toggle, GlowCard popup, more info, navigate, open URL, perform action or nothing for tap and hold, all in one list.
 
 ## Installation
 
