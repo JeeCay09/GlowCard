@@ -52,7 +52,13 @@ const LABELS = {
     mode_popup: 'GlowCard-Popup',
     mode_more_info: 'Detailansicht',
     mode_none: 'Nichts',
-    mode_other: 'Andere Aktion …',
+    mode_navigate: 'Navigieren',
+    mode_url: 'URL öffnen',
+    mode_perform_action: 'Aktion ausführen',
+    tap_path: 'Ziel beim Antippen',
+    hold_path: 'Ziel beim Gedrückthalten',
+    tap_url: 'Adresse beim Antippen',
+    hold_url: 'Adresse beim Gedrückthalten',
     mode_default: 'Standard',
     area: 'Text unter dem Namen',
     threshold: 'Glüht ab (W)',
@@ -144,7 +150,13 @@ const LABELS = {
     mode_popup: 'GlowCard popup',
     mode_more_info: 'More info',
     mode_none: 'Nothing',
-    mode_other: 'Other action …',
+    mode_navigate: 'Navigate',
+    mode_url: 'Open URL',
+    mode_perform_action: 'Perform action',
+    tap_path: 'Tap target',
+    hold_path: 'Hold target',
+    tap_url: 'Tap URL',
+    hold_url: 'Hold URL',
     mode_default: 'default',
     area: 'Text under the name',
     threshold: 'Glows from (W)',
@@ -313,13 +325,9 @@ export const sizeField: FormSchema = {
   },
 };
 
-/** HA actions offered under "Other action …" (the simple ones have their own choice). */
-export const OTHER_ACTIONS = ['navigate', 'url', 'perform-action'];
-
 /**
- * Tap and hold behaviour. The editor element replaces each `*_action` field with a
- * choice (toggle, GlowCard popup, more info, nothing, other action …) and shows HA's own
- * action picker only for "other action".
+ * Tap and hold behaviour. The editor element replaces each `*_action` field with one
+ * choice of all actions and shows only the fields the chosen action needs.
  */
 export const actionsField: FormSchema = {
   name: '',
@@ -327,8 +335,8 @@ export const actionsField: FormSchema = {
   title: 'actions_section',
   icon: 'mdi:gesture-tap',
   schema: [
-    { name: 'tap_action', selector: { ui_action: { actions: OTHER_ACTIONS } } },
-    { name: 'hold_action', selector: { ui_action: { actions: OTHER_ACTIONS } } },
+    { name: 'tap_action', selector: { ui_action: {} } },
+    { name: 'hold_action', selector: { ui_action: {} } },
   ],
 };
 
@@ -344,45 +352,56 @@ export const lookSection = (...fields: FormSchema[]): FormSchema => ({
 
 // ---------- gestures (tap / hold) ----------
 
-export type GestureMode = 'toggle' | 'popup' | 'more-info' | 'none' | 'other';
+export type GestureMode =
+  'popup' | 'toggle' | 'more-info' | 'navigate' | 'url' | 'perform-action' | 'none';
 export type Gesture = 'tap' | 'hold';
 
 export interface GestureSpec {
   /** Choices per gesture, in this order. */
   modes: Record<Gesture, GestureMode[]>;
   /** What happens when the key is not set. */
-  defaults: Record<Gesture, Exclude<GestureMode, 'other'>>;
+  defaults: Record<Gesture, GestureMode>;
 }
+
+const HA_MODES: GestureMode[] = ['navigate', 'url', 'perform-action', 'none'];
 
 export const DEFAULT_GESTURES: GestureSpec = {
   modes: {
-    tap: ['toggle', 'popup', 'more-info', 'none', 'other'],
-    hold: ['popup', 'toggle', 'more-info', 'none', 'other'],
+    tap: ['toggle', 'popup', 'more-info', ...HA_MODES],
+    hold: ['popup', 'toggle', 'more-info', ...HA_MODES],
   },
   defaults: { tap: 'toggle', hold: 'popup' },
 };
 
-const SIMPLE_MODES: GestureMode[] = ['toggle', 'popup', 'more-info', 'none'];
+/** Switch groups: no popup and no single entity for more info. */
+export const GROUP_GESTURES: GestureSpec = {
+  modes: {
+    tap: ['toggle', ...HA_MODES],
+    hold: ['none', 'toggle', 'navigate', 'url', 'perform-action'],
+  },
+  defaults: { tap: 'toggle', hold: 'none' },
+};
+
 const GESTURES: Gesture[] = ['tap', 'hold'];
 
 /** The editor choice that shows an action (unset = the card's default). */
 export function gestureMode(action: ActionConfig | undefined, fallback: GestureMode): GestureMode {
   if (!action) return fallback;
-  const simple = SIMPLE_MODES.includes(action.action as GestureMode);
-  return simple && Object.keys(action).length === 1 ? (action.action as GestureMode) : 'other';
+  return (action.action === 'call-service' ? 'perform-action' : action.action) as GestureMode;
 }
 
-/** Card config → form data: adds `tap_mode` / `hold_mode`. */
+/** Card config → form data: adds `*_mode` plus `*_path` / `*_url` for navigate and url. */
 export function toFormData(
   config: Record<string, unknown>,
   spec: GestureSpec,
 ): Record<string, unknown> {
   const data: Record<string, unknown> = { ...config };
   for (const g of GESTURES) {
-    data[`${g}_mode`] = gestureMode(
-      config[`${g}_action`] as ActionConfig | undefined,
-      spec.defaults[g],
-    );
+    const action = config[`${g}_action`] as Record<string, unknown> | undefined;
+    const mode = gestureMode(action as ActionConfig | undefined, spec.defaults[g]);
+    data[`${g}_mode`] = mode;
+    if (mode === 'navigate') data[`${g}_path`] = action?.navigation_path ?? '';
+    if (mode === 'url') data[`${g}_url`] = action?.url_path ?? '';
   }
   return data;
 }
@@ -394,17 +413,28 @@ export function fromFormData(
 ): Record<string, unknown> {
   const config: Record<string, unknown> = { ...data };
   for (const g of GESTURES) {
-    const mode = config[`${g}_mode`] as GestureMode | undefined;
-    delete config[`${g}_mode`];
     const key = `${g}_action`;
-    if (mode === undefined) continue;
-    if (mode !== 'other') {
-      if (mode === spec.defaults[g]) delete config[key];
-      else config[key] = { action: mode };
-    } else if (!config[key] || gestureMode(config[key] as ActionConfig, mode) !== 'other') {
-      // Just switched to "other action": start with navigation, HA's picker shows its fields.
-      config[key] = { action: 'navigate', navigation_path: '' };
+    const mode = config[`${g}_mode`] as GestureMode | undefined;
+    const path = config[`${g}_path`] as string | undefined;
+    const url = config[`${g}_url`] as string | undefined;
+    delete config[`${g}_mode`];
+    delete config[`${g}_path`];
+    delete config[`${g}_url`];
+    const existing = config[key] as Record<string, unknown> | undefined;
+    if (mode === undefined || (mode === spec.defaults[g] && !existing)) {
+      delete config[key];
+      continue;
     }
+    const same = existing && gestureMode(existing as ActionConfig, spec.defaults[g]) === mode;
+    // Keep what the action already had (e.g. `entity`, service data) while the choice stays.
+    const base: Record<string, unknown> = same ? { ...existing } : { action: mode };
+    if (!same && mode === spec.defaults[g]) {
+      delete config[key];
+      continue;
+    }
+    if (mode === 'navigate') base.navigation_path = path ?? '';
+    if (mode === 'url') base.url_path = url ?? '';
+    config[key] = base;
   }
   return config;
 }
@@ -412,10 +442,17 @@ export function fromFormData(
 const modeLabel = (m: GestureMode, lang?: string): string =>
   editorLabel(`mode_${m.replace('-', '_')}` as EditorLabel, lang);
 
-/**
- * Replaces the `tap_action` / `hold_action` fields with the gesture choice; HA's action
- * picker only stays for "other action".
- */
+/** Fields the chosen action needs, below the choice. */
+function modeFields(g: Gesture, mode: unknown, action: FormSchema): FormSchema[] {
+  if (mode === 'navigate') return [{ name: `${g}_path`, selector: { navigation: {} } }];
+  if (mode === 'url') return [{ name: `${g}_url`, selector: { text: { type: 'url' } } }];
+  // HA's picker limited to "perform action" brings the service, target and data fields.
+  if (mode === 'perform-action')
+    return [{ ...action, selector: { ui_action: { actions: ['perform-action'] } } }];
+  return [];
+}
+
+/** Replaces the `tap_action` / `hold_action` fields with one choice of all actions. */
 export function gestureSchema(
   schema: FormSchema[],
   spec: GestureSpec,
@@ -441,7 +478,7 @@ export function gestureSchema(
         },
       },
     };
-    return data[`${g}_mode`] === 'other' ? [choice, s] : [choice];
+    return [choice, ...modeFields(g, data[`${g}_mode`], s)];
   });
 }
 
