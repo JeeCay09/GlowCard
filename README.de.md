@@ -38,7 +38,7 @@
 
 Alle Karten haben einen visuellen Editor (ab Home Assistant 2025.1). In einem Sections-Dashboard richtet sich die Breite nach der Variante: klein = 1/4, breit = 1/2, breite Steckdose, Kopfzeile, Status-Leiste, Überschrift und Chip-Reihen = ganze Breite, einzelner Chip = 1/2, Symbol-Chip = 1/4. Im Dashboard-Editor kannst du die Größe weiterhin selbst ändern. Neue Karten starten ohne Entität; fügst du eine Karte „nach Entität“ hinzu, nimmt sie die gewählte Entität.
 
-Im Editor bietet „Tippverhalten“ für Antippen und Gedrückthalten: Ein/Aus, GlowCard-Popup, Detailansicht, Nichts oder eine andere Aktion von Home Assistant.
+Im Editor bietet „Tippverhalten“ für Antippen und Gedrückthalten: Ein/Aus, GlowCard-Popup, Detailansicht, Navigieren, URL öffnen, Aktion ausführen oder Nichts, alles in einer Liste.
 
 ## Installation
 
