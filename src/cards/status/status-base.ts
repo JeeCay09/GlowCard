@@ -90,6 +90,11 @@ export abstract class GlowStatusBase<C extends GlowCardConfig> extends GlowCardB
   /** The segments (status bar) or chips of this card. */
   protected abstract get segmentConfigs(): SegmentConfig[];
 
+  /** Status bar and chips have their own per-segment actions (YAML), no card gestures. */
+  static gestureSpec(): undefined {
+    return undefined;
+  }
+
   /** Subclasses check their own config; there is no single main entity here. */
   protected validateConfig(config: C): void {
     if (!config) throw new Error('Invalid configuration');

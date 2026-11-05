@@ -62,6 +62,7 @@ export class GlowHeadingCard extends GlowStatusBase<HeadingCardConfig> {
           name: '',
           type: 'expandable',
           title: 'glow_section',
+          icon: 'mdi:shimmer',
           schema: [
             { name: 'glow_entity', selector: { entity: {} } },
             { name: 'glow_color', selector: { color_rgb: {} } },
@@ -71,6 +72,7 @@ export class GlowHeadingCard extends GlowStatusBase<HeadingCardConfig> {
           name: '',
           type: 'expandable',
           title: 'actions_section',
+          icon: 'mdi:gesture-tap',
           schema: [
             {
               name: 'tap_action',
