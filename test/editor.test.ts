@@ -1,5 +1,15 @@
 import { describe, expect, it } from 'vitest';
-import { cleanConfig, configForm, editorLabel, type FormSchema } from '../src/core/editor';
+import {
+  DEFAULT_GESTURES,
+  cleanConfig,
+  configForm,
+  editorLabel,
+  fromFormData,
+  gestureSchema,
+  toFormData,
+  type FormSchema,
+  type GestureSpec,
+} from '../src/core/editor';
 import '../src/glowcard';
 
 type FormCard = { getConfigForm(): ReturnType<typeof configForm> };
@@ -48,13 +58,110 @@ describe('visual editor', () => {
     expect(editorLabel('compact', 'de')).toBe('Kompakt');
   });
 
-  it('offers tap and hold actions with the popup as tap default', () => {
+  it('offers tap and hold actions on switch, plug and light', () => {
     for (const type of ['glowcard-switch', 'glowcard-plug', 'glowcard-light']) {
       const form = card(type).getConfigForm();
       expect(names(form.schema)).toEqual(expect.arrayContaining(['tap_action', 'hold_action']));
-      expect(form.computeHelper({ name: 'tap_action' })).toBeTruthy();
     }
-    expect(editorLabel('tap_action', 'de')).toBe('Tippen');
+    expect(editorLabel('tap_mode', 'de')).toBe('Antippen');
+  });
+
+  it('shows translated section titles with icons', () => {
+    const sections = (schema: FormSchema[]): FormSchema[] =>
+      schema.flatMap((s) => (s.type === 'expandable' ? [s, ...sections(s.schema!)] : []));
+    for (const type of [
+      'glowcard-switch',
+      'glowcard-plug',
+      'glowcard-light',
+      'glowcard-status',
+      'glowcard-chip',
+      'glowcard-heading',
+    ]) {
+      const form = card(type).getConfigForm();
+      for (const s of sections(form.schema)) {
+        expect(s.title).toBeTruthy();
+        expect(s.title).not.toMatch(/_section$/);
+        expect(s.icon).toMatch(/^mdi:/);
+        expect(form.computeLabel(s)).toBe(s.title);
+      }
+    }
+  });
+
+  it('maps the gesture choices to tap_action and hold_action', () => {
+    const spec = DEFAULT_GESTURES;
+    // Defaults: tap = toggle, hold = GlowCard popup.
+    expect(toFormData({ entity: 'light.a' }, spec)).toMatchObject({
+      tap_mode: 'toggle',
+      hold_mode: 'popup',
+    });
+    expect(
+      toFormData(
+        {
+          tap_action: { action: 'popup' },
+          hold_action: { action: 'navigate', navigation_path: '/x' },
+        },
+        spec,
+      ),
+    ).toMatchObject({ tap_mode: 'popup', hold_mode: 'other' });
+
+    // Choosing the default removes the key, other simple choices are stored.
+    expect(
+      fromFormData({ entity: 'light.a', tap_mode: 'toggle', hold_mode: 'popup' }, spec),
+    ).toEqual({ entity: 'light.a' });
+    expect(
+      fromFormData(
+        { tap_mode: 'more-info', hold_mode: 'none', tap_action: { action: 'popup' } },
+        spec,
+      ),
+    ).toEqual({ tap_action: { action: 'more-info' }, hold_action: { action: 'none' } });
+
+    // "Other action" starts with navigation and keeps what HA's picker sets afterwards.
+    expect(fromFormData({ tap_mode: 'other' }, spec)).toEqual({
+      tap_action: { action: 'navigate', navigation_path: '' },
+    });
+    const url = { action: 'url', url_path: 'https://example.com' };
+    expect(fromFormData({ tap_mode: 'other', tap_action: url }, spec)).toEqual({ tap_action: url });
+  });
+
+  it('shows the action picker only for "other action" and marks the default', () => {
+    const form = card('glowcard-light').getConfigForm();
+    const plain = gestureSchema(form.schema, DEFAULT_GESTURES, { tap_mode: 'toggle' }, 'de');
+    expect(names(plain)).toEqual(expect.arrayContaining(['tap_mode', 'hold_mode']));
+    expect(names(plain)).not.toContain('tap_action');
+    const choice = JSON.stringify(plain);
+    expect(choice).toContain('Ein/Aus (Standard)');
+    expect(choice).toContain('GlowCard-Popup (Standard)');
+    const other = gestureSchema(form.schema, DEFAULT_GESTURES, { tap_mode: 'other' }, 'de');
+    expect(names(other)).toContain('tap_action');
+    expect(names(other)).not.toContain('hold_action');
+  });
+
+  it('switch groups have no popup choice and do nothing on hold by default', () => {
+    const spec = (
+      customElements.get('glowcard-switch') as unknown as {
+        gestureSpec(c: Record<string, unknown>): GestureSpec;
+      }
+    ).gestureSpec({ entities: ['switch.a', 'switch.b'] });
+    expect(spec.modes.tap).not.toContain('popup');
+    expect(spec.defaults).toEqual({ tap: 'toggle', hold: 'none' });
+  });
+
+  it('picks no entity for new cards, only the one chosen "by entity"', () => {
+    type Stub = { getStubConfig(hass: unknown, entities?: string[]): Record<string, unknown> };
+    const stub = (type: string, entities?: string[]) =>
+      (customElements.get(type) as unknown as Stub).getStubConfig(
+        { states: { 'light.led': {}, 'switch.plug': {}, 'person.a': {}, 'weather.home': {} } },
+        entities,
+      );
+    expect(stub('glowcard-light')).toEqual({});
+    expect(stub('glowcard-light', ['light.tv'])).toEqual({ entity: 'light.tv' });
+    expect(stub('glowcard-light', ['switch.x'])).toEqual({});
+    expect(stub('glowcard-switch')).toEqual({});
+    expect(stub('glowcard-switch', ['input_boolean.x'])).toEqual({ entity: 'input_boolean.x' });
+    expect(stub('glowcard-plug')).toEqual({});
+    expect(stub('glowcard-header')).toEqual({});
+    expect(stub('glowcard-status')).toEqual({ all_lights: true });
+    expect(stub('glowcard-chip')).toEqual({ chip: 'lights' });
   });
 
   it('drops cleared fields so defaults apply again', () => {

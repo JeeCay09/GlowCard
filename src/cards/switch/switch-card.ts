@@ -1,6 +1,6 @@
 import { css, html, nothing, type PropertyValues } from 'lit';
 import { state } from 'lit/decorators.js';
-import { GlowCardBase, type GlowCardConfig } from '../../core/base-card';
+import { GlowCardBase, stubEntity, type GlowCardConfig } from '../../core/base-card';
 import { registerCard } from '../../core/register';
 import {
   actionsField,
@@ -8,8 +8,11 @@ import {
   configForm,
   editorLabel,
   lookFields,
+  lookSection,
   sizeField,
   nameIconFields,
+  DEFAULT_GESTURES,
+  type GestureSpec,
   variantField,
 } from '../../core/editor';
 import { localize } from '../../core/localize';
@@ -58,12 +61,14 @@ export class GlowSwitchCard extends GlowCardBase<SwitchCardConfig> {
     return configForm(
       [
         { name: 'entity', selector: { entity: { domain: SWITCH_DOMAINS } } },
-        variantField(['small', 'wide', 'row']),
-        nameIconFields,
-        lookFields,
-        sizeField,
-        areaField,
         { name: 'entities', selector: { entity: { domain: SWITCH_DOMAINS, multiple: true } } },
+        lookSection(
+          variantField(['small', 'wide', 'row']),
+          nameIconFields,
+          lookFields,
+          sizeField,
+          areaField,
+        ),
         actionsField,
       ],
       { color: 'color_helper', area: 'area_helper', entities: 'entities_helper' },
@@ -76,20 +81,24 @@ export class GlowSwitchCard extends GlowCardBase<SwitchCardConfig> {
     );
   }
 
-  static getStubConfig(hass: HomeAssistant): Partial<SwitchCardConfig> {
-    const entity = Object.keys(hass.states).find((id) => SWITCH_DOMAINS.includes(id.split('.')[0]));
-    return { entity: entity ?? 'switch.example' };
+  /** No entity is picked for the user; "by entity" passes the chosen ones. */
+  static getStubConfig(_hass: HomeAssistant, entities: string[] = []): Partial<SwitchCardConfig> {
+    return stubEntity(entities, SWITCH_DOMAINS);
   }
 
-  protected validateConfig(config: SwitchCardConfig): void {
-    if (!config.entity && !config.entities?.length) {
-      throw new Error('Please define an entity or a list of entities');
-    }
+  /** Groups have no popup and no single entity: tap switches all, hold does nothing. */
+  static gestureSpec(config: Record<string, unknown> = {}): GestureSpec {
+    const group = Array.isArray(config.entities) && config.entities.length > 0;
+    if (!group) return DEFAULT_GESTURES;
+    return {
+      modes: { tap: ['toggle', 'none', 'other'], hold: ['none', 'toggle', 'other'] },
+      defaults: { tap: 'toggle', hold: 'none' },
+    };
   }
 
   setConfig(config: SwitchCardConfig): void {
     super.setConfig(config);
-    if (this.isGroup) this.defaultTapAction = { action: 'none' };
+    this.defaultHoldAction = this.isGroup ? { action: 'none' } : { action: 'popup' };
   }
 
   getCardSize(): number {
@@ -184,6 +193,11 @@ export class GlowSwitchCard extends GlowCardBase<SwitchCardConfig> {
 
   // ---------- actions ----------
 
+  protected async toggleMain(): Promise<void> {
+    if (this.isGroup) return this.toggleGroup();
+    return super.toggleMain();
+  }
+
   private toggleGroup = async (ev?: Event) => {
     ev?.stopPropagation();
     if (!this.hass) return;
@@ -221,16 +235,14 @@ export class GlowSwitchCard extends GlowCardBase<SwitchCardConfig> {
     return this.config?.area ?? this.areaName();
   }
 
-  private orb(size = 52, onClick: (e: Event) => unknown = this.toggle) {
+  /** The orb is part of the card: tap and hold run the card's actions. */
+  private orb(size = 52) {
     return html`<glowcard-orb
       .icon=${this.icon}
       .size=${size}
       ?active=${this.isActive}
       ?dark-icon=${this.darkIcon}
       label=${this.displayName}
-      @pointerdown=${(e: Event) => e.stopPropagation()}
-      @pointerup=${(e: Event) => e.stopPropagation()}
-      @click=${onClick}
     ></glowcard-orb>`;
   }
 
@@ -343,7 +355,7 @@ export class GlowSwitchCard extends GlowCardBase<SwitchCardConfig> {
       'wide group',
       html`<div class="top">
           <div class="head">
-            ${this.orb(52, this.toggleGroup)}
+            ${this.orb(52)}
             <div class="titles">
               <span class="name">${this.config?.name ?? ''}</span>
               <span class="sub"
