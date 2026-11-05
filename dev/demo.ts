@@ -133,6 +133,11 @@ const states: Record<string, HassEntity> = {
     friendly_name: 'TV Wand',
     supported_color_modes: ['brightness'],
   }),
+  'light.led_strip': entity('light.led_strip', 'on', {
+    friendly_name: 'LED Leiste',
+    color_mode: 'onoff',
+    supported_color_modes: ['onoff'],
+  }),
   'switch.office_plug': entity('switch.office_plug', 'off', { friendly_name: 'Home Office' }),
   'switch.terrace': entity('switch.terrace', 'unavailable', { friendly_name: 'Terrasse' }),
 };
@@ -319,6 +324,7 @@ const entities: HomeAssistant['entities'] = {
   'input_boolean.tv_warm': { entity_id: 'input_boolean.tv_warm', area_id: 'living' },
   'light.living': { entity_id: 'light.living', area_id: 'living' },
   'light.kitchen': { entity_id: 'light.kitchen', area_id: 'kitchen' },
+  'light.led_strip': { entity_id: 'light.led_strip', area_id: 'kitchen' },
   'switch.carpet_boost': { entity_id: 'switch.carpet_boost', area_id: 'utility' },
   'switch.dishwasher': { entity_id: 'switch.dishwasher', area_id: 'kitchen' },
   'switch.fairy_lights': { entity_id: 'switch.fairy_lights', area_id: 'terrace' },

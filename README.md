@@ -126,10 +126,9 @@ The card finds the plug's power and energy sensors, countdown, child lock, "powe
 ```yaml
 type: custom:glowcard-light
 entity: light.living_room
-variant: wide # wide (2 columns, drag bar) | small (1 column)
 ```
 
-Orb, bar and tint use the light's current colour. Drag the bar to set the brightness; dragging to 0 turns the light off. The popup has a tall brightness bar, tabs for colour temperature and colour (only what the light supports, from `supported_color_modes`) and colour presets from warm white to blue.
+Orb, bar and tint use the light's current colour. Drag the bar to set the brightness; dragging to 0 turns the light off. The card is always 2 columns wide (the former `variant: small` is shown wide). Top right it shows the brightness while the light is on; lights without dimming show nothing there. The popup has a tall brightness bar (lights without dimming get a big on/off switch instead), tabs for colour temperature and colour (only what the light supports, from `supported_color_modes`) and colour presets from warm white to blue.
 
 ### Header
 

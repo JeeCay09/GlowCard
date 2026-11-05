@@ -12,7 +12,6 @@ describe('visual editor', () => {
   it('offers a form for every card', () => {
     expect(names(card('glowcard-light').getConfigForm().schema)).toEqual([
       'entity',
-      'variant',
       'name',
       'icon',
       'color',
@@ -79,7 +78,8 @@ describe('visual editor', () => {
     expect(grid('glowcard-plug', { entity: 'switch.a' })).toBe(3);
     expect(grid('glowcard-plug', { entity: 'switch.a', variant: 'wide' })).toBe(12);
     expect(grid('glowcard-light', { entity: 'light.a' })).toBe(6);
-    expect(grid('glowcard-light', { entity: 'light.a', variant: 'small' })).toBe(3);
+    // The former small light variant is shown as wide.
+    expect(grid('glowcard-light', { entity: 'light.a', variant: 'small' })).toBe(6);
     expect(grid('glowcard-header', {})).toBe(12);
     expect(grid('glowcard-status', { weather: 'weather.home' })).toBe(12);
     expect(grid('glowcard-chip', { chip: 'lights' })).toBe(6);
