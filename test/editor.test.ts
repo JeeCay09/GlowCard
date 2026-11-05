@@ -172,19 +172,23 @@ describe('visual editor', () => {
     expect(spec.defaults).toEqual({ tap: 'toggle', hold: 'none' });
   });
 
-  it('picks no entity for new cards, only the one chosen "by entity"', () => {
+  it('picks no entity for new cards but leaves an empty entity for "by entity"', () => {
     type Stub = { getStubConfig(hass: unknown, entities?: string[]): Record<string, unknown> };
-    const stub = (type: string, entities?: string[]) =>
-      (customElements.get(type) as unknown as Stub).getStubConfig(
-        { states: { 'light.led': {}, 'switch.plug': {}, 'person.a': {}, 'weather.home': {} } },
-        entities,
-      );
-    expect(stub('glowcard-light')).toEqual({});
-    expect(stub('glowcard-light', ['light.tv'])).toEqual({ entity: 'light.tv' });
-    expect(stub('glowcard-light', ['switch.x'])).toEqual({});
-    expect(stub('glowcard-switch')).toEqual({});
-    expect(stub('glowcard-switch', ['input_boolean.x'])).toEqual({ entity: 'input_boolean.x' });
-    expect(stub('glowcard-plug')).toEqual({});
+    const unused = ['light.led', 'switch.plug', 'input_boolean.x', 'person.a'];
+    const stub = (type: string) =>
+      (customElements.get(type) as unknown as Stub).getStubConfig({ states: {} }, unused);
+    // HA's create-card dialog: it fills in the chosen entity only if `entity` is in the stub.
+    const byEntity = (type: string, chosen: string) => {
+      const config: Record<string, unknown> = { type, ...stub(type) };
+      if ('entity' in config) config.entity = chosen;
+      return config;
+    };
+    expect(stub('glowcard-light')).toEqual({ entity: '' });
+    expect(stub('glowcard-switch')).toEqual({ entity: '' });
+    expect(stub('glowcard-plug')).toEqual({ entity: '' });
+    expect(byEntity('glowcard-light', 'light.tv').entity).toBe('light.tv');
+    expect(byEntity('glowcard-switch', 'switch.pump').entity).toBe('switch.pump');
+    expect(byEntity('glowcard-plug', 'switch.desk').entity).toBe('switch.desk');
     expect(stub('glowcard-header')).toEqual({});
     expect(stub('glowcard-status')).toEqual({ all_lights: true });
     expect(stub('glowcard-chip')).toEqual({ chip: 'lights' });

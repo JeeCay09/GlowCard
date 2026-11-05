@@ -35,12 +35,12 @@ const DEFAULT_ICONS: Record<string, string> = {
 };
 
 /**
- * Card picker stub: the first entity Home Assistant passes ("by entity") that fits the
- * domains, otherwise none. GlowCard never picks an entity on its own.
+ * Card picker stub: an empty `entity`. Home Assistant passes the dashboard's unused
+ * entities here (not the one chosen), so GlowCard picks none of them. The empty key is
+ * needed: "by entity" fills in the chosen entity only if the stub has an `entity` field.
  */
-export function stubEntity(entities: string[] | undefined, domains: string[]): { entity?: string } {
-  const entity = entities?.find((id) => domains.includes(id.split('.')[0]));
-  return entity ? { entity } : {};
+export function stubEntity(): { entity: string } {
+  return { entity: '' };
 }
 
 /** Accent-derived colours from the mockups, applied to card and popup. */
@@ -170,8 +170,7 @@ export abstract class GlowCardBase<C extends GlowCardConfig = GlowCardConfig> ex
     return (
       this.config?.name ??
       this.stateObj?.attributes.friendly_name ??
-      this.config?.entity ??
-      localize(this.hass, 'pick_entity')
+      (this.config?.entity || localize(this.hass, 'pick_entity'))
     );
   }
 

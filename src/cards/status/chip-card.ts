@@ -9,7 +9,6 @@ import {
   type EditorLabel,
 } from '../../core/editor';
 import { rgbTriplet } from '../../core/color';
-import type { HomeAssistant } from '../../types/hass';
 import {
   SEGMENT_TYPES,
   paletteColor,
@@ -102,9 +101,9 @@ export class GlowChipCard extends GlowStatusBase<ChipCardConfig> {
     );
   }
 
-  /** No entity is picked for the user: a lights chip, or the entity chosen "by entity". */
-  static getStubConfig(_hass: HomeAssistant, entities: string[] = []): Partial<ChipCardConfig> {
-    return entities[0] ? { chip: 'entity', entity: entities[0] } : { chip: 'lights' };
+  /** A lights chip. HA passes unused dashboard entities here, so none is picked. */
+  static getStubConfig(): Partial<ChipCardConfig> {
+    return { chip: 'lights' };
   }
 
   setConfig(config: ChipCardConfig): void {
