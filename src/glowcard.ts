@@ -11,5 +11,6 @@ import './cards/light/light-card';
 import './cards/status/header-card';
 import './cards/status/status-card';
 import './cards/status/chip-card';
+import './cards/heading/heading-card';
 
 logVersion();

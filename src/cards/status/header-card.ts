@@ -55,8 +55,14 @@ export class GlowHeaderCard extends GlowCardBase<HeaderCardConfig> {
     );
   }
 
-  static getStubConfig(hass: HomeAssistant): Partial<HeaderCardConfig> {
-    return { persons: Object.keys(hass.states).filter((id) => id.startsWith('person.')) };
+  /** No people are picked for the user. */
+  static getStubConfig(): Partial<HeaderCardConfig> {
+    return {};
+  }
+
+  /** No tap / hold actions on the header. */
+  static gestureSpec(): undefined {
+    return undefined;
   }
 
   setConfig(config: HeaderCardConfig): void {

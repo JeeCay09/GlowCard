@@ -3,9 +3,11 @@ import { property, state } from 'lit/decorators.js';
 import type { HassEntity, HomeAssistant } from '../types/hass';
 import { handleAction, type ActionConfig } from './action';
 import { isBright, mix, rgbTriplet, resolveAccent, type Rgb } from './color';
-import { cleanConfig } from './editor';
+import { DEFAULT_GESTURES, cleanConfig, type ConfigForm, type GestureSpec } from './editor';
+import { ensureHaForm, type GlowCardEditor } from './editor-element';
 import { ensureFont } from './font';
 import { PressController } from './press';
+import { localize } from './localize';
 import { glassStyles, glowTokens } from './theme';
 import { openPopup, type GlowPopup } from '../components/popup';
 
@@ -32,6 +34,15 @@ const DEFAULT_ICONS: Record<string, string> = {
   fan: 'mdi:fan',
 };
 
+/**
+ * Card picker stub: the first entity Home Assistant passes ("by entity") that fits the
+ * domains, otherwise none. GlowCard never picks an entity on its own.
+ */
+export function stubEntity(entities: string[] | undefined, domains: string[]): { entity?: string } {
+  const entity = entities?.find((id) => domains.includes(id.split('.')[0]));
+  return entity ? { entity } : {};
+}
+
 /** Accent-derived colours from the mockups, applied to card and popup. */
 function applyAccent(el: HTMLElement, accent: Rgb): void {
   const css = (c: Rgb) => `rgb(${c.join(',')})`;
@@ -56,8 +67,27 @@ export abstract class GlowCardBase<C extends GlowCardConfig = GlowCardConfig> ex
 
   /** Accent name used when the config has no `color`. */
   protected defaultColor = 'amber';
-  protected defaultTapAction: ActionConfig = { action: 'popup' };
-  protected defaultHoldAction: ActionConfig = { action: 'more-info' };
+  /** Tap anywhere on the card (orb included) switches, holding opens the GlowCard popup. */
+  protected defaultTapAction: ActionConfig = { action: 'toggle' };
+  protected defaultHoldAction: ActionConfig = { action: 'popup' };
+
+  /** Visual editor: HA's ha-form with the card's getConfigForm() and the gesture choices. */
+  static async getConfigElement(): Promise<HTMLElement> {
+    await ensureHaForm();
+    const cls = this as unknown as {
+      getConfigForm(): ConfigForm;
+      gestureSpec?(config: Record<string, unknown>): GestureSpec | undefined;
+    };
+    const el = document.createElement('glowcard-editor') as GlowCardEditor;
+    el.form = cls.getConfigForm();
+    if (cls.gestureSpec?.({})) el.gestures = (config) => cls.gestureSpec!(config);
+    return el;
+  }
+
+  /** Gesture choices in the editor; cards without tap/hold actions return undefined. */
+  static gestureSpec(): GestureSpec | undefined {
+    return DEFAULT_GESTURES;
+  }
 
   private popup?: GlowPopup;
   protected press = new PressController(
@@ -73,9 +103,12 @@ export abstract class GlowCardBase<C extends GlowCardConfig = GlowCardConfig> ex
     this.config = config;
   }
 
-  /** Throw an Error with a readable message for a bad config. */
+  /**
+   * Throw an Error with a readable message for a bad config. A missing entity is fine:
+   * new cards start without one and show "Choose an entity" until it is picked.
+   */
   protected validateConfig(config: C): void {
-    if (!config.entity) throw new Error('Please define an entity');
+    if (!config) throw new Error('Invalid configuration');
   }
 
   getCardSize(): number {
@@ -135,7 +168,10 @@ export abstract class GlowCardBase<C extends GlowCardConfig = GlowCardConfig> ex
 
   protected get displayName(): string {
     return (
-      this.config?.name ?? this.stateObj?.attributes.friendly_name ?? this.config?.entity ?? ''
+      this.config?.name ??
+      this.stateObj?.attributes.friendly_name ??
+      this.config?.entity ??
+      localize(this.hass, 'pick_entity')
     );
   }
 
@@ -261,19 +297,28 @@ export abstract class GlowCardBase<C extends GlowCardConfig = GlowCardConfig> ex
         : (this.config.hold_action ?? this.defaultHoldAction);
     const effective =
       config.action === 'popup' && !this.renderPopup() ? { action: 'more-info' as const } : config;
+    if (effective.action === 'toggle' && !effective.entity) {
+      await this.toggleMain();
+      return;
+    }
     await handleAction(
       { element: this, hass: this.hass, entity: this.config.entity, openPopup: this.openPopup },
       effective,
     );
   }
 
-  /** Toggles the main entity, used by the orb. */
+  /** Toggles the main entity (tap default, popup orb). */
   protected toggle = async (ev?: Event): Promise<void> => {
     ev?.stopPropagation();
+    await this.toggleMain();
+  };
+
+  /** What "toggle" means for this card; switch groups switch all members. */
+  protected async toggleMain(): Promise<void> {
     if (!this.hass || !this.config?.entity || this.isUnavailable) return;
     await handleAction(
       { element: this, hass: this.hass, entity: this.config.entity },
       { action: 'toggle' },
     );
-  };
+  }
 }

@@ -14,7 +14,7 @@
 ![GlowCard Schalter- und Steckdosen-Karten im hellen Modus](https://raw.githubusercontent.com/JeeCay09/GlowCard/main/docs/images/cards-light.jpg)
 
 - Karten aus Milchglas; ein aktives Gerät färbt seine Karte ein und leuchtet in seiner eigenen Farbe.
-- Runde „Orb“-Symbole: Tippen auf den Orb schaltet ein/aus. Keine extra Schalterzeilen.
+- Tippen auf die Karte (auch auf den Orb) schaltet ein/aus, Gedrückthalten öffnet das GlowCard-Popup. Keine extra Schalterzeilen.
 - Werte wie Helligkeit stellt man ein, indem man den Balken selbst zieht.
 - Lichter nutzen ihre **aktuelle** Farbe für Orb, Balken und Kartentönung.
 - Eingebaute Popups (kein Bubble Card oder browser_mod nötig).
@@ -25,17 +25,20 @@
 
 ## Karten
 
-| Karte          | Typ                      | Entitäten                                           | Status           |
-| -------------- | ------------------------ | --------------------------------------------------- | ---------------- |
-| Schalter       | `custom:glowcard-switch` | `switch.*`, `input_boolean.*`                       | Beta (v0.1)      |
-| Steckdose      | `custom:glowcard-plug`   | `switch.*` + optional Leistungs-/Energie-`sensor.*` | Beta (v0.1)      |
-| Licht          | `custom:glowcard-light`  | `light.*`                                           | Beta (v0.2)      |
-| Kopfzeile      | `custom:glowcard-header` | `person.*`, Begrüßung, Datum/Uhrzeit                | Beta (v0.3)      |
-| Status-Leiste  | `custom:glowcard-status` | Wetter, Lichter, Energie, Sicherheit, Warnungen     | Beta (v0.3)      |
-| Chip           | `custom:glowcard-chip`   | wie die Status-Leiste, plus Personen und Akku       | Beta (v0.3)      |
-| Energie „Haus“ | `custom:glowcard-energy` | Leistungs-`sensor.*` für Solar, Akku, Netz, Haus    | geplant für v0.4 |
+| Karte          | Typ                       | Entitäten                                           | Status           |
+| -------------- | ------------------------- | --------------------------------------------------- | ---------------- |
+| Schalter       | `custom:glowcard-switch`  | `switch.*`, `input_boolean.*`                       | Beta (v0.1)      |
+| Steckdose      | `custom:glowcard-plug`    | `switch.*` + optional Leistungs-/Energie-`sensor.*` | Beta (v0.1)      |
+| Licht          | `custom:glowcard-light`   | `light.*`                                           | Beta (v0.2)      |
+| Kopfzeile      | `custom:glowcard-header`  | `person.*`, Begrüßung, Datum/Uhrzeit                | Beta (v0.3)      |
+| Status-Leiste  | `custom:glowcard-status`  | Wetter, Lichter, Energie, Sicherheit, Warnungen     | Beta (v0.3)      |
+| Chip           | `custom:glowcard-chip`    | wie die Status-Leiste, plus Personen und Akku       | Beta (v0.3)      |
+| Überschrift    | `custom:glowcard-heading` | beliebige Entitäten als Badges                      | Beta (v0.4)      |
+| Energie „Haus“ | `custom:glowcard-energy`  | Leistungs-`sensor.*` für Solar, Akku, Netz, Haus    | geplant für v0.4 |
 
-Alle Karten haben einen visuellen Editor (ab Home Assistant 2025.1). In einem Sections-Dashboard richtet sich die Breite nach der Variante: klein = 1/4, breit = 1/2, breite Steckdose, Kopfzeile, Status-Leiste und Chip-Reihen = ganze Breite, einzelner Chip = 1/2, Symbol-Chip = 1/4. Im Dashboard-Editor kannst du die Größe weiterhin selbst ändern.
+Alle Karten haben einen visuellen Editor (ab Home Assistant 2025.1). In einem Sections-Dashboard richtet sich die Breite nach der Variante: klein = 1/4, breit = 1/2, breite Steckdose, Kopfzeile, Status-Leiste, Überschrift und Chip-Reihen = ganze Breite, einzelner Chip = 1/2, Symbol-Chip = 1/4. Im Dashboard-Editor kannst du die Größe weiterhin selbst ändern. Neue Karten starten ohne Entität; fügst du eine Karte „nach Entität“ hinzu, nimmt sie die gewählte Entität.
+
+Im Editor bietet „Tippverhalten“ für Antippen und Gedrückthalten: Ein/Aus, GlowCard-Popup, Detailansicht, Nichts oder eine andere Aktion von Home Assistant.
 
 ## Installation
 
@@ -67,7 +70,7 @@ lovelace:
    - Typ: **JavaScript-Modul**
 4. Browser neu laden.
 
-Nach einem Update die URL z. B. auf `/local/glowcard/glowcard.js?v=0.3.1` ändern, damit Browser die neue Datei laden.
+Nach einem Update die URL z. B. auf `/local/glowcard/glowcard.js?v=0.4.0` ändern, damit Browser die neue Datei laden.
 
 ## Konfiguration
 
@@ -81,8 +84,8 @@ Alle Karten teilen diese Optionen:
 | `color`       | String | je Kartentyp       | Akzentfarbe (`amber`, `teal`, `sky`, `violet`, … oder Hex)                                                 |
 | `variant`     | String | `small`            | Layout der Karte, abhängig vom Kartentyp                                                                   |
 | `size`        | String | `auto`             | Schalter, Steckdose, Licht, Status-Leiste: `auto` (kompakt am Handy unter 600 px), `compact` oder `normal` |
-| `tap_action`  | Aktion | Popup öffnen       | Standard-Aktion von Home Assistant                                                                         |
-| `hold_action` | Aktion | `more-info`        | Standard-Aktion von Home Assistant                                                                         |
+| `tap_action`  | Aktion | `toggle`           | Aktion von Home Assistant oder `action: popup` für das GlowCard-Popup                                      |
+| `hold_action` | Aktion | `popup`            | Aktion von Home Assistant oder `action: popup` für das GlowCard-Popup                                      |
 
 Die Beispiele zeigen die geplanten Optionen. Details können sich bis v1.0 noch ändern.
 
@@ -96,7 +99,7 @@ color: sky
 variant: wide # small | wide (7-Tage-Streifen) | row
 ```
 
-Gruppe von Schaltern (der Orb schaltet alle):
+Gruppe von Schaltern (Tippen auf die Karte schaltet alle, Gedrückthalten macht standardmäßig nichts):
 
 ```yaml
 type: custom:glowcard-switch
@@ -125,10 +128,9 @@ Die Karte findet Leistungs- und Energie-Sensor, Countdown, Kindersicherung sowie
 ```yaml
 type: custom:glowcard-light
 entity: light.living_room
-variant: wide # wide (2 Spalten, Ziehbalken) | small (1 Spalte)
 ```
 
-Orb, Balken und Kartentönung nutzen die aktuelle Farbe der Lampe. Den Balken ziehen stellt die Helligkeit ein, ganz nach links schaltet aus. Das Popup hat einen hohen Helligkeitsbalken, Reiter für Farbtemperatur und Farbe (nur was die Lampe laut `supported_color_modes` kann) und Farbkreise von Warmweiß bis Blau.
+Orb, Balken und Kartentönung nutzen die aktuelle Farbe der Lampe. Den Balken ziehen stellt die Helligkeit ein, ganz nach links schaltet aus. Die Karte ist immer 2 Spalten breit (das frühere `variant: small` wird breit angezeigt). Oben rechts steht die Helligkeit, solange das Licht an ist; Lampen ohne Dimmung zeigen dort nichts. Das Popup hat einen hohen Helligkeitsbalken (Lampen ohne Dimmung bekommen stattdessen einen großen An/Aus-Schalter), Reiter für Farbtemperatur und Farbe (nur was die Lampe laut `supported_color_modes` kann) und Farbkreise von Warmweiß bis Blau.
 
 ### Kopfzeile
 
@@ -236,6 +238,33 @@ chips:
 
 Nicht erreichbare Entitäten erscheinen gestrichelt und blass. Ein Warn-Chip ohne Meldung verschwindet (`hide_when_ok: false` zeigt ihn grün).
 
+### Überschrift
+
+Ein Abschnittstitel mit rundem Symbol, einer Zeile darunter und kleinen Glas-Badges, oder ein Untertitel in Großbuchstaben zum Gliedern. Das Symbol bleibt standardmäßig neutral; mit `glow_entity` leuchtet es, solange diese Entität an ist, in `glow_color` (Farbwähler im Editor) oder sonst in der Farbe des Lichts.
+
+```yaml
+type: custom:glowcard-heading
+heading: Wohnzimmer
+subtitle: Erdgeschoss
+icon: mdi:sofa-outline
+badges:
+  - sensor.wohnzimmer_temperatur
+  - sensor.wohnzimmer_luftfeuchtigkeit
+  - sensor.wohnzimmer_sensor_batterie # ab 15 % und weniger rot und pulsierend
+  - type: lights # YAML: dieselben Einträge wie bei der Status-Leiste, öffnet das Licht-Popup
+    entities: [light.tv_wand]
+glow_entity: light.wohnzimmer # optional
+glow_color: [255, 165, 110] # optional
+tap_action: # optional, zeigt einen Pfeil neben dem Titel
+  action: navigate
+  navigation_path: /dashboard-home/wohnzimmer
+---
+type: custom:glowcard-heading
+heading_style: subtitle
+heading: Erdgeschoss
+subtitle: 6 Räume
+```
+
 ### Energie „Haus“
 
 ```yaml
@@ -253,7 +282,7 @@ home: sensor.home_load_power
 2. Schalter- und Steckdosen-Karte → v0.1.0 (Beta)
 3. Licht-Karte und Popup → v0.2.0 (Beta)
 4. Kopfzeile, Status-Leiste und Chips, visueller Editor und Standard-Breiten → **v0.3.0 (Beta)**
-5. Energie-Karte „Haus“ und Popup → v0.4.0
+5. Überschrift-Karte (Abschnittstitel mit Badges, zusätzlich zum Plan) und Energie-Karte „Haus“ mit Popup → v0.4.0
 6. Visuelle Editoren für alle Karten, vollständige Doku, Antrag auf HACS-Standardliste → v1.0.0
 
 Später: Raum-Karte, Binärsensor, Bewässerung/Pflanze, Popups für Medien, Rollos und Saugroboter.
