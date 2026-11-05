@@ -70,7 +70,7 @@ lovelace:
    - Type: **JavaScript module**
 4. Reload your browser.
 
-After an update, change the URL to e.g. `/local/glowcard/glowcard.js?v=0.3.1` so browsers load the new file.
+After an update, change the URL to e.g. `/local/glowcard/glowcard.js?v=0.4.0` so browsers load the new file.
 
 ## Configuration
 
