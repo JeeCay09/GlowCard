@@ -147,6 +147,23 @@ describe('switch card with plug extras', () => {
     expect(text).not.toContain('186');
   });
 
+  it('keeps teal as the default colour of smart plugs', async () => {
+    await import('../src/glowcard');
+    const el = document.createElement('glowcard-switch') as HTMLElement & {
+      setConfig(c: unknown): void;
+      hass: unknown;
+      accent: number[];
+    };
+    el.setConfig({ type: 'custom:glowcard-switch', entity: 'switch.office' });
+    el.hass = hass([
+      e('switch.office', 'on'),
+      e('sensor.office_power', '5', { device_class: 'power', unit_of_measurement: 'W' }),
+    ]);
+    expect(el.accent).toEqual([20, 184, 166]);
+    el.hass = hass([e('switch.office', 'on')]);
+    expect(el.accent).toEqual([245, 165, 36]);
+  });
+
   it('shows the watts with show_power', async () => {
     // Watts use a narrow no-break space before the unit on some locales.
     expect(await render({ show_power: true })).toMatch(/186\sW/);
