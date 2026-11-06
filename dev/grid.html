@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="de">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>GlowCard Raster</title>
+    <style>
+      /* Emulates HA's sections grid: 12 columns, rows of 56 px, 8 px gaps. */
+      body {
+        margin: 0;
+        padding: 16px;
+        background: #111;
+        font-family: system-ui, sans-serif;
+      }
+      .section {
+        width: var(--w, 520px);
+        display: grid;
+        grid-template-columns: repeat(12, minmax(0, 1fr));
+        grid-auto-rows: 56px;
+        gap: 8px;
+        background-image: repeating-linear-gradient(
+          to bottom,
+          rgba(255, 255, 255, 0.06) 0 56px,
+          transparent 56px 64px
+        );
+      }
+      .tile {
+        box-sizing: border-box;
+        border-radius: 12px;
+        background: #1c1c1c;
+        border: 1px solid #2f2f2f;
+        color: #ddd;
+        font-size: 14px;
+        display: flex;
+        align-items: center;
+        padding: 0 14px;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="section" data-dark></div>
+    <script type="module">
+      import '../dist/glowcard.js';
+      import { mount } from './build/demo.js';
+      const params = new URLSearchParams(location.search);
+      if (params.get('w')) document.body.style.setProperty('--w', `${params.get('w')}px`);
+      const size = params.get('size') ?? 'normal';
+      const section = document.querySelector('.section');
+      const cards = [
+        ['glowcard-light', { entity: 'light.living', size }],
+        ['ha-tile', 'Decke (HA)', 6, 1],
+        ['ha-tile', 'LED Leiste (HA)', 6, 1],
+        ['glowcard-switch', { entity: 'switch.sprinkler', size }],
+        ['glowcard-switch', { entity: 'switch.night_light', size }],
+        ['glowcard-light', { entity: 'light.kitchen', size: 'mini' }],
+        ['ha-tile', 'Tile (HA)', 6, 1],
+        ['glowcard-switch', { entity: 'switch.dnd', size: 'mini' }],
+        ['glowcard-switch', { entity: 'switch.home_office', size: 'mini', show_power: true }],
+        ['glowcard-switch', { entity: 'switch.home_office', show_power: true, size }],
+        ['glowcard-status', { weather: 'weather.home', all_lights: true, size }],
+        ['glowcard-chip', { chip: 'lights' }],
+        ['ha-tile', 'Tile (HA)', 6, 1],
+      ];
+      for (const [tag, config, c0, r0] of cards) {
+        let cols = c0;
+        let rows = r0;
+        let el;
+        if (tag === 'ha-tile') {
+          el = document.createElement('div');
+          el.className = 'tile';
+          el.textContent = config;
+        } else {
+          el = document.createElement(tag);
+          el.dataset.card = '';
+          el.setConfig({ type: `custom:${tag}`, ...config });
+          const o = el.getGridOptions();
+          cols = o.columns;
+          rows = o.rows;
+        }
+        el.style.gridColumn = `span ${cols}`;
+        el.style.gridRow = `span ${rows}`;
+        section.appendChild(el);
+      }
+      mount(document);
+    </script>
+  </body>
+</html>
