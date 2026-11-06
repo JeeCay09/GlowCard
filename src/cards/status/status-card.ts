@@ -165,8 +165,9 @@ export class GlowStatusCard extends GlowStatusBase<StatusCardConfig> {
     return 1;
   }
 
+  /** One grid row (56 px), like HA's own cards. */
   getGridOptions() {
-    return { columns: 12, rows: 'auto', min_columns: 6 };
+    return this.gridOptions(12, 1, 6);
   }
 
   render() {

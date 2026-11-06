@@ -6,7 +6,10 @@ import {
   editorLabel,
   fromFormData,
   gestureSchema,
+  schemaDefaults,
   toFormData,
+  withDefaults,
+  withoutDefaults,
   type FormSchema,
   type GestureSpec,
 } from '../src/core/editor';
@@ -31,15 +34,15 @@ describe('visual editor', () => {
       'hold_action',
     ]);
     expect(names(card('glowcard-switch').getConfigForm().schema)).toContain('entities');
-    expect(names(card('glowcard-plug').getConfigForm().schema)).toEqual(
-      expect.arrayContaining(['threshold', 'power_entity', 'indicator_entity']),
+    expect(names(card('glowcard-switch').getConfigForm().schema)).toEqual(
+      expect.arrayContaining(['show_power', 'threshold', 'power_entity', 'indicator_entity']),
     );
   });
 
   it('labels fields in German and English', () => {
-    expect(editorLabel('variant', 'de')).toBe('Variante');
-    expect(editorLabel('variant', 'en-GB')).toBe('Variant');
-    const form = card('glowcard-plug').getConfigForm();
+    expect(editorLabel('variant', 'de')).toBe('Layout');
+    expect(editorLabel('variant', 'en-GB')).toBe('Layout');
+    const form = card('glowcard-switch').getConfigForm();
     expect(form.computeLabel({ name: 'threshold' })).toBeTruthy();
     expect(form.computeLabel({ name: 'unknown' })).toBeUndefined();
     expect(form.computeHelper({ name: 'power_entity' })).toBeTruthy();
@@ -52,14 +55,14 @@ describe('visual editor', () => {
   });
 
   it('offers the card size on switch, plug, light and status bar', () => {
-    for (const type of ['glowcard-switch', 'glowcard-plug', 'glowcard-light', 'glowcard-status']) {
+    for (const type of ['glowcard-switch', 'glowcard-light', 'glowcard-status']) {
       expect(names(card(type).getConfigForm().schema)).toContain('size');
     }
     expect(editorLabel('compact', 'de')).toBe('Kompakt');
   });
 
   it('offers tap and hold actions on switch, plug and light', () => {
-    for (const type of ['glowcard-switch', 'glowcard-plug', 'glowcard-light']) {
+    for (const type of ['glowcard-switch', 'glowcard-light']) {
       const form = card(type).getConfigForm();
       expect(names(form.schema)).toEqual(expect.arrayContaining(['tap_action', 'hold_action']));
     }
@@ -71,7 +74,6 @@ describe('visual editor', () => {
       schema.flatMap((s) => (s.type === 'expandable' ? [s, ...sections(s.schema!)] : []));
     for (const type of [
       'glowcard-switch',
-      'glowcard-plug',
       'glowcard-light',
       'glowcard-status',
       'glowcard-chip',
@@ -102,7 +104,7 @@ describe('visual editor', () => {
         },
         spec,
       ),
-    ).toMatchObject({ tap_mode: 'popup', hold_mode: 'other' });
+    ).toMatchObject({ tap_mode: 'popup', hold_mode: 'navigate', hold_path: '/x' });
 
     // Choosing the default removes the key, other simple choices are stored.
     expect(
@@ -115,15 +117,31 @@ describe('visual editor', () => {
       ),
     ).toEqual({ tap_action: { action: 'more-info' }, hold_action: { action: 'none' } });
 
-    // "Other action" starts with navigation and keeps what HA's picker sets afterwards.
-    expect(fromFormData({ tap_mode: 'other' }, spec)).toEqual({
-      tap_action: { action: 'navigate', navigation_path: '' },
+    // Navigate and URL: the choice plus their own field.
+    expect(fromFormData({ tap_mode: 'navigate', tap_path: '/lovelace/2' }, spec)).toEqual({
+      tap_action: { action: 'navigate', navigation_path: '/lovelace/2' },
     });
-    const url = { action: 'url', url_path: 'https://example.com' };
-    expect(fromFormData({ tap_mode: 'other', tap_action: url }, spec)).toEqual({ tap_action: url });
+    expect(fromFormData({ hold_mode: 'url', hold_url: 'https://example.com' }, spec)).toEqual({
+      hold_action: { action: 'url', url_path: 'https://example.com' },
+    });
+    // Perform action: HA's picker edits the action; it is kept while the choice stays.
+    const service = { action: 'perform-action', perform_action: 'light.turn_on', data: { x: 1 } };
+    expect(fromFormData({ tap_mode: 'perform-action', tap_action: service }, spec)).toEqual({
+      tap_action: service,
+    });
+    expect(fromFormData({ tap_mode: 'perform-action' }, spec)).toEqual({
+      tap_action: { action: 'perform-action' },
+    });
+    // Extra keys of an existing action survive, e.g. toggle of another entity.
+    const other = { action: 'toggle', entity: 'light.b' };
+    expect(fromFormData({ tap_mode: 'toggle', tap_action: other }, spec)).toEqual({
+      tap_action: other,
+    });
+    // Clearing the choice brings the default back.
+    expect(fromFormData({ tap_action: { action: 'none' } }, spec)).toEqual({});
   });
 
-  it('shows the action picker only for "other action" and marks the default', () => {
+  it('shows all actions in one list and only the fields they need', () => {
     const form = card('glowcard-light').getConfigForm();
     const plain = gestureSchema(form.schema, DEFAULT_GESTURES, { tap_mode: 'toggle' }, 'de');
     expect(names(plain)).toEqual(expect.arrayContaining(['tap_mode', 'hold_mode']));
@@ -131,9 +149,19 @@ describe('visual editor', () => {
     const choice = JSON.stringify(plain);
     expect(choice).toContain('Ein/Aus (Standard)');
     expect(choice).toContain('GlowCard-Popup (Standard)');
-    const other = gestureSchema(form.schema, DEFAULT_GESTURES, { tap_mode: 'other' }, 'de');
-    expect(names(other)).toContain('tap_action');
-    expect(names(other)).not.toContain('hold_action');
+    expect(choice).toContain('Navigieren');
+    expect(choice).toContain('Aktion ausführen');
+    expect(choice).not.toContain('Andere Aktion');
+    expect(names(gestureSchema(form.schema, DEFAULT_GESTURES, { tap_mode: 'navigate' }))).toContain(
+      'tap_path',
+    );
+    expect(names(gestureSchema(form.schema, DEFAULT_GESTURES, { hold_mode: 'url' }))).toContain(
+      'hold_url',
+    );
+    expect(
+      names(gestureSchema(form.schema, DEFAULT_GESTURES, { tap_mode: 'perform-action' })),
+    ).toContain('tap_action');
+    expect(form.computeLabel({ name: 'tap_path' })).toBeTruthy();
   });
 
   it('switch groups have no popup choice and do nothing on hold by default', () => {
@@ -146,19 +174,21 @@ describe('visual editor', () => {
     expect(spec.defaults).toEqual({ tap: 'toggle', hold: 'none' });
   });
 
-  it('picks no entity for new cards, only the one chosen "by entity"', () => {
+  it('picks no entity for new cards but leaves an empty entity for "by entity"', () => {
     type Stub = { getStubConfig(hass: unknown, entities?: string[]): Record<string, unknown> };
-    const stub = (type: string, entities?: string[]) =>
-      (customElements.get(type) as unknown as Stub).getStubConfig(
-        { states: { 'light.led': {}, 'switch.plug': {}, 'person.a': {}, 'weather.home': {} } },
-        entities,
-      );
-    expect(stub('glowcard-light')).toEqual({});
-    expect(stub('glowcard-light', ['light.tv'])).toEqual({ entity: 'light.tv' });
-    expect(stub('glowcard-light', ['switch.x'])).toEqual({});
-    expect(stub('glowcard-switch')).toEqual({});
-    expect(stub('glowcard-switch', ['input_boolean.x'])).toEqual({ entity: 'input_boolean.x' });
-    expect(stub('glowcard-plug')).toEqual({});
+    const unused = ['light.led', 'switch.plug', 'input_boolean.x', 'person.a'];
+    const stub = (type: string) =>
+      (customElements.get(type) as unknown as Stub).getStubConfig({ states: {} }, unused);
+    // HA's create-card dialog: it fills in the chosen entity only if `entity` is in the stub.
+    const byEntity = (type: string, chosen: string) => {
+      const config: Record<string, unknown> = { type, ...stub(type) };
+      if ('entity' in config) config.entity = chosen;
+      return config;
+    };
+    expect(stub('glowcard-light')).toEqual({ entity: '' });
+    expect(stub('glowcard-switch')).toEqual({ entity: '' });
+    expect(byEntity('glowcard-light', 'light.tv').entity).toBe('light.tv');
+    expect(byEntity('glowcard-switch', 'switch.pump').entity).toBe('switch.pump');
     expect(stub('glowcard-header')).toEqual({});
     expect(stub('glowcard-status')).toEqual({ all_lights: true });
     expect(stub('glowcard-chip')).toEqual({ chip: 'lights' });
@@ -181,9 +211,15 @@ describe('visual editor', () => {
       return el.getGridOptions().columns;
     };
     expect(grid('glowcard-switch', { entity: 'switch.a' })).toBe(3);
-    expect(grid('glowcard-switch', { entity: 'switch.a', variant: 'wide' })).toBe(6);
-    expect(grid('glowcard-plug', { entity: 'switch.a' })).toBe(3);
-    expect(grid('glowcard-plug', { entity: 'switch.a', variant: 'wide' })).toBe(12);
+    // The former wide switch variant is shown as a small tile.
+    expect(grid('glowcard-switch', { entity: 'switch.a', variant: 'wide' })).toBe(3);
+    expect(grid('glowcard-switch', { entity: 'switch.a', variant: 'row' })).toBe(6);
+    // Smart plugs: power card (full width) only with show_power; not for rows or groups.
+    expect(grid('glowcard-switch', { entity: 'switch.a', show_power: true })).toBe(12);
+    expect(grid('glowcard-switch', { entity: 'switch.a', show_power: true, variant: 'row' })).toBe(
+      6,
+    );
+    expect(customElements.get('glowcard-plug')).toBeUndefined();
     expect(grid('glowcard-light', { entity: 'light.a' })).toBe(6);
     // The former small light variant is shown as wide.
     expect(grid('glowcard-light', { entity: 'light.a', variant: 'small' })).toBe(6);
@@ -211,5 +247,61 @@ describe('visual editor', () => {
     const chip = card('glowcard-chip').getConfigForm();
     expect(names(chip.schema)).toEqual(expect.arrayContaining(['chip', 'entity', 'icon_only']));
     expect(() => chip.assertConfig!({ chips: [] })).toThrow();
+  });
+
+  it('shows defaults instead of empty fields and keeps them out of the YAML', () => {
+    const defaults = (type: string) => schemaDefaults(card(type).getConfigForm().schema);
+    expect(defaults('glowcard-light')).toEqual({ color: 'auto', font: 'glow', size: 'auto' });
+    expect(defaults('glowcard-switch')).toMatchObject({ size: 'auto', font: 'glow' });
+    expect(defaults('glowcard-switch')).toMatchObject({ show_power: false, threshold: 1 });
+    expect(defaults('glowcard-heading')).toMatchObject({ heading_style: 'title', size: 'auto' });
+    expect(defaults('glowcard-header')).toEqual({ font: 'glow' });
+    expect(defaults('glowcard-status')).toEqual({ font: 'glow', size: 'auto' });
+    expect(defaults('glowcard-chip')).toEqual({ color: 'auto', font: 'glow' });
+
+    const d = defaults('glowcard-light');
+    expect(withDefaults({ entity: 'light.a', font: 'theme' }, d)).toEqual({
+      entity: 'light.a',
+      font: 'theme',
+      color: 'auto',
+      size: 'auto',
+    });
+    expect(withoutDefaults({ type: 'x', font: 'glow', color: 'auto', size: 'compact' }, d)).toEqual(
+      { type: 'x', size: 'compact' },
+    );
+  });
+
+  it("fits HA's sections grid: fixed rows of 56 px, mini is one row", () => {
+    const rows = (type: string, config: Record<string, unknown>) => {
+      const el = document.createElement(type) as HTMLElement & {
+        setConfig(c: unknown): void;
+        getGridOptions(): { columns: number; rows: number | string; max_rows?: number };
+      };
+      el.setConfig({ type: `custom:${type}`, ...config });
+      const o = el.getGridOptions();
+      return `${o.columns}x${o.rows}`;
+    };
+    expect(rows('glowcard-switch', { entity: 'switch.a', size: 'normal' })).toBe('3x3');
+    expect(rows('glowcard-switch', { entity: 'switch.a', size: 'compact' })).toBe('3x2');
+    expect(rows('glowcard-switch', { entity: 'switch.a', size: 'mini' })).toBe('6x1');
+    expect(rows('glowcard-switch', { entity: 'switch.a', variant: 'row' })).toBe('6x1');
+    expect(rows('glowcard-switch', { entities: ['switch.a', 'switch.b'] })).toBe('6x3');
+    expect(rows('glowcard-switch', { entity: 'switch.a', show_power: true })).toBe('12x3');
+    expect(rows('glowcard-light', { entity: 'light.a', size: 'normal' })).toBe('6x3');
+    expect(rows('glowcard-light', { entity: 'light.a', size: 'compact' })).toBe('6x2');
+    expect(rows('glowcard-light', { entity: 'light.a', size: 'mini' })).toBe('6x1');
+    expect(rows('glowcard-status', { weather: 'weather.home' })).toBe('12x1');
+    expect(rows('glowcard-chip', { chip: 'lights' })).toBe('6x1');
+
+    const form = card('glowcard-switch').getConfigForm();
+    expect(names(form.schema)).not.toContain('variant');
+    expect(form.normalize!({ entity: 'switch.a', variant: 'row' })).toEqual({
+      entity: 'switch.a',
+      size: 'mini',
+    });
+    expect(form.normalize!({ entity: 'switch.a', variant: 'wide' })).toEqual({
+      entity: 'switch.a',
+    });
+    expect(editorLabel('mini', 'de')).toBe('Mini (einzeilig)');
   });
 });

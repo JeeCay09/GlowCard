@@ -6,7 +6,10 @@ import {
   cleanConfig,
   fromFormData,
   gestureSchema,
+  schemaDefaults,
   toFormData,
+  withDefaults,
+  withoutDefaults,
   type ConfigForm,
   type FormSchema,
   type GestureSpec,
@@ -63,7 +66,7 @@ export class GlowCardEditor extends LitElement {
   /** HA switches to YAML mode when this throws (e.g. named group members). */
   setConfig(config: Record<string, unknown>): void {
     this.form.assertConfig?.(config);
-    this.config = config;
+    this.config = this.form.normalize ? this.form.normalize(config) : config;
   }
 
   private get spec(): GestureSpec | undefined {
@@ -73,7 +76,8 @@ export class GlowCardEditor extends LitElement {
   render() {
     if (!this.config) return nothing;
     const spec = this.spec;
-    const data = spec ? toFormData(this.config, spec) : this.config;
+    const defaults = schemaDefaults(this.form.schema);
+    const data = withDefaults(spec ? toFormData(this.config, spec) : this.config, defaults);
     const schema = spec
       ? gestureSchema(this.form.schema, spec, data, this.hass?.language)
       : this.form.schema;
@@ -91,7 +95,10 @@ export class GlowCardEditor extends LitElement {
     ev.stopPropagation();
     const spec = this.spec;
     const value = ev.detail.value;
-    const config = cleanConfig(spec ? fromFormData(value, spec) : value);
+    const config = withoutDefaults(
+      cleanConfig(spec ? fromFormData(value, spec) : value),
+      schemaDefaults(this.form.schema),
+    );
     this.config = config;
     fireEvent(this, 'config-changed', { config });
   }

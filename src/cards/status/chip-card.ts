@@ -9,7 +9,6 @@ import {
   type EditorLabel,
 } from '../../core/editor';
 import { rgbTriplet } from '../../core/color';
-import type { HomeAssistant } from '../../types/hass';
 import {
   SEGMENT_TYPES,
   paletteColor,
@@ -102,9 +101,9 @@ export class GlowChipCard extends GlowStatusBase<ChipCardConfig> {
     );
   }
 
-  /** No entity is picked for the user: a lights chip, or the entity chosen "by entity". */
-  static getStubConfig(_hass: HomeAssistant, entities: string[] = []): Partial<ChipCardConfig> {
-    return entities[0] ? { chip: 'entity', entity: entities[0] } : { chip: 'lights' };
+  /** A lights chip. HA passes unused dashboard entities here, so none is picked. */
+  static getStubConfig(): Partial<ChipCardConfig> {
+    return { chip: 'lights' };
   }
 
   setConfig(config: ChipCardConfig): void {
@@ -139,11 +138,10 @@ export class GlowChipCard extends GlowStatusBase<ChipCardConfig> {
     return 1;
   }
 
+  /** A single chip is one grid row (56 px); a list of chips can wrap, so it stays auto. */
   getGridOptions() {
     if (this.config?.chips) return { columns: 12, rows: 'auto', min_columns: 3 };
-    return this.config?.icon_only
-      ? { columns: 3, rows: 'auto', min_columns: 2 }
-      : { columns: 6, rows: 'auto', min_columns: 3 };
+    return this.config?.icon_only ? this.gridOptions(3, 1, 2) : this.gridOptions(6, 1, 3);
   }
 
   private orb(v: SegmentView): TemplateResult {
@@ -253,7 +251,7 @@ export class GlowChipCard extends GlowStatusBase<ChipCardConfig> {
         min-width: 0;
       }
       .chip {
-        height: 48px;
+        height: 56px;
         max-width: 100%;
         min-width: 0;
         box-sizing: border-box;
