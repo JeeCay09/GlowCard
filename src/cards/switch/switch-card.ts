@@ -37,11 +37,11 @@ import {
 import '../../components/orb';
 
 export interface SwitchCardConfig extends GlowCardConfig {
-  /** small (default), wide (7-day strip) or row (compact list row). */
+  /** small (default) or row (compact list row). The former `wide` is shown small. */
   variant?: 'small' | 'wide' | 'row';
   /** Several switches → group card; the orb switches all of them. */
   entities?: (string | { entity: string; name?: string })[];
-  /** Text under the name in wide/row; default: the entity's area. */
+  /** Text under the name in the row layout; default: the entity's area. */
   area?: string;
 }
 
@@ -49,7 +49,7 @@ const DAY_MS = 86_400_000;
 const HISTORY_REFRESH_MS = 5 * 60_000;
 const SWITCH_DOMAINS = ['switch', 'input_boolean'];
 
-/** Switch card from the GlowSwitches board: small, wide, group and row variants plus popup. */
+/** Switch card from the GlowSwitches board: small, group and row layouts plus popup. */
 export class GlowSwitchCard extends GlowCardBase<SwitchCardConfig> {
   @state() private history?: StatePoint[];
   private historyTimer?: number;
@@ -63,7 +63,7 @@ export class GlowSwitchCard extends GlowCardBase<SwitchCardConfig> {
         { name: 'entity', selector: { entity: { domain: SWITCH_DOMAINS } } },
         { name: 'entities', selector: { entity: { domain: SWITCH_DOMAINS, multiple: true } } },
         lookSection(
-          variantField(['small', 'wide', 'row']),
+          variantField(['small', 'row']),
           nameIconFields,
           lookFields,
           sizeField,
@@ -99,11 +99,11 @@ export class GlowSwitchCard extends GlowCardBase<SwitchCardConfig> {
 
   getCardSize(): number {
     if (this.config?.variant === 'row') return 1;
-    return this.isGroup || this.config?.variant === 'wide' ? 4 : 3;
+    return this.isGroup ? 4 : 3;
   }
 
   getGridOptions() {
-    const wide = this.isGroup || this.config?.variant === 'wide' || this.config?.variant === 'row';
+    const wide = this.isGroup || this.config?.variant === 'row';
     return { columns: wide ? 6 : 3, rows: 'auto', min_columns: wide ? 6 : 3 };
   }
 
@@ -137,7 +137,7 @@ export class GlowSwitchCard extends GlowCardBase<SwitchCardConfig> {
   // ---------- history ----------
 
   private get needsHistory(): boolean {
-    return !this.isGroup && (this.config?.variant === 'wide' || this.popupOpen);
+    return !this.isGroup && this.popupOpen;
   }
 
   connectedCallback(): void {
@@ -289,46 +289,6 @@ export class GlowSwitchCard extends GlowCardBase<SwitchCardConfig> {
     );
   }
 
-  private renderWide() {
-    const on = this.isActive;
-    const { days, hours } = this.stats;
-    const area = this.areaText();
-    const sub = this.isUnavailable
-      ? localize(this.hass, 'unavailable')
-      : `${area ? `${area} · ` : ''}${this.word(on).toLowerCase()} ${localize(this.hass, 'since')} ${this.sinceText()}`;
-    return this.wrap(
-      'wide',
-      html`<div class="top">
-          <div class="head">
-            ${this.orb()}
-            <div class="titles">
-              <span class="name">${this.displayName}</span>
-              <span class="sub">${sub}</span>
-            </div>
-          </div>
-          <span class="word big ${on ? 'on' : ''}">${this.isUnavailable ? '' : this.word(on)}</span>
-        </div>
-        <div class="strip-wrap">
-          <div class="strip-head">
-            <span>${localize(this.hass, 'last_7_days')}</span>
-            <span
-              ><b>${formatHours(this.hass, hours)}</b>
-              ${localize(this.hass, 'on').toLowerCase()}</span
-            >
-          </div>
-          <div class="strip">
-            ${days.map(
-              (d) =>
-                html`<div class="day">
-                  <div class="bar">${this.segments(d)}</div>
-                  <span class="day-label ${d.today ? 'today' : ''}">${this.dayLabel(d)}</span>
-                </div>`,
-            )}
-          </div>
-        </div>`,
-    );
-  }
-
   private renderRow() {
     const on = this.isActive;
     return this.wrap(
@@ -384,7 +344,6 @@ export class GlowSwitchCard extends GlowCardBase<SwitchCardConfig> {
   render() {
     if (!this.config) return nothing;
     if (this.isGroup) return this.renderGroup();
-    if (this.config.variant === 'wide') return this.renderWide();
     if (this.config.variant === 'row') return this.renderRow();
     return this.renderSmall();
   }
@@ -555,9 +514,6 @@ export class GlowSwitchCard extends GlowCardBase<SwitchCardConfig> {
       :host([dark]) .row-word.on {
         color: color-mix(in srgb, rgb(var(--glow-accent)) 62%, #ffffff);
       }
-      .word.big {
-        font-size: var(--glow-word-big);
-      }
       .row-name {
         font-size: 14px;
         font-weight: 700;
@@ -572,48 +528,6 @@ export class GlowSwitchCard extends GlowCardBase<SwitchCardConfig> {
         font-weight: 800;
         letter-spacing: -0.03em;
         color: var(--glow-muted);
-      }
-      .strip-wrap {
-        display: flex;
-        flex-direction: column;
-        gap: 8px;
-      }
-      .strip-head {
-        display: flex;
-        justify-content: space-between;
-        font-size: 12px;
-        font-weight: 600;
-        color: var(--glow-muted);
-      }
-      .strip-head b {
-        font-weight: 800;
-        color: var(--glow-text);
-      }
-      .strip {
-        display: flex;
-        gap: 4px;
-      }
-      .day {
-        flex: 1;
-        display: flex;
-        flex-direction: column;
-        gap: 6px;
-        align-items: center;
-      }
-      .bar {
-        position: relative;
-        width: 100%;
-        height: 12px;
-        border-radius: 4px;
-        background: var(--glow-inset);
-      }
-      .day-label {
-        font-size: 11px;
-        font-weight: 700;
-        color: var(--glow-muted);
-      }
-      .day-label.today {
-        color: var(--glow-text);
       }
       .badge {
         padding: 5px 10px;

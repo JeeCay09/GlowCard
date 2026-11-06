@@ -36,7 +36,7 @@
 | Heading        | `custom:glowcard-heading` | any entities as badges                          | beta (v0.4)      |
 | Energy "House" | `custom:glowcard-energy`  | power `sensor.*` for solar, battery, grid, home | planned for v0.4 |
 
-All cards have a visual editor (Home Assistant 2025.1 or newer). In a sections dashboard, each card takes its width from its variant: small = 1/4, wide = 1/2, plug with power/usage, header, status bar, heading and chip rows = full width, single chip = 1/2, icon-only chip = 1/4. You can still resize it in the dashboard editor. New cards start without an entity; when you add a card "by entity", it uses the entity you picked.
+All cards have a visual editor (Home Assistant 2025.1 or newer). In a sections dashboard, each card takes its width from its type: tile = 1/4, light, switch row and switch group = 1/2, plug with power/usage, header, status bar, heading and chip rows = full width, single chip = 1/2, icon-only chip = 1/4. You can still resize it in the dashboard editor. New cards start without an entity; when you add a card "by entity", it uses the entity you picked.
 
 In the editor, "Tap behaviour" offers toggle, GlowCard popup, more info, navigate, open URL, perform action or nothing for tap and hold, all in one list.
 
@@ -82,7 +82,7 @@ All cards share these options:
 | `name`        | string | friendly name | Title shown on the card                                                                         |
 | `icon`        | string | entity icon   | Any `mdi:` icon                                                                                 |
 | `color`       | string | per card type | Accent colour (`amber`, `teal`, `sky`, `violet`, … or hex)                                      |
-| `variant`     | string | `small`       | Switch card layout (`small`, `wide`, `row`)                                                     |
+| `variant`     | string | `small`       | Switch card layout (`small`, `row`)                                                             |
 | `size`        | string | `auto`        | Switch, plug, light, status bar: `auto` (compact on phones under 600 px), `compact` or `normal` |
 | `tap_action`  | action | `toggle`      | Home Assistant action, or `action: popup` for the GlowCard popup                                |
 | `hold_action` | action | `popup`       | Home Assistant action, or `action: popup` for the GlowCard popup                                |
@@ -96,8 +96,10 @@ type: custom:glowcard-switch
 entity: switch.garden_sprinkler
 name: Sprinkler
 color: sky
-variant: wide # small | wide (7-day on/off strip) | row
+variant: small # small (tile) | row (list row)
 ```
+
+The popup (hold) shows the 7-day history. The former `variant: wide` is shown as a tile.
 
 Group of switches (tapping the card toggles all of them, holding does nothing by default):
 
