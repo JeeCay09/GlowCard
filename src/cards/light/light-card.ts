@@ -8,7 +8,7 @@ import {
   lookFields,
   lookSection,
   nameIconFields,
-  sizeField,
+  miniSizeField,
 } from '../../core/editor';
 import { localize } from '../../core/localize';
 import { lightColor, mix, rgbTriplet, type Rgb } from '../../core/color';
@@ -52,7 +52,7 @@ export class GlowLightCard extends GlowCardBase<LightCardConfig> {
     return configForm(
       [
         { name: 'entity', required: true, selector: { entity: { domain: ['light'] } } },
-        lookSection(nameIconFields, lookFields, sizeField),
+        lookSection(nameIconFields, lookFields, miniSizeField),
         actionsField,
       ],
       { color: 'color_light_helper' },
@@ -60,16 +60,18 @@ export class GlowLightCard extends GlowCardBase<LightCardConfig> {
   }
 
   /** No entity is picked for the user; "by entity" passes the chosen ones. */
-  static getStubConfig(_hass: HomeAssistant, entities: string[] = []): Partial<LightCardConfig> {
-    return stubEntity(entities, ['light']);
+  static getStubConfig(): Partial<LightCardConfig> {
+    return stubEntity();
   }
 
   getCardSize(): number {
-    return 3;
+    return this.config?.size === 'mini' ? 1 : 3;
   }
 
+  /** Fixed rows on HA's grid: mini 1, compact 2, normal 3. */
   getGridOptions() {
-    return { columns: 6, rows: 'auto', min_columns: 6 };
+    if (this.config?.size === 'mini') return this.gridOptions(6, 1, 3);
+    return this.gridOptions(6, this.gridSize === 'compact' ? 2 : 3);
   }
 
   /** Orb, bar and tint follow the light's current colour while it is on. */
@@ -182,13 +184,44 @@ export class GlowLightCard extends GlowCardBase<LightCardConfig> {
     return `${this.bright}%`;
   }
 
-  private orb() {
+  private orb(size?: number) {
     return html`<glowcard-orb
       .icon=${this.icon}
+      .size=${size ?? 52}
       ?active=${this.isActive}
       ?dark-icon=${this.darkIcon}
       label=${this.displayName}
     ></glowcard-orb>`;
+  }
+
+  private slider() {
+    return html`<glowcard-slider
+      .value=${this.bright}
+      label=${localize(this.hass, 'brightness')}
+      @pointerdown=${(e: Event) => e.stopPropagation()}
+      @pointerup=${(e: Event) => e.stopPropagation()}
+      @value-changing=${this.dragBar}
+      @value-changed=${this.setBrightness}
+    ></glowcard-slider>`;
+  }
+
+  /** Mini size: one grid row with orb, name, brightness bar and value. */
+  private renderMini(s: string, showBar: boolean, value: string) {
+    return html`<div
+      class="glass sized row ${s}"
+      @pointerdown=${this.press.down}
+      @pointerup=${this.press.up}
+      @pointermove=${this.press.move}
+      @pointercancel=${this.press.cancel}
+      @contextmenu=${(e: Event) => e.preventDefault()}
+    >
+      ${this.orb(40)}
+      <div class="mini-body">
+        <span class="mini-name">${this.displayName}</span>
+        ${showBar ? this.slider() : html`<span class="sub">${this.stateText()}</span>`}
+      </div>
+      <span class="mini-value ${this.isActive ? 'lit' : ''}">${value}</span>
+    </div>`;
   }
 
   render() {
@@ -196,6 +229,7 @@ export class GlowLightCard extends GlowCardBase<LightCardConfig> {
     const s = this.isUnavailable ? 'unavailable' : this.isActive ? 'active' : '';
     const showBar = this.caps.brightness && !this.isUnavailable;
     const value = this.valueText();
+    if (this.config.size === 'mini') return this.renderMini(s, showBar, value);
     return html`<div
       class="glass sized wide ${s}"
       @pointerdown=${this.press.down}
@@ -213,18 +247,7 @@ export class GlowLightCard extends GlowCardBase<LightCardConfig> {
           <span class="name">${this.displayName}</span>
           <span class="sub">${this.stateText()}</span>
         </div>
-        ${
-          showBar
-            ? html`<glowcard-slider
-                .value=${this.bright}
-                label=${localize(this.hass, 'brightness')}
-                @pointerdown=${(e: Event) => e.stopPropagation()}
-                @pointerup=${(e: Event) => e.stopPropagation()}
-                @value-changing=${this.dragBar}
-                @value-changed=${this.setBrightness}
-              ></glowcard-slider>`
-            : nothing
-        }
+        ${showBar ? this.slider() : nothing}
       </div>
     </div>`;
   }
@@ -461,6 +484,45 @@ export class GlowLightCard extends GlowCardBase<LightCardConfig> {
         white-space: nowrap;
       }
       :host([dark]) .value.lit {
+        color: rgb(var(--glow-value-dark));
+      }
+      .glass.row {
+        height: 56px;
+        border-radius: 22px;
+        padding: 0 16px 0 8px;
+        flex-direction: row;
+        align-items: center;
+        justify-content: flex-start;
+        gap: 12px;
+      }
+      .mini-body {
+        flex-grow: 1;
+        min-width: 0;
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+      }
+      .mini-body glowcard-slider {
+        margin-bottom: -6px;
+      }
+      .mini-name {
+        font-size: 14px;
+        font-weight: 700;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+      .mini-value {
+        font-size: 18px;
+        font-weight: 800;
+        letter-spacing: -0.03em;
+        white-space: nowrap;
+        color: var(--glow-muted);
+      }
+      .mini-value.lit {
+        color: var(--glow-text);
+      }
+      :host([dark]) .mini-value.lit {
         color: rgb(var(--glow-value-dark));
       }
     `,

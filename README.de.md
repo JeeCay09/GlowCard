@@ -25,20 +25,19 @@
 
 ## Karten
 
-| Karte          | Typ                       | Entitäten                                           | Status           |
-| -------------- | ------------------------- | --------------------------------------------------- | ---------------- |
-| Schalter       | `custom:glowcard-switch`  | `switch.*`, `input_boolean.*`                       | Beta (v0.1)      |
-| Steckdose      | `custom:glowcard-plug`    | `switch.*` + optional Leistungs-/Energie-`sensor.*` | Beta (v0.1)      |
-| Licht          | `custom:glowcard-light`   | `light.*`                                           | Beta (v0.2)      |
-| Kopfzeile      | `custom:glowcard-header`  | `person.*`, Begrüßung, Datum/Uhrzeit                | Beta (v0.3)      |
-| Status-Leiste  | `custom:glowcard-status`  | Wetter, Lichter, Energie, Sicherheit, Warnungen     | Beta (v0.3)      |
-| Chip           | `custom:glowcard-chip`    | wie die Status-Leiste, plus Personen und Akku       | Beta (v0.3)      |
-| Überschrift    | `custom:glowcard-heading` | beliebige Entitäten als Badges                      | Beta (v0.4)      |
-| Energie „Haus“ | `custom:glowcard-energy`  | Leistungs-`sensor.*` für Solar, Akku, Netz, Haus    | geplant für v0.4 |
+| Karte          | Typ                       | Entitäten                                        | Status           |
+| -------------- | ------------------------- | ------------------------------------------------ | ---------------- |
+| Schalter       | `custom:glowcard-switch`  | `switch.*` (auch Steckdosen), `input_boolean.*`  | Beta (v0.1)      |
+| Licht          | `custom:glowcard-light`   | `light.*`                                        | Beta (v0.2)      |
+| Kopfzeile      | `custom:glowcard-header`  | `person.*`, Begrüßung, Datum/Uhrzeit             | Beta (v0.3)      |
+| Status-Leiste  | `custom:glowcard-status`  | Wetter, Lichter, Energie, Sicherheit, Warnungen  | Beta (v0.3)      |
+| Chip           | `custom:glowcard-chip`    | wie die Status-Leiste, plus Personen und Akku    | Beta (v0.3)      |
+| Überschrift    | `custom:glowcard-heading` | beliebige Entitäten als Badges                   | Beta (v0.4)      |
+| Energie „Haus“ | `custom:glowcard-energy`  | Leistungs-`sensor.*` für Solar, Akku, Netz, Haus | geplant für v0.4 |
 
-Alle Karten haben einen visuellen Editor (ab Home Assistant 2025.1). In einem Sections-Dashboard richtet sich die Breite nach der Variante: klein = 1/4, breit = 1/2, breite Steckdose, Kopfzeile, Status-Leiste, Überschrift und Chip-Reihen = ganze Breite, einzelner Chip = 1/2, Symbol-Chip = 1/4. Im Dashboard-Editor kannst du die Größe weiterhin selbst ändern. Neue Karten starten ohne Entität; fügst du eine Karte „nach Entität“ hinzu, nimmt sie die gewählte Entität.
+Alle Karten haben einen visuellen Editor (ab Home Assistant 2025.1). In einem Sections-Dashboard passen die Karten genau ins Raster von Home Assistant (Zeilen zu 56 px): Kachel 2 Zeilen am Handy bzw. 3 am PC, Schalter-Gruppe und Leistungs-Karte 3, Mini, Status-Leiste und Chip 1 Zeile. Breite: Kachel = 1/4, Licht, Mini und Schalter-Gruppe = 1/2, Schalter mit Leistung/Verbrauch, Kopfzeile, Status-Leiste, Überschrift und Chip-Reihen = ganze Breite, einzelner Chip = 1/2, Symbol-Chip = 1/4. Die Breite kannst du im Dashboard-Editor weiterhin ändern. Neue Karten starten ohne Entität; fügst du eine Karte „nach Entität“ hinzu, nimmt sie die gewählte Entität.
 
-Im Editor bietet „Tippverhalten“ für Antippen und Gedrückthalten: Ein/Aus, GlowCard-Popup, Detailansicht, Nichts oder eine andere Aktion von Home Assistant.
+Im Editor bietet „Tippverhalten“ für Antippen und Gedrückthalten: Ein/Aus, GlowCard-Popup, Detailansicht, Navigieren, URL öffnen, Aktion ausführen oder Nichts, alles in einer Liste.
 
 ## Installation
 
@@ -70,22 +69,21 @@ lovelace:
    - Typ: **JavaScript-Modul**
 4. Browser neu laden.
 
-Nach einem Update die URL z. B. auf `/local/glowcard/glowcard.js?v=0.4.0` ändern, damit Browser die neue Datei laden.
+Nach einem Update die URL z. B. auf `/local/glowcard/glowcard.js?v=0.5.0` ändern, damit Browser die neue Datei laden.
 
 ## Konfiguration
 
 Alle Karten teilen diese Optionen:
 
-| Option        | Typ    | Standard           | Beschreibung                                                                                               |
-| ------------- | ------ | ------------------ | ---------------------------------------------------------------------------------------------------------- |
-| `entity`      | String | Pflicht            | Haupt-Entität der Karte                                                                                    |
-| `name`        | String | Anzeigename        | Titel auf der Karte                                                                                        |
-| `icon`        | String | Symbol der Entität | Beliebiges `mdi:`-Symbol                                                                                   |
-| `color`       | String | je Kartentyp       | Akzentfarbe (`amber`, `teal`, `sky`, `violet`, … oder Hex)                                                 |
-| `variant`     | String | `small`            | Layout der Karte, abhängig vom Kartentyp                                                                   |
-| `size`        | String | `auto`             | Schalter, Steckdose, Licht, Status-Leiste: `auto` (kompakt am Handy unter 600 px), `compact` oder `normal` |
-| `tap_action`  | Aktion | `toggle`           | Aktion von Home Assistant oder `action: popup` für das GlowCard-Popup                                      |
-| `hold_action` | Aktion | `popup`            | Aktion von Home Assistant oder `action: popup` für das GlowCard-Popup                                      |
+| Option        | Typ    | Standard           | Beschreibung                                                                                                                            |
+| ------------- | ------ | ------------------ | --------------------------------------------------------------------------------------------------------------------------------------- |
+| `entity`      | String | Pflicht            | Haupt-Entität der Karte                                                                                                                 |
+| `name`        | String | Anzeigename        | Titel auf der Karte                                                                                                                     |
+| `icon`        | String | Symbol der Entität | Beliebiges `mdi:`-Symbol                                                                                                                |
+| `color`       | String | je Kartentyp       | Akzentfarbe (`amber`, `teal`, `sky`, `violet`, … oder Hex)                                                                              |
+| `size`        | String | `auto`             | Schalter, Licht, Status-Leiste: `auto` (kompakt am Handy unter 600 px), `compact`, `normal`; Schalter und Licht auch `mini` (einzeilig) |
+| `tap_action`  | Aktion | `toggle`           | Aktion von Home Assistant oder `action: popup` für das GlowCard-Popup                                                                   |
+| `hold_action` | Aktion | `popup`            | Aktion von Home Assistant oder `action: popup` für das GlowCard-Popup                                                                   |
 
 Die Beispiele zeigen die geplanten Optionen. Details können sich bis v1.0 noch ändern.
 
@@ -96,8 +94,10 @@ type: custom:glowcard-switch
 entity: switch.garden_sprinkler
 name: Rasensprenger
 color: sky
-variant: wide # small | wide (7-Tage-Streifen) | row
+size: mini # auto | compact | normal | mini (eine Zeile, z. B. für Listen)
 ```
+
+Den 7-Tage-Verlauf zeigt das Popup (Gedrückthalten). Das frühere `variant: wide` wird als Kachel angezeigt, `variant: row` als `size: mini`.
 
 Gruppe von Schaltern (Tippen auf die Karte schaltet alle, Gedrückthalten macht standardmäßig nichts):
 
@@ -111,17 +111,21 @@ entities:
   - switch.smoke_detector_bedroom_led
 ```
 
-### Steckdose
+#### Steckdosen
+
+Steckdosen nutzen dieselbe Karte. Sie findet Leistungs- und Energie-Sensor, Countdown, Kindersicherung sowie die Selects für „Nach Stromausfall“ und die LED selbst über das Gerät. Diese Dinge erscheinen im Popup, sobald das Gerät die passende Entität hat. Auf der Karte stehen Watt, Kurve und Verbrauch nur mit `show_power: true`.
 
 ```yaml
-type: custom:glowcard-plug
+type: custom:glowcard-switch
 entity: switch.office_plug
 name: Home Office
-variant: wide # small | wide (Live-Leistungskurve)
-threshold: 1 # leuchtet ab so vielen Watt (Standard 1)
+show_power: true # Watt, Live-Kurve und Verbrauch heute auf der Karte, ganze Breite (Standard false)
+threshold: 1 # mit show_power: leuchtet ab so vielen Watt (Standard 1)
 ```
 
-Die Karte findet Leistungs- und Energie-Sensor, Countdown, Kindersicherung sowie die Selects für „Nach Stromausfall“ und die LED selbst über das Gerät der Steckdose. Zeilen im Popup erscheinen nur, wenn die Steckdose die passende Entität hat. Falls die Erkennung danebenliegt, lassen sie sich festlegen: `power_entity`, `energy_entity`, `countdown_entity`, `child_lock_entity`, `power_on_entity`, `indicator_entity`.
+Mit `size: mini` zeigt die Zeile bei `show_power` die Watt statt An/Aus. Falls die Erkennung danebenliegt, lassen sich die Entitäten festlegen: `power_entity`, `energy_entity`, `countdown_entity`, `child_lock_entity`, `power_on_entity`, `indicator_entity`.
+
+Die frühere Karte `custom:glowcard-plug` gibt es nicht mehr. Ändere bei bestehenden Karten den Typ auf `custom:glowcard-switch` und ersetze `variant: wide` durch `show_power: true`.
 
 ### Licht
 
