@@ -76,7 +76,11 @@ export class GlowPlugCard extends GlowCardBase<PlugCardConfig> {
           type: 'grid',
           schema: [
             areaField,
-            { name: 'threshold', selector: { number: { min: 0, step: 0.5, mode: 'box' } } },
+            {
+              name: 'threshold',
+              default: 1,
+              selector: { number: { min: 0, step: 0.5, mode: 'box' } },
+            },
           ],
         }),
         {
