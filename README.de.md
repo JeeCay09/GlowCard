@@ -36,7 +36,7 @@
 | Überschrift    | `custom:glowcard-heading` | beliebige Entitäten als Badges                      | Beta (v0.4)      |
 | Energie „Haus“ | `custom:glowcard-energy`  | Leistungs-`sensor.*` für Solar, Akku, Netz, Haus    | geplant für v0.4 |
 
-Alle Karten haben einen visuellen Editor (ab Home Assistant 2025.1). In einem Sections-Dashboard richtet sich die Breite nach der Variante: klein = 1/4, breit = 1/2, Steckdose mit Leistung/Verbrauch, Kopfzeile, Status-Leiste, Überschrift und Chip-Reihen = ganze Breite, einzelner Chip = 1/2, Symbol-Chip = 1/4. Im Dashboard-Editor kannst du die Größe weiterhin selbst ändern. Neue Karten starten ohne Entität; fügst du eine Karte „nach Entität“ hinzu, nimmt sie die gewählte Entität.
+Alle Karten haben einen visuellen Editor (ab Home Assistant 2025.1). In einem Sections-Dashboard richtet sich die Breite nach der Karte: Kachel = 1/4, Licht, Schalter-Zeile und Schalter-Gruppe = 1/2, Steckdose mit Leistung/Verbrauch, Kopfzeile, Status-Leiste, Überschrift und Chip-Reihen = ganze Breite, einzelner Chip = 1/2, Symbol-Chip = 1/4. Im Dashboard-Editor kannst du die Größe weiterhin selbst ändern. Neue Karten starten ohne Entität; fügst du eine Karte „nach Entität“ hinzu, nimmt sie die gewählte Entität.
 
 Im Editor bietet „Tippverhalten“ für Antippen und Gedrückthalten: Ein/Aus, GlowCard-Popup, Detailansicht, Navigieren, URL öffnen, Aktion ausführen oder Nichts, alles in einer Liste.
 
@@ -82,7 +82,7 @@ Alle Karten teilen diese Optionen:
 | `name`        | String | Anzeigename        | Titel auf der Karte                                                                                        |
 | `icon`        | String | Symbol der Entität | Beliebiges `mdi:`-Symbol                                                                                   |
 | `color`       | String | je Kartentyp       | Akzentfarbe (`amber`, `teal`, `sky`, `violet`, … oder Hex)                                                 |
-| `variant`     | String | `small`            | Layout der Schalter-Karte (`small`, `wide`, `row`)                                                         |
+| `variant`     | String | `small`            | Layout der Schalter-Karte (`small`, `row`)                                                                 |
 | `size`        | String | `auto`             | Schalter, Steckdose, Licht, Status-Leiste: `auto` (kompakt am Handy unter 600 px), `compact` oder `normal` |
 | `tap_action`  | Aktion | `toggle`           | Aktion von Home Assistant oder `action: popup` für das GlowCard-Popup                                      |
 | `hold_action` | Aktion | `popup`            | Aktion von Home Assistant oder `action: popup` für das GlowCard-Popup                                      |
@@ -96,8 +96,10 @@ type: custom:glowcard-switch
 entity: switch.garden_sprinkler
 name: Rasensprenger
 color: sky
-variant: wide # small | wide (7-Tage-Streifen) | row
+variant: small # small (Kachel) | row (Zeile für Listen)
 ```
+
+Den 7-Tage-Verlauf zeigt das Popup (Gedrückthalten). Das frühere `variant: wide` wird als Kachel angezeigt.
 
 Gruppe von Schaltern (Tippen auf die Karte schaltet alle, Gedrückthalten macht standardmäßig nichts):
 
