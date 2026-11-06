@@ -40,8 +40,8 @@ describe('visual editor', () => {
   });
 
   it('labels fields in German and English', () => {
-    expect(editorLabel('variant', 'de')).toBe('Variante');
-    expect(editorLabel('variant', 'en-GB')).toBe('Variant');
+    expect(editorLabel('variant', 'de')).toBe('Layout');
+    expect(editorLabel('variant', 'en-GB')).toBe('Layout');
     const form = card('glowcard-plug').getConfigForm();
     expect(form.computeLabel({ name: 'threshold' })).toBeTruthy();
     expect(form.computeLabel({ name: 'unknown' })).toBeUndefined();
@@ -214,7 +214,9 @@ describe('visual editor', () => {
       return el.getGridOptions().columns;
     };
     expect(grid('glowcard-switch', { entity: 'switch.a' })).toBe(3);
-    expect(grid('glowcard-switch', { entity: 'switch.a', variant: 'wide' })).toBe(6);
+    // The former wide switch variant is shown as a small tile.
+    expect(grid('glowcard-switch', { entity: 'switch.a', variant: 'wide' })).toBe(3);
+    expect(grid('glowcard-switch', { entity: 'switch.a', variant: 'row' })).toBe(6);
     expect(grid('glowcard-plug', { entity: 'switch.a' })).toBe(3);
     expect(grid('glowcard-plug', { entity: 'switch.a', variant: 'wide' })).toBe(12);
     expect(grid('glowcard-plug', { entity: 'switch.a', show_power: true })).toBe(12);
