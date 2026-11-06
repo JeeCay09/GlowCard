@@ -147,7 +147,7 @@ describe('switch card with plug extras', () => {
     expect(text).not.toContain('186');
   });
 
-  it('keeps teal as the default colour of smart plugs', async () => {
+  it('uses teal as the default colour of all switches', async () => {
     await import('../src/glowcard');
     const el = document.createElement('glowcard-switch') as HTMLElement & {
       setConfig(c: unknown): void;
@@ -161,6 +161,8 @@ describe('switch card with plug extras', () => {
     ]);
     expect(el.accent).toEqual([20, 184, 166]);
     el.hass = hass([e('switch.office', 'on')]);
+    expect(el.accent).toEqual([20, 184, 166]);
+    el.setConfig({ type: 'custom:glowcard-switch', entity: 'switch.office', color: 'amber' });
     expect(el.accent).toEqual([245, 165, 36]);
   });
 

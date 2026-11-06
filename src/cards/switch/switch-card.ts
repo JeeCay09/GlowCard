@@ -17,7 +17,6 @@ import {
   variantField,
 } from '../../core/editor';
 import { language, localize } from '../../core/localize';
-import { resolveAccent } from '../../core/color';
 import { fireEvent } from '../../core/fire-event';
 import {
   formatNumber,
@@ -96,6 +95,8 @@ export class GlowSwitchCard extends GlowCardBase<SwitchCardConfig> {
   private powerFor?: string;
 
   protected popupStyle = 'glow' as const;
+  /** All switches (plugs too) default to teal (Gilbert). */
+  protected defaultColor = 'teal';
 
   static getConfigForm() {
     const pick = (name: string, domain: string[], device_class?: string) => ({
@@ -224,11 +225,6 @@ export class GlowSwitchCard extends GlowCardBase<SwitchCardConfig> {
 
   private st(id?: string) {
     return id ? this.hass?.states[id] : undefined;
-  }
-
-  /** Smart plugs (a power sensor on the device) keep their teal accent unless `color` is set. */
-  protected get accent() {
-    return resolveAccent(this.config?.color, this.dark, this.parts.power ? 'teal' : 'amber');
   }
 
   /** Smart plugs (a power sensor on the device) get a socket icon unless one is set. */
