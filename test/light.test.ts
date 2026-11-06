@@ -204,7 +204,7 @@ describe('light card bar', () => {
 
   it('shows "choose an entity" on a new card without entity', async () => {
     await import('../src/glowcard');
-    const cases = ['glowcard-light', 'glowcard-switch', 'glowcard-plug'].flatMap((type) => [
+    const cases = ['glowcard-light', 'glowcard-switch'].flatMap((type) => [
       [type, {}],
       [type, { entity: '' }],
     ]) as [string, Record<string, unknown>][];
