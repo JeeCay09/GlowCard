@@ -261,11 +261,11 @@
           { entity: 'switch.dishwasher', icon: 'mdi:dishwasher', color: 'indigo', variant: 'row' },
           'span2',
         ],
-        ['glowcard-plug', { entity: 'switch.home_office' }, ''],
-        ['glowcard-plug', { entity: 'switch.dryer' }, ''],
-        ['glowcard-plug', { entity: 'switch.bedroom_plug' }, ''],
-        ['glowcard-plug', { entity: 'switch.fairy_lights' }, ''],
-        ['glowcard-plug', { entity: 'switch.home_office', variant: 'wide' }, 'span4'],
+        ['glowcard-switch', { entity: 'switch.home_office' }, ''],
+        ['glowcard-switch', { entity: 'switch.dryer', show_power: true, variant: 'row' }, 'span2'],
+        ['glowcard-switch', { entity: 'switch.bedroom_plug' }, ''],
+        ['glowcard-switch', { entity: 'switch.fairy_lights' }, ''],
+        ['glowcard-switch', { entity: 'switch.home_office', show_power: true }, 'span4'],
       ];
       const set = new URLSearchParams(location.search).get('set');
       const cards =

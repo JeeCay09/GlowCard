@@ -8,7 +8,7 @@ import {
   selectedTimer,
   toKwh,
   watts,
-} from '../src/cards/plug/plug-logic';
+} from '../src/cards/switch/power-logic';
 import type { HassEntity, HomeAssistant } from '../src/types/hass';
 
 const e = (id: string, state: string, attributes: HassEntity['attributes'] = {}): HassEntity => ({
@@ -110,5 +110,64 @@ describe('plug values', () => {
     expect(selectedTimer(3601)).toBe(7200);
     expect(selectedTimer(99999)).toBe(7200);
     expect(countdownSeconds(e('number.c', '25', { unit_of_measurement: 'min' }))).toBe(1500);
+  });
+});
+
+describe('switch card with plug extras', () => {
+  const render = async (config: Record<string, unknown>) => {
+    await import('../src/glowcard');
+    const el = document.createElement('glowcard-switch') as HTMLElement & {
+      setConfig(c: unknown): void;
+      hass: unknown;
+      updateComplete: Promise<boolean>;
+    };
+    el.setConfig({ type: 'custom:glowcard-switch', entity: 'switch.office', ...config });
+    el.hass = {
+      ...hass(
+        [
+          { ...e('switch.office', 'on'), last_changed: new Date().toISOString() },
+          e('sensor.office_power', '186', { device_class: 'power', unit_of_measurement: 'W' }),
+        ],
+        {},
+      ),
+      locale: { language: 'de' },
+      themes: {},
+      callWS: async () => ({}),
+    };
+    document.body.appendChild(el);
+    await el.updateComplete;
+    const text = el.shadowRoot!.textContent ?? '';
+    el.remove();
+    return text;
+  };
+
+  it('shows on/off by default, even when the device measures power', async () => {
+    const text = await render({});
+    expect(text).toContain('An');
+    expect(text).not.toContain('186');
+  });
+
+  it('uses teal as the default colour of all switches', async () => {
+    await import('../src/glowcard');
+    const el = document.createElement('glowcard-switch') as HTMLElement & {
+      setConfig(c: unknown): void;
+      hass: unknown;
+      accent: number[];
+    };
+    el.setConfig({ type: 'custom:glowcard-switch', entity: 'switch.office' });
+    el.hass = hass([
+      e('switch.office', 'on'),
+      e('sensor.office_power', '5', { device_class: 'power', unit_of_measurement: 'W' }),
+    ]);
+    expect(el.accent).toEqual([20, 184, 166]);
+    el.hass = hass([e('switch.office', 'on')]);
+    expect(el.accent).toEqual([20, 184, 166]);
+    el.setConfig({ type: 'custom:glowcard-switch', entity: 'switch.office', color: 'amber' });
+    expect(el.accent).toEqual([245, 165, 36]);
+  });
+
+  it('shows the watts with show_power', async () => {
+    // Watts use a narrow no-break space before the unit on some locales.
+    expect(await render({ show_power: true })).toMatch(/186\sW/);
   });
 });
