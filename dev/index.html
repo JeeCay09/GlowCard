@@ -208,6 +208,8 @@
         ['glowcard-light', { entity: 'light.hall' }, 'span2'],
         ['glowcard-light', { entity: 'light.led_strip', icon: 'mdi:led-strip-variant' }, 'span2'],
         ['glowcard-light', { entity: 'light.kitchen' }, 'span2'],
+        ['glowcard-light', { entity: 'light.kitchen', size: 'mini' }, 'span2'],
+        ['glowcard-light', { entity: 'light.hall', size: 'mini' }, 'span2'],
         [
           'glowcard-switch',
           { entity: 'switch.sprinkler', icon: 'mdi:sprinkler', color: 'sky' },
@@ -253,16 +255,16 @@
         ],
         [
           'glowcard-switch',
-          { entity: 'switch.carpet_boost', icon: 'mdi:flash', color: 'cyan', variant: 'row' },
+          { entity: 'switch.carpet_boost', icon: 'mdi:flash', color: 'cyan', size: 'mini' },
           'span2',
         ],
         [
           'glowcard-switch',
-          { entity: 'switch.dishwasher', icon: 'mdi:dishwasher', color: 'indigo', variant: 'row' },
+          { entity: 'switch.dishwasher', icon: 'mdi:dishwasher', color: 'indigo', size: 'mini' },
           'span2',
         ],
         ['glowcard-switch', { entity: 'switch.home_office' }, ''],
-        ['glowcard-switch', { entity: 'switch.dryer', show_power: true, variant: 'row' }, 'span2'],
+        ['glowcard-switch', { entity: 'switch.dryer', show_power: true, size: 'mini' }, 'span2'],
         ['glowcard-switch', { entity: 'switch.bedroom_plug' }, ''],
         ['glowcard-switch', { entity: 'switch.fairy_lights' }, ''],
         ['glowcard-switch', { entity: 'switch.home_office', show_power: true }, 'span4'],

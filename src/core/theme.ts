@@ -8,8 +8,8 @@ import { css } from 'lit';
 const compactSizes = css`
   --glow-pad: 12px;
   --glow-radius: 22px;
-  --glow-card-h: 104px;
-  --glow-card-h-wide: 144px;
+  --glow-card-h: 120px;
+  --glow-card-h-wide: 184px;
   --glow-orb-size: 36px;
   --glow-value-size: 26px;
   --glow-word-size: 18px;
@@ -17,7 +17,7 @@ const compactSizes = css`
   --glow-name-size: 14px;
   --glow-name-small: 13px;
   --glow-sub-size: 12px;
-  --glow-dock-h: 48px;
+  --glow-dock-h: 56px;
   --glow-dock-pad: 5px;
   --glow-dot-scale: 0.7;
   --glow-seg-val: 13px;
@@ -75,8 +75,9 @@ export const glowTokens = css`
 
     /* card sizes (normal); see compactSizes */
     --glow-pad: 18px;
-    --glow-card-h: 164px;
-    --glow-card-h-wide: 200px;
+    /* Heights fit HA's sections grid: n rows of 56 px with 8 px gaps (56/120/184/248). */
+    --glow-card-h: 184px;
+    --glow-card-h-wide: 184px;
     --glow-orb-size: 52px;
     --glow-value-size: 44px;
     --glow-word-size: 24px;
@@ -85,7 +86,7 @@ export const glowTokens = css`
     --glow-name-small: 15px;
     --glow-sub-size: 13px;
     /* status bar */
-    --glow-dock-h: 72px;
+    --glow-dock-h: 56px;
     --glow-dock-pad: 8px;
     --glow-dot-scale: 1;
     --glow-seg-val: 16px;
@@ -98,7 +99,8 @@ export const glowTokens = css`
       ${compactSizes}
     }
   }
-  :host([size='compact']) {
+  :host([size='compact']),
+  :host([size='mini']) {
     ${compactSizes}
   }
   :host([dark]) {

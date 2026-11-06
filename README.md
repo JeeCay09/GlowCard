@@ -35,7 +35,7 @@
 | Heading        | `custom:glowcard-heading` | any entities as badges                          | beta (v0.4)      |
 | Energy "House" | `custom:glowcard-energy`  | power `sensor.*` for solar, battery, grid, home | planned for v0.4 |
 
-All cards have a visual editor (Home Assistant 2025.1 or newer). In a sections dashboard, each card takes its width from its type: tile = 1/4, light, switch row and switch group = 1/2, switch with power/usage, header, status bar, heading and chip rows = full width, single chip = 1/2, icon-only chip = 1/4. You can still resize it in the dashboard editor. New cards start without an entity; when you add a card "by entity", it uses the entity you picked.
+All cards have a visual editor (Home Assistant 2025.1 or newer). In a sections dashboard, the cards fit Home Assistant's grid exactly (rows of 56 px): tile 2 rows on phones or 3 on desktop, switch group and power card 3, mini, status bar and chip 1 row. Width: tile = 1/4, light, mini and switch group = 1/2, switch with power/usage, header, status bar, heading and chip rows = full width, single chip = 1/2, icon-only chip = 1/4. You can still change the width in the dashboard editor. New cards start without an entity; when you add a card "by entity", it uses the entity you picked.
 
 In the editor, "Tap behaviour" offers toggle, GlowCard popup, more info, navigate, open URL, perform action or nothing for tap and hold, all in one list.
 
@@ -75,16 +75,15 @@ After an update, change the URL to e.g. `/local/glowcard/glowcard.js?v=0.4.0` so
 
 All cards share these options:
 
-| Option        | Type   | Default       | Description                                                                               |
-| ------------- | ------ | ------------- | ----------------------------------------------------------------------------------------- |
-| `entity`      | string | required      | Main entity of the card                                                                   |
-| `name`        | string | friendly name | Title shown on the card                                                                   |
-| `icon`        | string | entity icon   | Any `mdi:` icon                                                                           |
-| `color`       | string | per card type | Accent colour (`amber`, `teal`, `sky`, `violet`, … or hex)                                |
-| `variant`     | string | `small`       | Switch card layout (`small`, `row`)                                                       |
-| `size`        | string | `auto`        | Switch, light, status bar: `auto` (compact on phones under 600 px), `compact` or `normal` |
-| `tap_action`  | action | `toggle`      | Home Assistant action, or `action: popup` for the GlowCard popup                          |
-| `hold_action` | action | `popup`       | Home Assistant action, or `action: popup` for the GlowCard popup                          |
+| Option        | Type   | Default       | Description                                                                                                                      |
+| ------------- | ------ | ------------- | -------------------------------------------------------------------------------------------------------------------------------- |
+| `entity`      | string | required      | Main entity of the card                                                                                                          |
+| `name`        | string | friendly name | Title shown on the card                                                                                                          |
+| `icon`        | string | entity icon   | Any `mdi:` icon                                                                                                                  |
+| `color`       | string | per card type | Accent colour (`amber`, `teal`, `sky`, `violet`, … or hex)                                                                       |
+| `size`        | string | `auto`        | Switch, light, status bar: `auto` (compact on phones under 600 px), `compact`, `normal`; switch and light also `mini` (one line) |
+| `tap_action`  | action | `toggle`      | Home Assistant action, or `action: popup` for the GlowCard popup                                                                 |
+| `hold_action` | action | `popup`       | Home Assistant action, or `action: popup` for the GlowCard popup                                                                 |
 
 The examples below show the planned options. Details may still change before v1.0.
 
@@ -95,10 +94,10 @@ type: custom:glowcard-switch
 entity: switch.garden_sprinkler
 name: Sprinkler
 color: sky
-variant: small # small (tile) | row (list row)
+size: mini # auto | compact | normal | mini (one line, e.g. for lists)
 ```
 
-The popup (hold) shows the 7-day history. The former `variant: wide` is shown as a tile.
+The popup (hold) shows the 7-day history. The former `variant: wide` is shown as a tile, `variant: row` as `size: mini`.
 
 Group of switches (tapping the card toggles all of them, holding does nothing by default):
 
@@ -124,7 +123,7 @@ show_power: true # watts, live curve and today's usage on the card, full width (
 threshold: 1 # with show_power: glows from this many watts (default 1)
 ```
 
-With `variant: row` and `show_power`, the row shows the watts instead of on/off. If detection picks the wrong entity, set it yourself: `power_entity`, `energy_entity`, `countdown_entity`, `child_lock_entity`, `power_on_entity`, `indicator_entity`.
+With `size: mini` and `show_power`, the row shows the watts instead of on/off. If detection picks the wrong entity, set it yourself: `power_entity`, `energy_entity`, `countdown_entity`, `child_lock_entity`, `power_on_entity`, `indicator_entity`.
 
 The former `custom:glowcard-plug` card is gone. For existing cards, change the type to `custom:glowcard-switch` and replace `variant: wide` with `show_power: true`.
 

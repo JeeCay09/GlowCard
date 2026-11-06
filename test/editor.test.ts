@@ -252,7 +252,7 @@ describe('visual editor', () => {
   it('shows defaults instead of empty fields and keeps them out of the YAML', () => {
     const defaults = (type: string) => schemaDefaults(card(type).getConfigForm().schema);
     expect(defaults('glowcard-light')).toEqual({ color: 'auto', font: 'glow', size: 'auto' });
-    expect(defaults('glowcard-switch')).toMatchObject({ variant: 'small', font: 'glow' });
+    expect(defaults('glowcard-switch')).toMatchObject({ size: 'auto', font: 'glow' });
     expect(defaults('glowcard-switch')).toMatchObject({ show_power: false, threshold: 1 });
     expect(defaults('glowcard-heading')).toMatchObject({ heading_style: 'title', size: 'auto' });
     expect(defaults('glowcard-header')).toEqual({ font: 'glow' });
@@ -269,5 +269,39 @@ describe('visual editor', () => {
     expect(withoutDefaults({ type: 'x', font: 'glow', color: 'auto', size: 'compact' }, d)).toEqual(
       { type: 'x', size: 'compact' },
     );
+  });
+
+  it("fits HA's sections grid: fixed rows of 56 px, mini is one row", () => {
+    const rows = (type: string, config: Record<string, unknown>) => {
+      const el = document.createElement(type) as HTMLElement & {
+        setConfig(c: unknown): void;
+        getGridOptions(): { columns: number; rows: number | string; max_rows?: number };
+      };
+      el.setConfig({ type: `custom:${type}`, ...config });
+      const o = el.getGridOptions();
+      return `${o.columns}x${o.rows}`;
+    };
+    expect(rows('glowcard-switch', { entity: 'switch.a', size: 'normal' })).toBe('3x3');
+    expect(rows('glowcard-switch', { entity: 'switch.a', size: 'compact' })).toBe('3x2');
+    expect(rows('glowcard-switch', { entity: 'switch.a', size: 'mini' })).toBe('6x1');
+    expect(rows('glowcard-switch', { entity: 'switch.a', variant: 'row' })).toBe('6x1');
+    expect(rows('glowcard-switch', { entities: ['switch.a', 'switch.b'] })).toBe('6x3');
+    expect(rows('glowcard-switch', { entity: 'switch.a', show_power: true })).toBe('12x3');
+    expect(rows('glowcard-light', { entity: 'light.a', size: 'normal' })).toBe('6x3');
+    expect(rows('glowcard-light', { entity: 'light.a', size: 'compact' })).toBe('6x2');
+    expect(rows('glowcard-light', { entity: 'light.a', size: 'mini' })).toBe('6x1');
+    expect(rows('glowcard-status', { weather: 'weather.home' })).toBe('12x1');
+    expect(rows('glowcard-chip', { chip: 'lights' })).toBe('6x1');
+
+    const form = card('glowcard-switch').getConfigForm();
+    expect(names(form.schema)).not.toContain('variant');
+    expect(form.normalize!({ entity: 'switch.a', variant: 'row' })).toEqual({
+      entity: 'switch.a',
+      size: 'mini',
+    });
+    expect(form.normalize!({ entity: 'switch.a', variant: 'wide' })).toEqual({
+      entity: 'switch.a',
+    });
+    expect(editorLabel('mini', 'de')).toBe('Mini (einzeilig)');
   });
 });

@@ -35,7 +35,7 @@
 | Überschrift    | `custom:glowcard-heading` | beliebige Entitäten als Badges                   | Beta (v0.4)      |
 | Energie „Haus“ | `custom:glowcard-energy`  | Leistungs-`sensor.*` für Solar, Akku, Netz, Haus | geplant für v0.4 |
 
-Alle Karten haben einen visuellen Editor (ab Home Assistant 2025.1). In einem Sections-Dashboard richtet sich die Breite nach der Karte: Kachel = 1/4, Licht, Schalter-Zeile und Schalter-Gruppe = 1/2, Schalter mit Leistung/Verbrauch, Kopfzeile, Status-Leiste, Überschrift und Chip-Reihen = ganze Breite, einzelner Chip = 1/2, Symbol-Chip = 1/4. Im Dashboard-Editor kannst du die Größe weiterhin selbst ändern. Neue Karten starten ohne Entität; fügst du eine Karte „nach Entität“ hinzu, nimmt sie die gewählte Entität.
+Alle Karten haben einen visuellen Editor (ab Home Assistant 2025.1). In einem Sections-Dashboard passen die Karten genau ins Raster von Home Assistant (Zeilen zu 56 px): Kachel 2 Zeilen am Handy bzw. 3 am PC, Schalter-Gruppe und Leistungs-Karte 3, Mini, Status-Leiste und Chip 1 Zeile. Breite: Kachel = 1/4, Licht, Mini und Schalter-Gruppe = 1/2, Schalter mit Leistung/Verbrauch, Kopfzeile, Status-Leiste, Überschrift und Chip-Reihen = ganze Breite, einzelner Chip = 1/2, Symbol-Chip = 1/4. Die Breite kannst du im Dashboard-Editor weiterhin ändern. Neue Karten starten ohne Entität; fügst du eine Karte „nach Entität“ hinzu, nimmt sie die gewählte Entität.
 
 Im Editor bietet „Tippverhalten“ für Antippen und Gedrückthalten: Ein/Aus, GlowCard-Popup, Detailansicht, Navigieren, URL öffnen, Aktion ausführen oder Nichts, alles in einer Liste.
 
@@ -75,16 +75,15 @@ Nach einem Update die URL z. B. auf `/local/glowcard/glowcard.js?v=0.4.0` änder
 
 Alle Karten teilen diese Optionen:
 
-| Option        | Typ    | Standard           | Beschreibung                                                                                    |
-| ------------- | ------ | ------------------ | ----------------------------------------------------------------------------------------------- |
-| `entity`      | String | Pflicht            | Haupt-Entität der Karte                                                                         |
-| `name`        | String | Anzeigename        | Titel auf der Karte                                                                             |
-| `icon`        | String | Symbol der Entität | Beliebiges `mdi:`-Symbol                                                                        |
-| `color`       | String | je Kartentyp       | Akzentfarbe (`amber`, `teal`, `sky`, `violet`, … oder Hex)                                      |
-| `variant`     | String | `small`            | Layout der Schalter-Karte (`small`, `row`)                                                      |
-| `size`        | String | `auto`             | Schalter, Licht, Status-Leiste: `auto` (kompakt am Handy unter 600 px), `compact` oder `normal` |
-| `tap_action`  | Aktion | `toggle`           | Aktion von Home Assistant oder `action: popup` für das GlowCard-Popup                           |
-| `hold_action` | Aktion | `popup`            | Aktion von Home Assistant oder `action: popup` für das GlowCard-Popup                           |
+| Option        | Typ    | Standard           | Beschreibung                                                                                                                            |
+| ------------- | ------ | ------------------ | --------------------------------------------------------------------------------------------------------------------------------------- |
+| `entity`      | String | Pflicht            | Haupt-Entität der Karte                                                                                                                 |
+| `name`        | String | Anzeigename        | Titel auf der Karte                                                                                                                     |
+| `icon`        | String | Symbol der Entität | Beliebiges `mdi:`-Symbol                                                                                                                |
+| `color`       | String | je Kartentyp       | Akzentfarbe (`amber`, `teal`, `sky`, `violet`, … oder Hex)                                                                              |
+| `size`        | String | `auto`             | Schalter, Licht, Status-Leiste: `auto` (kompakt am Handy unter 600 px), `compact`, `normal`; Schalter und Licht auch `mini` (einzeilig) |
+| `tap_action`  | Aktion | `toggle`           | Aktion von Home Assistant oder `action: popup` für das GlowCard-Popup                                                                   |
+| `hold_action` | Aktion | `popup`            | Aktion von Home Assistant oder `action: popup` für das GlowCard-Popup                                                                   |
 
 Die Beispiele zeigen die geplanten Optionen. Details können sich bis v1.0 noch ändern.
 
@@ -95,10 +94,10 @@ type: custom:glowcard-switch
 entity: switch.garden_sprinkler
 name: Rasensprenger
 color: sky
-variant: small # small (Kachel) | row (Zeile für Listen)
+size: mini # auto | compact | normal | mini (eine Zeile, z. B. für Listen)
 ```
 
-Den 7-Tage-Verlauf zeigt das Popup (Gedrückthalten). Das frühere `variant: wide` wird als Kachel angezeigt.
+Den 7-Tage-Verlauf zeigt das Popup (Gedrückthalten). Das frühere `variant: wide` wird als Kachel angezeigt, `variant: row` als `size: mini`.
 
 Gruppe von Schaltern (Tippen auf die Karte schaltet alle, Gedrückthalten macht standardmäßig nichts):
 
@@ -124,7 +123,7 @@ show_power: true # Watt, Live-Kurve und Verbrauch heute auf der Karte, ganze Bre
 threshold: 1 # mit show_power: leuchtet ab so vielen Watt (Standard 1)
 ```
 
-Mit `variant: row` zeigt die Zeile bei `show_power` die Watt statt An/Aus. Falls die Erkennung danebenliegt, lassen sich die Entitäten festlegen: `power_entity`, `energy_entity`, `countdown_entity`, `child_lock_entity`, `power_on_entity`, `indicator_entity`.
+Mit `size: mini` zeigt die Zeile bei `show_power` die Watt statt An/Aus. Falls die Erkennung danebenliegt, lassen sich die Entitäten festlegen: `power_entity`, `energy_entity`, `countdown_entity`, `child_lock_entity`, `power_on_entity`, `indicator_entity`.
 
 Die frühere Karte `custom:glowcard-plug` gibt es nicht mehr. Ändere bei bestehenden Karten den Typ auf `custom:glowcard-switch` und ersetze `variant: wide` durch `show_power: true`.
 
