@@ -10,7 +10,6 @@ import {
   lookSection,
   nameIconFields,
   sizeField,
-  variantField,
 } from '../../core/editor';
 import { language, localize } from '../../core/localize';
 import { formatNumber } from '../../core/format';
@@ -33,7 +32,9 @@ import '../../components/orb';
 import '../../components/segments';
 
 export interface PlugCardConfig extends GlowCardConfig {
-  /** small (default) or wide (full width with live power curve). */
+  /** Full width card with live power curve and today's usage (default false). */
+  show_power?: boolean;
+  /** Former layout option: `wide` = `show_power: true`. */
   variant?: 'small' | 'wide';
   /** From this many watts the plug counts as drawing power and glows (default 1). */
   threshold?: number;
@@ -53,7 +54,7 @@ const CHART_SPAN = 2 * HOUR;
 const CHART_BUCKETS = 24;
 const REFRESH_MS = 5 * 60_000;
 
-/** Smart plug card from the GlowPlugs board: small and wide variants plus popup. */
+/** Smart plug card from the GlowPlugs board: small, or full width with power curve, plus popup. */
 export class GlowPlugCard extends GlowCardBase<PlugCardConfig> {
   @state() private powerHistory?: StatePoint[];
   @state() private energyHistory?: StatePoint[];
@@ -71,18 +72,24 @@ export class GlowPlugCard extends GlowCardBase<PlugCardConfig> {
     return configForm(
       [
         { name: 'entity', required: true, selector: { entity: { domain: ['switch'] } } },
-        lookSection(variantField(['small', 'wide']), nameIconFields, lookFields, sizeField, {
-          name: '',
-          type: 'grid',
-          schema: [
-            areaField,
-            {
-              name: 'threshold',
-              default: 1,
-              selector: { number: { min: 0, step: 0.5, mode: 'box' } },
-            },
-          ],
-        }),
+        lookSection(
+          { name: 'show_power', default: false, selector: { boolean: {} } },
+          nameIconFields,
+          lookFields,
+          sizeField,
+          {
+            name: '',
+            type: 'grid',
+            schema: [
+              areaField,
+              {
+                name: 'threshold',
+                default: 1,
+                selector: { number: { min: 0, step: 0.5, mode: 'box' } },
+              },
+            ],
+          },
+        ),
         {
           name: '',
           type: 'expandable',
@@ -108,6 +115,15 @@ export class GlowPlugCard extends GlowCardBase<PlugCardConfig> {
         child_lock_entity: 'auto_helper',
         power_on_entity: 'auto_helper',
         indicator_entity: 'auto_helper',
+        show_power: 'show_power_helper',
+      },
+      undefined,
+      (config) => {
+        if (config.variant === undefined) return config;
+        const { variant, ...rest } = config;
+        return rest.show_power === undefined && variant === 'wide'
+          ? { ...rest, show_power: true }
+          : rest;
       },
     );
   }
@@ -118,11 +134,11 @@ export class GlowPlugCard extends GlowCardBase<PlugCardConfig> {
   }
 
   getCardSize(): number {
-    return this.config?.variant === 'wide' ? 4 : 3;
+    return this.showPower ? 4 : 3;
   }
 
   getGridOptions() {
-    const wide = this.config?.variant === 'wide';
+    const wide = this.showPower;
     return { columns: wide ? 12 : 3, rows: 'auto', min_columns: wide ? 6 : 3 };
   }
 
@@ -172,7 +188,7 @@ export class GlowPlugCard extends GlowCardBase<PlugCardConfig> {
   // ---------- history ----------
 
   private get needsHistory(): boolean {
-    return this.config?.variant === 'wide' || this.popupOpen;
+    return this.showPower || this.popupOpen;
   }
 
   connectedCallback(): void {
@@ -411,9 +427,14 @@ export class GlowPlugCard extends GlowCardBase<PlugCardConfig> {
     );
   }
 
+  /** Power curve + usage (full width); `variant: wide` still works. */
+  private get showPower(): boolean {
+    return this.config?.show_power ?? this.config?.variant === 'wide';
+  }
+
   render() {
     if (!this.config) return nothing;
-    return this.config.variant === 'wide' ? this.renderWide() : this.renderSmall();
+    return this.showPower ? this.renderWide() : this.renderSmall();
   }
 
   // ---------- popup ----------

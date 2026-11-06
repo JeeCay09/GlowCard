@@ -217,6 +217,10 @@ describe('visual editor', () => {
     expect(grid('glowcard-switch', { entity: 'switch.a', variant: 'wide' })).toBe(6);
     expect(grid('glowcard-plug', { entity: 'switch.a' })).toBe(3);
     expect(grid('glowcard-plug', { entity: 'switch.a', variant: 'wide' })).toBe(12);
+    expect(grid('glowcard-plug', { entity: 'switch.a', show_power: true })).toBe(12);
+    expect(grid('glowcard-plug', { entity: 'switch.a', show_power: false, variant: 'wide' })).toBe(
+      3,
+    );
     expect(grid('glowcard-light', { entity: 'light.a' })).toBe(6);
     // The former small light variant is shown as wide.
     expect(grid('glowcard-light', { entity: 'light.a', variant: 'small' })).toBe(6);
@@ -250,7 +254,7 @@ describe('visual editor', () => {
     const defaults = (type: string) => schemaDefaults(card(type).getConfigForm().schema);
     expect(defaults('glowcard-light')).toEqual({ color: 'auto', font: 'glow', size: 'auto' });
     expect(defaults('glowcard-switch')).toMatchObject({ variant: 'small', font: 'glow' });
-    expect(defaults('glowcard-plug')).toMatchObject({ variant: 'small', threshold: 1 });
+    expect(defaults('glowcard-plug')).toMatchObject({ show_power: false, threshold: 1 });
     expect(defaults('glowcard-heading')).toMatchObject({ heading_style: 'title', size: 'auto' });
     expect(defaults('glowcard-header')).toEqual({ font: 'glow' });
     expect(defaults('glowcard-status')).toEqual({ font: 'glow', size: 'auto' });
@@ -266,5 +270,19 @@ describe('visual editor', () => {
     expect(withoutDefaults({ type: 'x', font: 'glow', color: 'auto', size: 'compact' }, d)).toEqual(
       { type: 'x', size: 'compact' },
     );
+  });
+
+  it('plug: "show power/usage" checkbox instead of a variant', () => {
+    const form = card('glowcard-plug').getConfigForm();
+    expect(names(form.schema)).toContain('show_power');
+    expect(names(form.schema)).not.toContain('variant');
+    expect(form.normalize!({ entity: 'switch.a', variant: 'wide' })).toEqual({
+      entity: 'switch.a',
+      show_power: true,
+    });
+    expect(form.normalize!({ entity: 'switch.a', variant: 'small' })).toEqual({
+      entity: 'switch.a',
+    });
+    expect(form.normalize!({ entity: 'switch.a' })).toEqual({ entity: 'switch.a' });
   });
 });

@@ -66,7 +66,7 @@ export class GlowCardEditor extends LitElement {
   /** HA switches to YAML mode when this throws (e.g. named group members). */
   setConfig(config: Record<string, unknown>): void {
     this.form.assertConfig?.(config);
-    this.config = config;
+    this.config = this.form.normalize ? this.form.normalize(config) : config;
   }
 
   private get spec(): GestureSpec | undefined {
