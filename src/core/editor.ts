@@ -29,7 +29,7 @@ export interface ConfigForm {
   computeLabel: (schema: FormSchema) => string | undefined;
   computeHelper: (schema: FormSchema) => string | undefined;
   assertConfig?: (config: Record<string, unknown>) => void;
-  /** Rewrites old keys into what the editor shows (e.g. `variant: wide` → `show_power`). */
+  /** Rewrites old keys into what the editor shows. */
   normalize?: (config: Record<string, unknown>) => Record<string, unknown>;
 }
 
@@ -68,8 +68,9 @@ const LABELS = {
     area: 'Text unter dem Namen',
     threshold: 'Glüht ab (W)',
     show_power: 'Leistung/Verbrauch anzeigen',
-    show_power_helper: 'Live-Leistungskurve und heutiger Verbrauch, die Karte wird ganz breit',
-    entities_section: 'Entitäten der Steckdose',
+    show_power_helper:
+      'Nur mit Leistungssensor: Watt, Live-Kurve und Verbrauch heute auf der Karte (ganze Breite)',
+    entities_section: 'Leistung & Steckdose',
     power_entity: 'Leistung',
     energy_entity: 'Energie',
     countdown_entity: 'Countdown',
@@ -169,8 +170,9 @@ const LABELS = {
     area: 'Text under the name',
     threshold: 'Glows from (W)',
     show_power: 'Show power/usage',
-    show_power_helper: "Live power curve and today's usage; the card goes full width",
-    entities_section: 'Plug entities',
+    show_power_helper:
+      "Only with a power sensor: watts, live curve and today's usage on the card (full width)",
+    entities_section: 'Power & plug',
     power_entity: 'Power',
     energy_entity: 'Energy',
     countdown_entity: 'Countdown',

@@ -1,4 +1,4 @@
-import { css, html, nothing, type PropertyValues } from 'lit';
+import { css, html, nothing, svg, type PropertyValues } from 'lit';
 import { state } from 'lit/decorators.js';
 import { GlowCardBase, stubEntity, type GlowCardConfig } from '../../core/base-card';
 import { registerCard } from '../../core/register';
@@ -16,8 +16,10 @@ import {
   type GestureSpec,
   variantField,
 } from '../../core/editor';
-import { localize } from '../../core/localize';
+import { language, localize } from '../../core/localize';
+import { fireEvent } from '../../core/fire-event';
 import {
+  formatNumber,
   formatDuration,
   formatHours,
   formatLogDate,
@@ -29,12 +31,28 @@ import {
   daySegments,
   fetchHistory,
   lastChanges,
+  meterIncrease,
+  numericBuckets,
   onPeriods,
   totalHours,
   type DayStrip,
   type StatePoint,
 } from '../../core/history';
+import {
+  TIMER_OPTIONS,
+  chartPaths,
+  countdownFactor,
+  countdownSeconds,
+  findPlugParts,
+  formatWatts,
+  niceMax,
+  selectedTimer,
+  toKwh,
+  watts,
+  type PlugParts,
+} from './power-logic';
 import '../../components/orb';
+import '../../components/segments';
 
 export interface SwitchCardConfig extends GlowCardConfig {
   /** small (default) or row (compact list row). The former `wide` is shown small. */
@@ -43,21 +61,48 @@ export interface SwitchCardConfig extends GlowCardConfig {
   entities?: (string | { entity: string; name?: string })[];
   /** Text under the name in the row layout; default: the entity's area. */
   area?: string;
+  /** Smart plugs: watts, live curve and today's usage on the card (default false, full width). */
+  show_power?: boolean;
+  /** With `show_power`: from this many watts the plug counts as drawing and glows (default 1). */
+  threshold?: number;
+  /** Overrides for the entities found automatically on the switch's device. */
+  power_entity?: string;
+  energy_entity?: string;
+  countdown_entity?: string;
+  child_lock_entity?: string;
+  power_on_entity?: string;
+  indicator_entity?: string;
 }
 
 const DAY_MS = 86_400_000;
+const HOUR = 3_600_000;
 const HISTORY_REFRESH_MS = 5 * 60_000;
+const CHART_SPAN = 2 * HOUR;
+const CHART_BUCKETS = 24;
 const SWITCH_DOMAINS = ['switch', 'input_boolean'];
 
-/** Switch card from the GlowSwitches board: small, group and row layouts plus popup. */
+/**
+ * Switch card (switch, input_boolean, smart plugs): tile, row and group layouts plus popup.
+ * Plug extras (power, usage, timer, child lock …) are found on the device and shown in the
+ * popup; power on the card only with `show_power`.
+ */
 export class GlowSwitchCard extends GlowCardBase<SwitchCardConfig> {
   @state() private history?: StatePoint[];
+  @state() private powerHistory?: StatePoint[];
+  @state() private energyHistory?: StatePoint[];
   private historyTimer?: number;
   private historyFor?: string;
+  private powerFor?: string;
 
   protected popupStyle = 'glow' as const;
+  /** All switches (plugs too) default to teal (Gilbert). */
+  protected defaultColor = 'teal';
 
   static getConfigForm() {
+    const pick = (name: string, domain: string[], device_class?: string) => ({
+      name,
+      selector: { entity: device_class ? { domain, device_class } : { domain } },
+    });
     return configForm(
       [
         { name: 'entity', selector: { entity: { domain: SWITCH_DOMAINS } } },
@@ -69,9 +114,40 @@ export class GlowSwitchCard extends GlowCardBase<SwitchCardConfig> {
           sizeField,
           areaField,
         ),
+        {
+          name: '',
+          type: 'expandable',
+          title: 'entities_section',
+          icon: 'mdi:power-plug-outline',
+          schema: [
+            { name: 'show_power', default: false, selector: { boolean: {} } },
+            {
+              name: 'threshold',
+              default: 1,
+              selector: { number: { min: 0, step: 0.5, mode: 'box' } },
+            },
+            pick('power_entity', ['sensor'], 'power'),
+            pick('energy_entity', ['sensor'], 'energy'),
+            pick('countdown_entity', ['number']),
+            pick('child_lock_entity', ['switch', 'lock']),
+            pick('power_on_entity', ['select']),
+            pick('indicator_entity', ['select']),
+          ],
+        },
         actionsField,
       ],
-      { color: 'color_helper', area: 'area_helper', entities: 'entities_helper' },
+      {
+        color: 'color_helper',
+        area: 'area_helper',
+        entities: 'entities_helper',
+        show_power: 'show_power_helper',
+        power_entity: 'auto_helper',
+        energy_entity: 'auto_helper',
+        countdown_entity: 'auto_helper',
+        child_lock_entity: 'auto_helper',
+        power_on_entity: 'auto_helper',
+        indicator_entity: 'auto_helper',
+      },
       (config) => {
         const list = config.entities;
         if (Array.isArray(list) && list.some((e) => typeof e !== 'string')) {
@@ -98,13 +174,20 @@ export class GlowSwitchCard extends GlowCardBase<SwitchCardConfig> {
   }
 
   getCardSize(): number {
+    if (this.powerCard) return 4;
     if (this.config?.variant === 'row') return 1;
     return this.isGroup ? 4 : 3;
   }
 
   getGridOptions() {
+    if (this.powerCard) return { columns: 12, rows: 'auto', min_columns: 6 };
     const wide = this.isGroup || this.config?.variant === 'row';
     return { columns: wide ? 6 : 3, rows: 'auto', min_columns: wide ? 6 : 3 };
+  }
+
+  /** The full width power card: `show_power` on a single switch (not a group or row). */
+  private get powerCard(): boolean {
+    return !!this.config?.show_power && !this.isGroup && this.config.variant !== 'row';
   }
 
   private get isGroup(): boolean {
@@ -120,7 +203,47 @@ export class GlowSwitchCard extends GlowCardBase<SwitchCardConfig> {
   }
 
   protected watchedEntities(): string[] {
-    return this.isGroup ? this.groupItems.map((i) => i.entity) : super.watchedEntities();
+    if (this.isGroup) return this.groupItems.map((i) => i.entity);
+    return [super.watchedEntities(), Object.values(this.parts)].flat().filter(Boolean) as string[];
+  }
+
+  // ---------- plug parts (found on the device) ----------
+
+  private get parts(): PlugParts {
+    const c = this.config;
+    if (!c || this.isGroup) return {};
+    const found = this.hass && c.entity ? findPlugParts(this.hass, c.entity) : {};
+    return {
+      power: c.power_entity ?? found.power,
+      energy: c.energy_entity ?? found.energy,
+      countdown: c.countdown_entity ?? found.countdown,
+      child_lock: c.child_lock_entity ?? found.child_lock,
+      power_on: c.power_on_entity ?? found.power_on,
+      indicator: c.indicator_entity ?? found.indicator,
+    };
+  }
+
+  private st(id?: string) {
+    return id ? this.hass?.states[id] : undefined;
+  }
+
+  /** Smart plugs (a power sensor on the device) get a socket icon unless one is set. */
+  protected get icon(): string {
+    const own = this.config?.icon ?? this.stateObj?.attributes.icon;
+    if (typeof own === 'string' || !this.parts.power) return super.icon;
+    return this.isUnavailable ? 'mdi:power-plug-off-outline' : 'mdi:power-socket-de';
+  }
+
+  private get power(): number | undefined {
+    return this.isUnavailable ? undefined : watts(this.st(this.parts.power));
+  }
+
+  /** With `show_power` it glows only while drawing power; otherwise while it is on. */
+  private get glowing(): boolean {
+    if (!this.isActive) return false;
+    if (!this.config?.show_power) return true;
+    const w = this.power;
+    return w === undefined || w >= (this.config.threshold ?? 1);
   }
 
   protected get isActive(): boolean {
@@ -140,9 +263,16 @@ export class GlowSwitchCard extends GlowCardBase<SwitchCardConfig> {
     return !this.isGroup && this.popupOpen;
   }
 
+  private get needsPower(): boolean {
+    return !this.isGroup && (this.powerCard || this.popupOpen);
+  }
+
   connectedCallback(): void {
     super.connectedCallback();
-    this.historyTimer = window.setInterval(() => this.loadHistory(true), HISTORY_REFRESH_MS);
+    this.historyTimer = window.setInterval(() => {
+      void this.loadHistory(true);
+      void this.loadPower(true);
+    }, HISTORY_REFRESH_MS);
   }
 
   disconnectedCallback(): void {
@@ -154,12 +284,80 @@ export class GlowSwitchCard extends GlowCardBase<SwitchCardConfig> {
     super.updated(changed);
     if (changed.has('hass') || changed.has('config')) {
       const key = `${this.config?.entity}|${this.stateObj?.last_changed}`;
-      if (key !== this.historyFor) this.loadHistory(true);
+      if (key !== this.historyFor) void this.loadHistory(true);
+      const p = this.parts;
+      if (`${this.config?.entity}|${p.power}|${p.energy}` !== this.powerFor) {
+        void this.loadPower(true);
+      } else {
+        this.appendLive(p.power, 'powerHistory');
+        this.appendLive(p.energy, 'energyHistory');
+      }
     }
   }
 
   protected popupOpened(): void {
-    this.loadHistory(false);
+    void this.loadHistory(false);
+    void this.loadPower(false);
+  }
+
+  /** Adds the live state to the loaded history, so the curve follows without refetching. */
+  private appendLive(id: string | undefined, field: 'powerHistory' | 'energyHistory'): void {
+    const e = this.st(id);
+    const list = this[field];
+    if (!e || !list) return;
+    const start = Date.parse(e.last_changed);
+    const last = list[list.length - 1];
+    if (last && last.start >= start) return;
+    this[field] = [...list, { state: e.state, start }];
+    this.refreshPopup();
+  }
+
+  private async loadPower(force: boolean): Promise<void> {
+    const p = this.parts;
+    if (!this.hass || !this.config?.entity || !this.needsPower) return;
+    if (!p.power && !p.energy) return;
+    if (!force && (this.powerHistory || this.energyHistory)) return;
+    this.powerFor = `${this.config.entity}|${p.power}|${p.energy}`;
+    const now = new Date();
+    const yesterday = new Date(now);
+    yesterday.setHours(0, 0, 0, 0);
+    yesterday.setDate(yesterday.getDate() - 1);
+    const [power, energy] = await Promise.all([
+      p.power
+        ? fetchHistory(this.hass, [p.power], new Date(now.getTime() - CHART_SPAN), now)
+        : undefined,
+      p.energy ? fetchHistory(this.hass, [p.energy], yesterday, now) : undefined,
+    ]);
+    this.powerHistory = p.power ? power?.[p.power] : undefined;
+    this.energyHistory = p.energy ? energy?.[p.energy] : undefined;
+    this.refreshPopup();
+  }
+
+  private get series(): number[] {
+    const e = this.st(this.parts.power);
+    const now = Date.now();
+    const pts = this.powerHistory ?? [];
+    const factor = e?.attributes.unit_of_measurement === 'kW' ? 1000 : 1;
+    return pts.length
+      ? numericBuckets(pts, now - CHART_SPAN, now, CHART_BUCKETS).map((v) => v * factor)
+      : [];
+  }
+
+  /** kWh today and yesterday from the energy meter, or undefined without one. */
+  private get energy(): { today?: number; yesterday?: number } {
+    const e = this.st(this.parts.energy);
+    if (!e || !this.energyHistory) return {};
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const t0 = today.getTime();
+    const y0 = new Date(today).setDate(today.getDate() - 1);
+    const pts = this.energyHistory;
+    const t = meterIncrease(pts, t0, Date.now());
+    const y = meterIncrease(pts, y0, t0);
+    return {
+      today: t === undefined ? undefined : toKwh(t, e),
+      yesterday: y === undefined ? undefined : toKwh(y, e),
+    };
   }
 
   private async loadHistory(force: boolean): Promise<void> {
@@ -208,10 +406,55 @@ export class GlowSwitchCard extends GlowCardBase<SwitchCardConfig> {
     await this.hass?.callService('homeassistant', 'toggle', { entity_id: entity });
   };
 
+  private setTimer = async (ev: CustomEvent<{ value: string }>) => {
+    const id = this.parts.countdown;
+    const e = this.st(id);
+    if (!id || !e || !this.hass) return;
+    const seconds = Number(ev.detail.value);
+    const max = Number(e.attributes.max);
+    let value = seconds / countdownFactor(e);
+    if (Number.isFinite(max) && value > max) value = max;
+    if (seconds > 0 && !this.isActive) {
+      await this.hass.callService('homeassistant', 'turn_on', { entity_id: this.config!.entity });
+    }
+    await this.hass.callService('number', 'set_value', { entity_id: id, value });
+  };
+
+  private toggleLock = async () => {
+    const id = this.parts.child_lock;
+    if (!id || !this.hass) return;
+    if (id.startsWith('lock.')) {
+      const locked = this.st(id)?.state === 'locked';
+      await this.hass.callService('lock', locked ? 'unlock' : 'lock', { entity_id: id });
+    } else {
+      await this.hass.callService('homeassistant', 'toggle', { entity_id: id });
+    }
+  };
+
+  private moreInfo = (entityId: string) => () => {
+    fireEvent(this, 'hass-more-info', { entityId });
+  };
+
   // ---------- rendering ----------
 
   private word(on: boolean): string {
     return localize(this.hass, on ? 'on' : 'off');
+  }
+
+  private w(value: number): string {
+    return formatWatts(language(this.hass), value);
+  }
+
+  private kwh(value: number): string {
+    return `${formatNumber(this.hass, value, 2)} kWh`;
+  }
+
+  /** Top right / row value: watts while on with `show_power`, else on/off. */
+  private valueText(): string {
+    if (this.isUnavailable) return '';
+    const w = this.power;
+    if (this.config?.show_power && this.isActive && w !== undefined) return this.w(w);
+    return this.word(this.isActive);
   }
 
   private sinceText(): string {
@@ -243,7 +486,7 @@ export class GlowSwitchCard extends GlowCardBase<SwitchCardConfig> {
   }
 
   private cardClass(extra: string): string {
-    const s = this.isUnavailable ? 'unavailable' : this.isActive ? 'active' : '';
+    const s = this.isUnavailable ? 'unavailable' : this.glowing ? 'active' : '';
     return `glass sized ${extra} ${s}`;
   }
 
@@ -280,7 +523,7 @@ export class GlowSwitchCard extends GlowCardBase<SwitchCardConfig> {
       'small',
       html`<div class="top">
           ${this.orb()}
-          <span class="word ${on ? 'on' : ''}">${this.isUnavailable ? '' : this.word(on)}</span>
+          <span class="word ${on ? 'on' : ''}">${this.valueText()}</span>
         </div>
         <div class="titles">
           <span class="name small-name">${this.displayName}</span>
@@ -300,7 +543,62 @@ export class GlowSwitchCard extends GlowCardBase<SwitchCardConfig> {
             >${this.isUnavailable ? localize(this.hass, 'unavailable') : (this.areaText() ?? '')}</span
           >
         </div>
-        <span class="row-word ${on ? 'on' : ''}">${this.isUnavailable ? '' : this.word(on)}</span>`,
+        <span class="row-word ${on ? 'on' : ''}">${this.valueText()}</span>`,
+    );
+  }
+
+  private chart(width: number, height: number, cls: string, dot = false) {
+    const series = this.series;
+    if (!series.length) return nothing;
+    const { line, area, lastY } = chartPaths(series, width, height, niceMax(Math.max(...series)));
+    const id = `switch-${cls}`;
+    return html`<svg
+      class=${cls}
+      viewBox="0 0 ${width} ${height}"
+      preserveAspectRatio="none"
+      aria-hidden="true"
+    >
+      <defs>
+        <linearGradient id=${id} x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0" class="area-top"></stop>
+          <stop offset="1" class="area-bottom"></stop>
+        </linearGradient>
+      </defs>
+      ${
+        dot
+          ? svg`<path class="grid" d="M0,25 H${width} M0,50 H${width} M0,75 H${width}"></path>`
+          : nothing
+      }
+      <g class="curve ${this.isActive ? '' : 'off'}">
+        <path d=${area} fill="url(#${id})"></path>
+        <path class="line" d=${line}></path>
+        ${dot ? svg`<circle class="line dot" cx=${width} cy=${lastY} r="4.5"></circle>` : nothing}
+      </g>
+    </svg>`;
+  }
+
+  /** `show_power`: full width with watts, today's usage and the live curve. */
+  private renderPower() {
+    const on = this.isActive;
+    const today = this.energy.today;
+    const sub = this.isUnavailable
+      ? localize(this.hass, 'unavailable')
+      : today !== undefined
+        ? `${this.word(on)} · ${localize(this.hass, 'today_lower')} ${this.kwh(today)}`
+        : this.subText();
+    return this.wrap(
+      'power',
+      html`<div class="top">
+          <div class="head">
+            ${this.orb()}
+            <div class="titles">
+              <span class="name">${this.displayName}</span>
+              <span class="sub">${sub}</span>
+            </div>
+          </div>
+          <span class="word big ${this.glowing ? 'on' : ''}">${this.valueText()}</span>
+        </div>
+        ${this.chart(900, 86, 'card-chart')}`,
     );
   }
 
@@ -345,17 +643,130 @@ export class GlowSwitchCard extends GlowCardBase<SwitchCardConfig> {
     if (!this.config) return nothing;
     if (this.isGroup) return this.renderGroup();
     if (this.config.variant === 'row') return this.renderRow();
+    if (this.powerCard) return this.renderPower();
     return this.renderSmall();
   }
 
   // ---------- popup ----------
+
+  private optionLabel(value: string): string {
+    const v = value.toLowerCase();
+    if (/previous|restore|memory|last/.test(v)) return localize(this.hass, 'previous_state');
+    if (v === 'on' || v === 'off') return localize(this.hass, v);
+    const text = value.replace(/_/g, ' ');
+    return text.charAt(0).toUpperCase() + text.slice(1);
+  }
+
+  private timeLabel(ms: number): string {
+    return new Intl.DateTimeFormat(language(this.hass), {
+      hour: '2-digit',
+      minute: '2-digit',
+    }).format(new Date(ms));
+  }
+
+  /** Power now, today / yesterday and the 2 h curve (only with a power sensor). */
+  private renderPowerBlock() {
+    if (!this.parts.power) return nothing;
+    const w = this.power;
+    const { today, yesterday } = this.energy;
+    const now = Date.now();
+    return html`<div class="now-row">
+        <div class="now-power">
+          <span class="label">${localize(this.hass, 'power_now')}</span>
+          <span class="big-watts ${this.glowing ? 'on' : ''}"
+            >${w === undefined ? '–' : this.w(this.isActive ? w : 0)}</span
+          >
+        </div>
+        ${
+          this.parts.energy
+            ? html`<div class="stats">
+                <span
+                  >${localize(this.hass, 'today')}
+                  <b>${today === undefined ? '…' : this.kwh(today)}</b></span
+                >
+                <span
+                  >${localize(this.hass, 'yesterday')}
+                  <b>${yesterday === undefined ? '…' : this.kwh(yesterday)}</b></span
+                >
+              </div>`
+            : nothing
+        }
+      </div>
+      <div class="pop-chart">
+        ${this.chart(340, 100, 'popup-chart', true)}
+        <div class="axis chart-axis">
+          <span>${this.timeLabel(now - CHART_SPAN)}</span>
+          <span>${this.timeLabel(now - CHART_SPAN / 2)}</span>
+          <span>${localize(this.hass, 'now')}</span>
+        </div>
+      </div>`;
+  }
+
+  private renderTimer() {
+    const e = this.st(this.parts.countdown);
+    if (!e) return nothing;
+    const max = Number(e.attributes.max);
+    const factor = countdownFactor(e);
+    const options = TIMER_OPTIONS.filter((s) => !Number.isFinite(max) || s / factor <= max);
+    const M = localize(this.hass, 'minutes_short');
+    const H = localize(this.hass, 'hours_short');
+    const label = (s: number) =>
+      s === 0
+        ? localize(this.hass, 'off')
+        : s < HOUR / 1000
+          ? `${s / 60} ${M}`
+          : `${s / 3600} ${H}`;
+    return html`<div class="timer">
+      <span class="section">${localize(this.hass, 'turn_off_in')}</span>
+      <glowcard-segments
+        .options=${options.map((s) => ({ value: String(s), label: label(s) }))}
+        .value=${String(selectedTimer(countdownSeconds(e), options))}
+        @value-changed=${this.setTimer}
+      ></glowcard-segments>
+    </div>`;
+  }
+
+  private renderSettings() {
+    const p = this.parts;
+    const lock = this.st(p.child_lock);
+    const rows = [];
+    if (lock) {
+      const on = lock.state === 'on' || lock.state === 'locked';
+      rows.push(
+        html`<div class="set-row">
+          <span class="row-label">${localize(this.hass, 'child_lock')}</span>
+          <button
+            class="pill ${on ? 'on' : ''}"
+            aria-pressed=${on ? 'true' : 'false'}
+            @click=${this.toggleLock}
+          >
+            ${localize(this.hass, on ? 'on' : 'off')}
+          </button>
+        </div>`,
+      );
+    }
+    for (const [id, key] of [
+      [p.power_on, 'power_on_behavior'],
+      [p.indicator, 'indicator'],
+    ] as const) {
+      const e = this.st(id);
+      if (!e || !id) continue;
+      rows.push(
+        html`<button class="set-row link" @click=${this.moreInfo(id)}>
+          <span class="row-label">${localize(this.hass, key)}</span>
+          <span class="row-value">${this.optionLabel(e.state)}</span>
+        </button>`,
+      );
+    }
+    return rows.length ? html`<div class="rows">${rows}</div>` : nothing;
+  }
 
   protected renderPopup() {
     if (this.isGroup || !this.config?.entity) return undefined;
     const on = this.isActive;
     const { days, hours, count, log } = this.stats;
     const area = this.areaText();
-    const kind = localize(this.hass, 'switch');
+    const kind = localize(this.hass, this.parts.power ? 'plug' : 'switch');
     const changed = this.stateObj ? new Date(this.stateObj.last_changed).getTime() : Date.now();
     const nowH = (() => {
       const d = new Date();
@@ -380,6 +791,7 @@ export class GlowSwitchCard extends GlowCardBase<SwitchCardConfig> {
             <span>${localize(this.hass, 'switched_on_count')} <b>${count}×</b></span>
           </div>
         </div>
+        ${this.renderPowerBlock()} ${this.renderTimer()} ${this.renderSettings()}
         <div class="timeline">
           <span class="section">${localize(this.hass, 'last_7_days')}</span>
           ${days.map(
@@ -427,7 +839,7 @@ export class GlowSwitchCard extends GlowCardBase<SwitchCardConfig> {
   }
 
   protected popupStyles() {
-    return [switchShared, popupCss];
+    return [switchShared, chartCss, popupCss];
   }
 
   static styles = [
@@ -461,6 +873,26 @@ export class GlowSwitchCard extends GlowCardBase<SwitchCardConfig> {
       }
       .wide {
         height: var(--glow-card-h-wide);
+      }
+      .power {
+        height: var(--glow-card-h-wide);
+        padding-bottom: 0;
+        overflow: hidden;
+        justify-content: flex-start;
+      }
+      .glass.unavailable {
+        opacity: 0.6;
+      }
+      .word.big {
+        font-size: var(--glow-word-big);
+        white-space: nowrap;
+      }
+      .card-chart {
+        display: block;
+        width: calc(100% + 2 * var(--glow-pad));
+        margin: auto calc(-1 * var(--glow-pad)) 0;
+        height: 92px;
+        overflow: visible;
       }
       .row {
         height: 68px;
@@ -592,8 +1024,45 @@ export class GlowSwitchCard extends GlowCardBase<SwitchCardConfig> {
       }
     `,
     switchSharedCss(),
+    chartCssText(),
   ];
 }
+
+function chartCssText() {
+  return css`
+    svg {
+      overflow: visible;
+    }
+    .area-top {
+      stop-color: rgb(var(--glow-accent));
+      stop-opacity: 0.35;
+    }
+    :host([dark]) .area-top {
+      stop-opacity: 0.45;
+    }
+    .area-bottom {
+      stop-color: rgb(var(--glow-accent));
+      stop-opacity: 0;
+    }
+    .line {
+      fill: none;
+      stroke: rgb(var(--glow-accent));
+      stroke-width: 2.5;
+      stroke-linejoin: round;
+      stroke-linecap: round;
+      filter: drop-shadow(0 0 6px rgba(var(--glow-accent), 0.8));
+    }
+    .dot {
+      fill: rgb(var(--glow-accent));
+      stroke: none;
+    }
+    .curve.off {
+      opacity: 0.35;
+    }
+  `;
+}
+
+const chartCss = chartCssText();
 
 function switchSharedCss() {
   return css`
@@ -614,8 +1083,107 @@ function switchSharedCss() {
 const switchShared = switchSharedCss();
 
 const popupCss = css`
+  :host {
+    --glow-inset: rgba(20, 22, 26, 0.05);
+  }
   :host([dark]) {
     --glow-inset: rgba(255, 255, 255, 0.07);
+  }
+  .now-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+  }
+  .now-power {
+    display: flex;
+    flex-direction: column;
+  }
+  .big-watts {
+    font-size: 40px;
+    font-weight: 800;
+    letter-spacing: -0.04em;
+    line-height: 1.1;
+    color: var(--glow-muted);
+  }
+  .big-watts.on {
+    color: var(--glow-text);
+  }
+  :host([dark]) .big-watts.on {
+    color: color-mix(in srgb, rgb(var(--glow-accent)) 62%, #ffffff);
+  }
+  .pop-chart {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+  .popup-chart {
+    display: block;
+    width: 100%;
+    height: 100px;
+  }
+  .grid {
+    stroke: rgba(20, 22, 26, 0.08);
+    stroke-width: 1;
+    stroke-dasharray: 2 4;
+  }
+  :host([dark]) .grid {
+    stroke: rgba(255, 255, 255, 0.08);
+  }
+  .axis.chart-axis {
+    margin-left: 0;
+  }
+  .timer {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .rows {
+    display: flex;
+    flex-direction: column;
+  }
+  .set-row {
+    all: unset;
+    box-sizing: border-box;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    min-height: 50px;
+    padding: 10px 0;
+    border-bottom: 1px solid var(--glow-line);
+  }
+  .set-row:last-child {
+    border-bottom: 0;
+  }
+  .set-row.link {
+    cursor: pointer;
+  }
+  .set-row:focus-visible,
+  .pill:focus-visible {
+    outline: 2px solid rgb(var(--glow-accent));
+  }
+  .row-label,
+  .row-value {
+    font-size: 13px;
+    font-weight: 600;
+  }
+  .row-value {
+    color: var(--glow-muted);
+  }
+  .pill {
+    all: unset;
+    box-sizing: border-box;
+    height: 30px;
+    padding: 0 12px;
+    border-radius: 999px;
+    font-size: 12px;
+    font-weight: 700;
+    cursor: pointer;
+    background: var(--glow-inset);
+    color: var(--glow-muted);
+  }
+  .pill.on {
+    background: rgb(var(--glow-accent));
+    color: #fff;
   }
   .since-row {
     display: flex;
@@ -753,7 +1321,7 @@ registerCard(
   {
     type: 'glowcard-switch',
     name: 'GlowCard Switch',
-    description: 'Switch or input_boolean with glow, 7-day history and popup',
+    description: 'Switch, smart plug or input_boolean with glow, 7-day history, power and popup',
   },
   GlowSwitchCard,
 );
