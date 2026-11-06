@@ -47,6 +47,7 @@ const LABELS = {
     color_auto: 'Automatisch',
     compact: 'Kompakt',
     normal: 'Normal',
+    mini: 'Mini (einzeilig)',
     look_section: 'Darstellung',
     actions_section: 'Tippverhalten',
     tap_mode: 'Antippen',
@@ -149,6 +150,7 @@ const LABELS = {
     color_auto: 'Automatic',
     compact: 'Compact',
     normal: 'Normal',
+    mini: 'Mini (one line)',
     look_section: 'Appearance',
     actions_section: 'Tap behaviour',
     tap_mode: 'Tap',
@@ -332,20 +334,22 @@ export const fontField: FormSchema = {
   },
 };
 
-/** Card size: auto (compact on phones), compact or normal. */
-export const sizeField: FormSchema = {
+const sizeSelect = (sizes: string[]): FormSchema => ({
   name: 'size',
   default: 'auto',
   selector: {
     select: {
       mode: 'dropdown',
-      options: ['auto', 'compact', 'normal'].map((v) => ({
-        value: v,
-        label: editorLabel(v as EditorLabel),
-      })),
+      options: sizes.map((v) => ({ value: v, label: editorLabel(v as EditorLabel) })),
     },
   },
-};
+});
+
+/** Card size: auto (compact on phones), compact or normal. */
+export const sizeField: FormSchema = sizeSelect(['auto', 'compact', 'normal']);
+
+/** Card size with "mini": one grid row (switch, light). */
+export const miniSizeField: FormSchema = sizeSelect(['auto', 'compact', 'normal', 'mini']);
 
 /**
  * Tap and hold behaviour. The editor element replaces each `*_action` field with one

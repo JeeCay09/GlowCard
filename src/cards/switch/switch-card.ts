@@ -9,12 +9,11 @@ import {
   editorLabel,
   lookFields,
   lookSection,
-  sizeField,
+  miniSizeField,
   nameIconFields,
   DEFAULT_GESTURES,
   GROUP_GESTURES,
   type GestureSpec,
-  variantField,
 } from '../../core/editor';
 import { language, localize } from '../../core/localize';
 import { fireEvent } from '../../core/fire-event';
@@ -55,7 +54,7 @@ import '../../components/orb';
 import '../../components/segments';
 
 export interface SwitchCardConfig extends GlowCardConfig {
-  /** small (default) or row (compact list row). The former `wide` is shown small. */
+  /** Former layout option: `row` = `size: mini`; `small` and `wide` are the normal tile. */
   variant?: 'small' | 'wide' | 'row';
   /** Several switches → group card; the orb switches all of them. */
   entities?: (string | { entity: string; name?: string })[];
@@ -107,13 +106,7 @@ export class GlowSwitchCard extends GlowCardBase<SwitchCardConfig> {
       [
         { name: 'entity', selector: { entity: { domain: SWITCH_DOMAINS } } },
         { name: 'entities', selector: { entity: { domain: SWITCH_DOMAINS, multiple: true } } },
-        lookSection(
-          variantField(['small', 'row']),
-          nameIconFields,
-          lookFields,
-          sizeField,
-          areaField,
-        ),
+        lookSection(nameIconFields, lookFields, miniSizeField, areaField),
         {
           name: '',
           type: 'expandable',
@@ -154,6 +147,12 @@ export class GlowSwitchCard extends GlowCardBase<SwitchCardConfig> {
           throw new Error(editorLabel('yaml_only'));
         }
       },
+      (config) => {
+        // The former row layout is the mini size now; the layout field is gone.
+        if (config.variant === undefined) return config;
+        const { variant, ...rest } = config;
+        return variant === 'row' && rest.size === undefined ? { ...rest, size: 'mini' } : rest;
+      },
     );
   }
 
@@ -174,20 +173,27 @@ export class GlowSwitchCard extends GlowCardBase<SwitchCardConfig> {
   }
 
   getCardSize(): number {
-    if (this.powerCard) return 4;
-    if (this.config?.variant === 'row') return 1;
-    return this.isGroup ? 4 : 3;
+    if (this.isMini) return 1;
+    if (this.powerCard || this.isGroup) return 4;
+    return 3;
   }
 
+  /** Fixed rows on HA's grid: mini 1, tile 2 (compact) or 3, group and power card 3. */
   getGridOptions() {
-    if (this.powerCard) return { columns: 12, rows: 'auto', min_columns: 6 };
-    const wide = this.isGroup || this.config?.variant === 'row';
-    return { columns: wide ? 6 : 3, rows: 'auto', min_columns: wide ? 6 : 3 };
+    if (this.isMini) return this.gridOptions(6, 1, 3);
+    if (this.powerCard) return this.gridOptions(12, 3, 6);
+    if (this.isGroup) return this.gridOptions(6, 3);
+    return this.gridOptions(3, this.gridSize === 'compact' ? 2 : 3);
   }
 
-  /** The full width power card: `show_power` on a single switch (not a group or row). */
+  /** One line (56 px): `size: mini`, or the former `variant: row`. Not for groups. */
+  private get isMini(): boolean {
+    return !this.isGroup && (this.config?.size === 'mini' || this.config?.variant === 'row');
+  }
+
+  /** The full width power card: `show_power` on a single switch (not a group or mini). */
   private get powerCard(): boolean {
-    return !!this.config?.show_power && !this.isGroup && this.config.variant !== 'row';
+    return !!this.config?.show_power && !this.isGroup && !this.isMini;
   }
 
   private get isGroup(): boolean {
@@ -536,7 +542,7 @@ export class GlowSwitchCard extends GlowCardBase<SwitchCardConfig> {
     const on = this.isActive;
     return this.wrap(
       'row',
-      html`${this.orb(44)}
+      html`${this.orb(40)}
         <div class="titles grow">
           <span class="row-name">${this.displayName}</span>
           <span class="row-area"
@@ -642,7 +648,7 @@ export class GlowSwitchCard extends GlowCardBase<SwitchCardConfig> {
   render() {
     if (!this.config) return nothing;
     if (this.isGroup) return this.renderGroup();
-    if (this.config.variant === 'row') return this.renderRow();
+    if (this.isMini) return this.renderRow();
     if (this.powerCard) return this.renderPower();
     return this.renderSmall();
   }
@@ -895,7 +901,7 @@ export class GlowSwitchCard extends GlowCardBase<SwitchCardConfig> {
         overflow: visible;
       }
       .row {
-        height: 68px;
+        height: 56px;
         border-radius: 22px;
         padding: 0 18px 0 12px;
         flex-direction: row;
@@ -956,6 +962,7 @@ export class GlowSwitchCard extends GlowCardBase<SwitchCardConfig> {
         color: var(--glow-muted);
       }
       .row-word {
+        white-space: nowrap;
         font-size: 18px;
         font-weight: 800;
         letter-spacing: -0.03em;

@@ -20,7 +20,7 @@ export interface GlowCardConfig {
   /** `glow` (default) uses the embedded Plus Jakarta Sans, `theme` the HA theme font. */
   font?: 'glow' | 'theme';
   /** `auto` (default) = compact on phones (< 600 px), `compact` = always, `normal` = never. */
-  size?: 'auto' | 'compact' | 'normal';
+  size?: 'auto' | 'compact' | 'normal' | 'mini';
   tap_action?: ActionConfig;
   hold_action?: ActionConfig;
 }
@@ -235,13 +235,30 @@ export abstract class GlowCardBase<C extends GlowCardConfig = GlowCardConfig> ex
     if (changed.has('config') && this.config?.font !== 'theme') ensureFont();
   }
 
+  /** The size in use: `auto` is compact on phones (below 600 px), else normal. */
+  protected get gridSize(): 'mini' | 'compact' | 'normal' {
+    const s = this.config?.size;
+    if (s === 'mini' || s === 'compact' || s === 'normal') return s;
+    const phone =
+      typeof window !== 'undefined' && window.matchMedia?.('(max-width: 600px)').matches;
+    return phone ? 'compact' : 'normal';
+  }
+
+  /**
+   * Sections grid options with a fixed height: HA rows are 56 px with 8 px gaps, so the
+   * card's CSS height is exactly `rows` rows and it lines up with HA's own cards.
+   */
+  protected gridOptions(columns: number, rows: number, minColumns = columns) {
+    return { columns, rows, min_columns: minColumns, min_rows: rows, max_rows: rows };
+  }
+
   protected updated(changed: PropertyValues): void {
     super.updated(changed);
     this.toggleAttribute('dark', this.dark);
     if (this.config?.font === 'theme') this.setAttribute('font', 'theme');
     else this.removeAttribute('font');
     const size = this.config?.size;
-    if (size === 'compact' || size === 'normal') this.setAttribute('size', size);
+    if (size === 'compact' || size === 'normal' || size === 'mini') this.setAttribute('size', size);
     else this.removeAttribute('size');
     applyAccent(this, this.accent);
     this.syncPopup();
