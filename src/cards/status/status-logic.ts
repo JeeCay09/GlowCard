@@ -33,6 +33,8 @@ export interface SegmentConfig {
   entity?: string;
   /** lights: list or "all" (default); security: sensors, locks, alarm panels. */
   entities?: EntityRef[] | 'all';
+  /** lights with "all": lights that are not counted or listed. */
+  exclude?: string[];
   name?: string;
   icon?: string;
   color?: string;
@@ -144,11 +146,15 @@ function isGroup(e: HassEntity | undefined): boolean {
   return Array.isArray(e?.attributes.entity_id);
 }
 
-/** Lights of a lights segment; "all" skips light groups and hidden entities. */
+/**
+ * Lights of a lights segment; "all" skips light groups, hidden entities and the
+ * lights listed in `exclude`.
+ */
 export function lightIds(hass: HomeAssistant, cfg: SegmentConfig): string[] {
   if (Array.isArray(cfg.entities) && cfg.entities.length) return cfg.entities.map(refId);
+  const exclude = new Set(cfg.exclude ?? []);
   return Object.keys(hass.states).filter((id) => {
-    if (!id.startsWith('light.')) return false;
+    if (!id.startsWith('light.') || exclude.has(id)) return false;
     const entry = hass.entities?.[id];
     if (entry?.hidden || entry?.entity_category) return false;
     return !isGroup(hass.states[id]);

@@ -8,6 +8,7 @@ import {
   gestureSchema,
   schemaDefaults,
   toFormData,
+  visibleSchema,
   withDefaults,
   withoutDefaults,
   type FormSchema,
@@ -246,6 +247,11 @@ describe('visual editor', () => {
       if (s.name) expect(status.computeLabel(s)).toBeTruthy();
     }
     expect(() => status.assertConfig!({ segments: [] })).toThrow();
+    expect(names(visibleSchema(status.schema, { all_lights: true }))).toContain('exclude_lights');
+    expect(names(visibleSchema(status.schema, {}))).not.toContain('exclude_lights');
+    expect(visibleSchema(status.schema, { all_lights: true }).some((s) => 'visible' in s)).toBe(
+      false,
+    );
     const chip = card('glowcard-chip').getConfigForm();
     expect(names(chip.schema)).toEqual(expect.arrayContaining(['chip', 'entity', 'icon_only']));
     expect(() => chip.assertConfig!({ chips: [] })).toThrow();
