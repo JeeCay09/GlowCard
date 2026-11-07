@@ -278,11 +278,6 @@ export abstract class GlowCardBase<C extends GlowCardConfig = GlowCardConfig> ex
     this.popupOpened();
   };
 
-  /** Re-renders the open popup, e.g. after history was loaded. */
-  protected refreshPopup(): void {
-    this.syncPopup();
-  }
-
   protected closePopup(): void {
     this.popup?.close();
     this.popup = undefined;

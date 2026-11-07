@@ -223,3 +223,44 @@ describe('light card bar', () => {
     }
   });
 });
+
+describe('popup updates', () => {
+  it('renders the open popup once per change while dragging', async () => {
+    await import('../src/glowcard');
+    const el = document.createElement('glowcard-light') as HTMLElement & {
+      setConfig(c: unknown): void;
+      hass: unknown;
+      updateComplete: Promise<boolean>;
+    };
+    el.setConfig({ type: 'custom:glowcard-light', entity: 'light.x' });
+    el.hass = {
+      states: {
+        'light.x': light('on', { brightness: 100, supported_color_modes: ['brightness'] }),
+      },
+      language: 'de',
+      locale: { language: 'de' },
+      themes: { darkMode: true },
+      callService: async () => undefined,
+    };
+    document.body.appendChild(el);
+    await el.updateComplete;
+    const card = el as unknown as {
+      openPopup(): void;
+      renderPopup(): unknown;
+      dragColumn(ev: CustomEvent): void;
+    };
+    card.openPopup();
+    const popup = document.body.querySelector('glowcard-popup') as HTMLElement & {
+      content: unknown;
+    };
+    expect(popup).not.toBeNull();
+    const render = vi.spyOn(card, 'renderPopup');
+    const before = popup.content;
+    card.dragColumn(new CustomEvent('value-changing', { detail: { value: 30 } }));
+    await el.updateComplete;
+    expect(render).toHaveBeenCalledTimes(1);
+    expect(popup.content).not.toBe(before);
+    popup.remove();
+    el.remove();
+  });
+});
