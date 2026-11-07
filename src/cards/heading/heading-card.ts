@@ -416,6 +416,10 @@ export class GlowHeadingCard extends GlowStatusBase<HeadingCardConfig> {
         white-space: nowrap;
         overflow: hidden;
         text-overflow: ellipsis;
+        /* overflow: hidden clips at the 1.1 line box, which cuts the descenders of
+           g/j/p/y and the dots of Ä/Ö/Ü. Grow the clip box, keep the layout unchanged. */
+        padding: 0.15em 0;
+        margin: -0.15em 0;
       }
       .subline {
         font-size: 13px;
