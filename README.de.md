@@ -244,7 +244,7 @@ Nicht erreichbare Entitäten erscheinen gestrichelt und blass. Ein Warn-Chip ohn
 
 ### Überschrift
 
-Ein Abschnittstitel mit rundem Symbol, einer Zeile darunter und kleinen Glas-Badges, oder ein Untertitel in Großbuchstaben zum Gliedern. Das Symbol bleibt standardmäßig neutral; mit `glow_entity` leuchtet es, solange diese Entität an ist, in `glow_color` (Farbwähler im Editor) oder sonst in der Farbe des Lichts.
+Ein Abschnittstitel mit rundem Symbol, einer Zeile darunter und kleinen Glas-Badges, oder ein Untertitel in Großbuchstaben zum Gliedern. Das Symbol bleibt standardmäßig neutral. Mit `glow_color` (Farbwähler „Farbe“ im Editor) wird es in dieser Farbe gezeigt, auch ohne Leuchten. Mit `glow_entity` leuchtet es, solange diese Entität an ist, in `glow_color` oder sonst in der Farbe des Lichts.
 
 ```yaml
 type: custom:glowcard-heading

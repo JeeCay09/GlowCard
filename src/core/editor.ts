@@ -130,11 +130,12 @@ const LABELS = {
     badges: 'Badges',
     badges_helper: 'Entitäten als kleine Badges neben der Überschrift',
     badges_yaml_only: 'Badges mit eigenen Einstellungen lassen sich nur im YAML-Modus bearbeiten',
-    glow_section: 'Leuchten',
+    glow_section: 'Farbe & Leuchten',
     glow_entity: 'Symbol leuchtet bei',
-    glow_entity_helper: 'Leer = Symbol bleibt neutral. Z. B. eine Lichtgruppe',
-    glow_color: 'Leuchtfarbe',
-    glow_color_helper: 'Leer = Farbe des Lichts, sonst Glow-Warmton',
+    glow_entity_helper: 'Leer = Symbol leuchtet nie. Z. B. eine Lichtgruppe',
+    glow_color: 'Farbe',
+    glow_color_helper:
+      'Färbt das Symbol, auch ohne Leuchten. Leer = neutral, beim Leuchten Farbe des Lichts',
     heading_tap_helper: 'Standardaktion = keine. Mit Aktion erscheint ein Pfeil',
   },
   en: {
@@ -233,11 +234,12 @@ const LABELS = {
     badges: 'Badges',
     badges_helper: 'Entities shown as small badges next to the heading',
     badges_yaml_only: 'Badges with their own settings can only be edited in YAML mode',
-    glow_section: 'Glow',
+    glow_section: 'Colour & glow',
     glow_entity: 'Icon glows while',
-    glow_entity_helper: 'Empty = the icon stays neutral. E.g. a light group',
-    glow_color: 'Glow colour',
-    glow_color_helper: 'Empty = the light’s colour, else the warm Glow tone',
+    glow_entity_helper: 'Empty = the icon never glows. E.g. a light group',
+    glow_color: 'Colour',
+    glow_color_helper:
+      'Tints the icon, also without glow. Empty = neutral, glow in the light’s colour',
     heading_tap_helper: 'Default action = none. With an action an arrow is shown',
   },
 };
