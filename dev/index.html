@@ -269,15 +269,38 @@
         ['glowcard-switch', { entity: 'switch.fairy_lights' }, ''],
         ['glowcard-switch', { entity: 'switch.home_office', show_power: true }, 'span4'],
       ];
+      const daily = {
+        solar_energy: 'sensor.energy_daily_pv',
+        home_energy: 'sensor.energy_daily_consumed',
+        grid_import_energy: 'sensor.energy_daily_grid_import',
+        grid_export_energy: 'sensor.energy_daily_grid_export',
+        battery_charge_energy: 'sensor.energy_daily_battery_charge',
+        battery_discharge_energy: 'sensor.energy_daily_battery_discharge',
+      };
+      const scene = (k) => ({
+        solar: `sensor.energy_${k}_pv`,
+        home: `sensor.energy_${k}_load`,
+        battery: `sensor.energy_${k}_soc`,
+        battery_power: `sensor.energy_${k}_battery`,
+        grid: `sensor.energy_${k}_grid`,
+        ...daily,
+      });
+      const energyCards = ['day', 'eve', 'night'].map((k) => [
+        'glowcard-energy',
+        scene(k),
+        'span2',
+      ]);
       const set = new URLSearchParams(location.search).get('set');
       const cards =
-        set === 'status'
-          ? statusCards
-          : set === 'heading'
-            ? headingCards
-            : set === 'classic'
-              ? classicCards
-              : [...statusCards, ...headingCards, ...classicCards];
+        set === 'energy'
+          ? energyCards
+          : set === 'status'
+            ? statusCards
+            : set === 'heading'
+              ? headingCards
+              : set === 'classic'
+                ? classicCards
+                : [...statusCards, ...headingCards, ...classicCards];
       for (const grid of document.querySelectorAll('.grid')) {
         for (const [tag, config, cls] of cards) {
           const el = document.createElement(tag);
