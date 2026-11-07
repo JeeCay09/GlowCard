@@ -164,3 +164,16 @@ export function glowActive(e: HassEntity | undefined): boolean {
 export function glowColor(e: HassEntity | undefined, color: unknown, dark: boolean): Rgb {
   return parseColor(color, dark) ?? lightColor(e) ?? paletteColor('warm', dark);
 }
+
+/**
+ * How the icon looks: `on` glows (entity on), `tint` shows the chosen colour without the
+ * glow (colour set, nothing glowing), `off` stays neutral.
+ */
+export function iconLook(
+  e: HassEntity | undefined,
+  color: unknown,
+  dark: boolean,
+): 'on' | 'tint' | 'off' {
+  if (glowActive(e)) return 'on';
+  return parseColor(color, dark) ? 'tint' : 'off';
+}
