@@ -5,6 +5,7 @@ import {
   findPlugParts,
   formatWatts,
   niceMax,
+  plugPartsFinder,
   selectedTimer,
   toKwh,
   watts,
@@ -74,6 +75,38 @@ describe('plug parts', () => {
     expect(parts.power).toBe('sensor.office_power');
     expect(parts.energy).toBeUndefined();
     expect(parts.countdown).toBeUndefined();
+  });
+});
+
+describe('cached plug parts', () => {
+  const states = [
+    e('switch.office', 'on'),
+    e('sensor.office_power', 'unavailable'),
+    e('sensor.office_energy', '2', { unit_of_measurement: 'kWh' }),
+  ];
+
+  it('gives the same parts as findPlugParts', () => {
+    const h = hass(states);
+    expect(plugPartsFinder()(h, 'switch.office')).toEqual(findPlugParts(h, 'switch.office'));
+  });
+
+  it('follows attribute changes without a new scan', () => {
+    const find = plugPartsFinder();
+    expect(find(hass(states), 'switch.office').power).toBeUndefined();
+    const later = hass([
+      ...states.slice(0, 1),
+      e('sensor.office_power', '12', { unit_of_measurement: 'W' }),
+      ...states.slice(2),
+    ]);
+    expect(find(later, 'switch.office').power).toBe('sensor.office_power');
+  });
+
+  it('scans again for added or removed entities and another switch', () => {
+    const find = plugPartsFinder();
+    expect(find(hass(states.slice(0, 1)), 'switch.office').energy).toBeUndefined();
+    expect(find(hass(states), 'switch.office').energy).toBe('sensor.office_energy');
+    expect(find(hass([states[0]!, states[1]!]), 'switch.office').energy).toBeUndefined();
+    expect(find(hass([e('switch.desk', 'on'), ...states]), 'switch.desk').energy).toBeUndefined();
   });
 });
 

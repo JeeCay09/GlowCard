@@ -60,6 +60,8 @@ describe('status segments', () => {
       e('light.group', 'on', { entity_id: ['light.a', 'light.b'] }),
     ]);
     expect(lightIds(h, { type: 'lights' })).toEqual(['light.a', 'light.b', 'light.c']);
+    expect(lightIds(h, { type: 'lights', exclude: ['light.b'] })).toEqual(['light.a', 'light.c']);
+    expect(view(h, { type: 'lights', exclude: ['light.a'] }).value).toBe('1 an');
     const v = view(h, { type: 'lights' });
     expect(v.value).toBe('2 an');
     expect(v.chipText).toBe('2 Lichter an');
@@ -225,6 +227,16 @@ describe('card configs', () => {
     expect(segs.map((s) => s.type)).toEqual(['weather', 'lights', 'energy', 'security', 'alert']);
   });
 
+  it('passes excluded lights only when all lights are counted', () => {
+    const base = { type: 'custom:glowcard-status', exclude_lights: ['light.x'] };
+    expect(simpleSegments({ ...base, all_lights: true })).toEqual([
+      { type: 'lights', exclude: ['light.x'] },
+    ]);
+    expect(simpleSegments({ ...base, lights: ['light.a'] })).toEqual([
+      { type: 'lights', entities: ['light.a'] },
+    ]);
+  });
+
   it('guesses the chip kind from the entity', () => {
     expect(chipSegment({ type: 'custom:glowcard-chip', entity: 'weather.home' }).type).toBe(
       'weather',
@@ -234,5 +246,45 @@ describe('card configs', () => {
     expect(chipSegment({ type: 'custom:glowcard-chip', chip: 'lights' })).toEqual({
       type: 'lights',
     });
+  });
+});
+
+describe('cached entity scans', () => {
+  it('keeps "all lights" in step with added lights and groups that load later', () => {
+    const entities = {};
+    const lights = (...s: HassEntity[]) => hass(s, { entities });
+    const a = e('light.a', 'on');
+    expect(lightIds(lights(a, e('light.g', 'on')), { type: 'lights' })).toEqual([
+      'light.a',
+      'light.g',
+    ]);
+    // Same registry and count, but light.g now reports its members: it is a group.
+    const group = e('light.g', 'on', { entity_id: ['light.a'] });
+    expect(lightIds(lights(a, group), { type: 'lights' })).toEqual(['light.a']);
+    expect(lightIds(lights(a, group, e('light.b', 'off')), { type: 'lights' })).toEqual([
+      'light.a',
+      'light.b',
+    ]);
+    // A light without registry entry replaced by another one in the same update.
+    expect(lightIds(lights(a, group, e('light.c', 'off')), { type: 'lights' })).toEqual([
+      'light.a',
+      'light.c',
+    ]);
+  });
+
+  it('finds alert parts again after a registry change', () => {
+    const cfg: SegmentConfig = { type: 'alert', entity: 'binary_sensor.v_problem' };
+    const states = [e('binary_sensor.v_problem', 'on'), e('sensor.v_error', 'x')];
+    const reg = (withError: boolean) =>
+      hass(states, {
+        entities: {
+          'binary_sensor.v_problem': { entity_id: 'binary_sensor.v_problem', device_id: 'd' },
+          ...(withError
+            ? { 'sensor.v_error': { entity_id: 'sensor.v_error', device_id: 'd' } }
+            : {}),
+        },
+      });
+    expect(findAlertParts(reg(false), cfg).detail).toBeUndefined();
+    expect(findAlertParts(reg(true), cfg).detail).toBe('sensor.v_error');
   });
 });

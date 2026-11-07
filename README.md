@@ -35,7 +35,7 @@
 | Heading        | `custom:glowcard-heading` | any entities as badges                          | beta (v0.4)      |
 | Energy "House" | `custom:glowcard-energy`  | power `sensor.*` for solar, battery, grid, home | planned for v0.4 |
 
-All cards have a visual editor (Home Assistant 2025.1 or newer). In a sections dashboard, the cards fit Home Assistant's grid exactly (rows of 56 px): tile 2 rows on phones or 3 on desktop, switch group and power card 3, mini, status bar and chip 1 row. Width: tile = 1/4, light, mini and switch group = 1/2, switch with power/usage, header, status bar, heading and chip rows = full width, single chip = 1/2, icon-only chip = 1/4. You can still change the width in the dashboard editor. New cards start without an entity; when you add a card "by entity", it uses the entity you picked.
+All cards have a visual editor (Home Assistant 2025.1 or newer). In a sections dashboard, the cards fit Home Assistant's grid exactly (rows of 56 px): tile 2 rows on phones or 3 on desktop, switch group and power card 3, mini, status bar and chip 1 row. Width: tile, light, mini and switch group = 1/2 (tile and mini can shrink to 1/4), switch with power/usage, header, status bar, heading and chip rows = full width, single chip = 1/2, icon-only chip = 1/4. You can still change the width in the dashboard editor. New cards start without an entity; when you add a card "by entity", it uses the entity you picked.
 
 In the editor, "Tap behaviour" offers toggle, GlowCard popup, more info, navigate, open URL, perform action or nothing for tap and hold, all in one list.
 
@@ -69,7 +69,7 @@ lovelace:
    - Type: **JavaScript module**
 4. Reload your browser.
 
-After an update, change the URL to e.g. `/local/glowcard/glowcard.js?v=0.5.0` so browsers load the new file.
+After an update, change the URL to e.g. `/local/glowcard/glowcard.js?v=0.6.0` so browsers load the new file.
 
 ## Configuration
 
@@ -158,6 +158,8 @@ Simple (this is also what the visual editor saves; order as in the screenshot):
 type: custom:glowcard-status
 weather: weather.home
 all_lights: true # or lights: [light.a, light.b]
+exclude_lights: # optional, only with all_lights
+  - light.night_light
 solar: sensor.pv_power
 battery: sensor.battery_level # state of charge in %
 battery_power: sensor.battery_power # + = charging
@@ -180,6 +182,7 @@ segments:
     tap_action:
       action: none # no arrow, not tappable
   - type: lights # without entities: all lights (light groups are skipped)
+    exclude: [light.night_light] # optional
   - type: energy
     solar: sensor.pv_power
     battery: sensor.battery_level
@@ -244,7 +247,7 @@ Unavailable entities are shown dashed and faded. An alert chip without a problem
 
 ### Heading
 
-A section title with a round icon, a line below and small glass badges, or a small caps subtitle to group sections. The icon stays neutral by default; with `glow_entity` it glows while that entity is on, in `glow_color` (colour picker in the editor) or else the light's own colour.
+A section title with a round icon, a line below and small glass badges, or a small caps subtitle to group sections. The icon stays neutral by default. With `glow_color` ("Colour" picker in the editor) it is shown in that colour, also without glow. With `glow_entity` it glows while that entity is on, in `glow_color` or else the light's own colour.
 
 ```yaml
 type: custom:glowcard-heading

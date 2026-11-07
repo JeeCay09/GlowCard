@@ -14,6 +14,8 @@ export interface StatusCardConfig extends GlowCardConfig {
   weather?: string;
   lights?: string[] | 'all';
   all_lights?: boolean;
+  /** With all_lights: lights that are not counted or listed. */
+  exclude_lights?: string[];
   solar?: string;
   battery?: string;
   battery_power?: string;
@@ -30,8 +32,12 @@ const CHEVRON = 'M9 6l6 6-6 6';
 export function simpleSegments(c: StatusCardConfig): SegmentConfig[] {
   const out: SegmentConfig[] = [];
   if (c.weather) out.push({ type: 'weather', entity: c.weather });
-  if (c.lights === 'all' || c.all_lights) out.push({ type: 'lights' });
-  else if (Array.isArray(c.lights) && c.lights.length) {
+  if (c.lights === 'all' || c.all_lights) {
+    out.push({
+      type: 'lights',
+      ...(c.exclude_lights?.length ? { exclude: c.exclude_lights } : {}),
+    });
+  } else if (Array.isArray(c.lights) && c.lights.length) {
     out.push({ type: 'lights', entities: c.lights });
   }
   if (c.solar || c.home || c.grid || c.battery_power) {
@@ -88,6 +94,11 @@ export class GlowStatusCard extends GlowStatusBase<StatusCardConfig> {
       [
         { name: 'weather', selector: { entity: { domain: ['weather'] } } },
         { name: 'all_lights', selector: { boolean: {} } },
+        {
+          name: 'exclude_lights',
+          selector: { entity: { domain: ['light'], multiple: true } },
+          visible: (data) => data.all_lights === true,
+        },
         { name: 'lights', selector: { entity: { domain: ['light'], multiple: true } } },
         {
           name: '',
@@ -127,6 +138,7 @@ export class GlowStatusCard extends GlowStatusBase<StatusCardConfig> {
       ],
       {
         lights: 'lights_helper',
+        exclude_lights: 'exclude_lights_helper',
         security: 'security_helper',
         alerts: 'alerts_helper',
         navigation_path: 'navigation_path_helper',

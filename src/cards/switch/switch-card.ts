@@ -42,7 +42,7 @@ import {
   chartPaths,
   countdownFactor,
   countdownSeconds,
-  findPlugParts,
+  plugPartsFinder,
   formatWatts,
   niceMax,
   selectedTimer,
@@ -50,6 +50,7 @@ import {
   watts,
   type PlugParts,
 } from './power-logic';
+import type { HomeAssistant } from '../../types/hass';
 import '../../components/orb';
 import '../../components/segments';
 
@@ -156,7 +157,7 @@ export class GlowSwitchCard extends GlowCardBase<SwitchCardConfig> {
     );
   }
 
-  /** No entity is picked for the user; "by entity" passes the chosen ones. */
+  /** No entity is picked for the user; "by entity" uses the suggestion from `registerCard`. */
   static getStubConfig(): Partial<SwitchCardConfig> {
     return stubEntity();
   }
@@ -178,12 +179,16 @@ export class GlowSwitchCard extends GlowCardBase<SwitchCardConfig> {
     return 3;
   }
 
-  /** Fixed rows on HA's grid: mini 1, tile 2 (compact) or 3, group and power card 3. */
+  /**
+   * Fixed rows on HA's grid: mini 1, tile 2 (compact) or 3, group and power card 3.
+   * The tile starts at half width (a quarter cut name and state on phones) and can be
+   * shrunk to a quarter in the dashboard editor.
+   */
   getGridOptions() {
     if (this.isMini) return this.gridOptions(6, 1, 3);
     if (this.powerCard) return this.gridOptions(12, 3, 6);
     if (this.isGroup) return this.gridOptions(6, 3);
-    return this.gridOptions(3, this.gridSize === 'compact' ? 2 : 3);
+    return this.gridOptions(6, this.gridSize === 'compact' ? 2 : 3, 3);
   }
 
   /** One line (56 px): `size: mini`, or the former `variant: row`. Not for groups. */
@@ -215,11 +220,17 @@ export class GlowSwitchCard extends GlowCardBase<SwitchCardConfig> {
 
   // ---------- plug parts (found on the device) ----------
 
+  private findParts = plugPartsFinder();
+  private partsCache?: { hass?: HomeAssistant; config: SwitchCardConfig; parts: PlugParts };
+
+  /** Parts for the current hass and config; computed once per update, not per use. */
   private get parts(): PlugParts {
     const c = this.config;
     if (!c || this.isGroup) return {};
-    const found = this.hass && c.entity ? findPlugParts(this.hass, c.entity) : {};
-    return {
+    const cache = this.partsCache;
+    if (cache && cache.hass === this.hass && cache.config === c) return cache.parts;
+    const found = this.hass && c.entity ? this.findParts(this.hass, c.entity) : {};
+    const parts: PlugParts = {
       power: c.power_entity ?? found.power,
       energy: c.energy_entity ?? found.energy,
       countdown: c.countdown_entity ?? found.countdown,
@@ -227,6 +238,8 @@ export class GlowSwitchCard extends GlowCardBase<SwitchCardConfig> {
       power_on: c.power_on_entity ?? found.power_on,
       indicator: c.indicator_entity ?? found.indicator,
     };
+    this.partsCache = { hass: this.hass, config: c, parts };
+    return parts;
   }
 
   private st(id?: string) {
@@ -315,7 +328,6 @@ export class GlowSwitchCard extends GlowCardBase<SwitchCardConfig> {
     const last = list[list.length - 1];
     if (last && last.start >= start) return;
     this[field] = [...list, { state: e.state, start }];
-    this.refreshPopup();
   }
 
   private async loadPower(force: boolean): Promise<void> {
@@ -336,7 +348,6 @@ export class GlowSwitchCard extends GlowCardBase<SwitchCardConfig> {
     ]);
     this.powerHistory = p.power ? power?.[p.power] : undefined;
     this.energyHistory = p.energy ? energy?.[p.energy] : undefined;
-    this.refreshPopup();
   }
 
   private get series(): number[] {
@@ -375,7 +386,6 @@ export class GlowSwitchCard extends GlowCardBase<SwitchCardConfig> {
     start.setDate(start.getDate() - 6);
     const res = await fetchHistory(this.hass, [this.config.entity], start);
     this.history = res[this.config.entity];
-    this.refreshPopup();
   }
 
   private get stats() {
@@ -1329,6 +1339,7 @@ registerCard(
     type: 'glowcard-switch',
     name: 'GlowCard Switch',
     description: 'Switch, smart plug or input_boolean with glow, 7-day history, power and popup',
+    domains: SWITCH_DOMAINS,
   },
   GlowSwitchCard,
 );

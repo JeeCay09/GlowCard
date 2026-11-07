@@ -35,7 +35,7 @@
 | Überschrift    | `custom:glowcard-heading` | beliebige Entitäten als Badges                   | Beta (v0.4)      |
 | Energie „Haus“ | `custom:glowcard-energy`  | Leistungs-`sensor.*` für Solar, Akku, Netz, Haus | geplant für v0.4 |
 
-Alle Karten haben einen visuellen Editor (ab Home Assistant 2025.1). In einem Sections-Dashboard passen die Karten genau ins Raster von Home Assistant (Zeilen zu 56 px): Kachel 2 Zeilen am Handy bzw. 3 am PC, Schalter-Gruppe und Leistungs-Karte 3, Mini, Status-Leiste und Chip 1 Zeile. Breite: Kachel = 1/4, Licht, Mini und Schalter-Gruppe = 1/2, Schalter mit Leistung/Verbrauch, Kopfzeile, Status-Leiste, Überschrift und Chip-Reihen = ganze Breite, einzelner Chip = 1/2, Symbol-Chip = 1/4. Die Breite kannst du im Dashboard-Editor weiterhin ändern. Neue Karten starten ohne Entität; fügst du eine Karte „nach Entität“ hinzu, nimmt sie die gewählte Entität.
+Alle Karten haben einen visuellen Editor (ab Home Assistant 2025.1). In einem Sections-Dashboard passen die Karten genau ins Raster von Home Assistant (Zeilen zu 56 px): Kachel 2 Zeilen am Handy bzw. 3 am PC, Schalter-Gruppe und Leistungs-Karte 3, Mini, Status-Leiste und Chip 1 Zeile. Breite: Kachel, Licht, Mini und Schalter-Gruppe = 1/2 (Kachel und Mini lassen sich auf 1/4 verkleinern), Schalter mit Leistung/Verbrauch, Kopfzeile, Status-Leiste, Überschrift und Chip-Reihen = ganze Breite, einzelner Chip = 1/2, Symbol-Chip = 1/4. Die Breite kannst du im Dashboard-Editor weiterhin ändern. Neue Karten starten ohne Entität; fügst du eine Karte „nach Entität“ hinzu, nimmt sie die gewählte Entität.
 
 Im Editor bietet „Tippverhalten“ für Antippen und Gedrückthalten: Ein/Aus, GlowCard-Popup, Detailansicht, Navigieren, URL öffnen, Aktion ausführen oder Nichts, alles in einer Liste.
 
@@ -69,7 +69,7 @@ lovelace:
    - Typ: **JavaScript-Modul**
 4. Browser neu laden.
 
-Nach einem Update die URL z. B. auf `/local/glowcard/glowcard.js?v=0.5.0` ändern, damit Browser die neue Datei laden.
+Nach einem Update die URL z. B. auf `/local/glowcard/glowcard.js?v=0.6.0` ändern, damit Browser die neue Datei laden.
 
 ## Konfiguration
 
@@ -158,6 +158,8 @@ Einfach (so speichert es auch der visuelle Editor, Reihenfolge wie im Bild):
 type: custom:glowcard-status
 weather: weather.home
 all_lights: true # oder lights: [light.a, light.b]
+exclude_lights: # optional, nur mit all_lights
+  - light.nachtlicht
 solar: sensor.pv_power
 battery: sensor.battery_level # Ladestand in %
 battery_power: sensor.battery_power # + = lädt
@@ -180,6 +182,7 @@ segments:
     tap_action:
       action: none # ohne Pfeil, nicht antippbar
   - type: lights # ohne entities: alle Lichter (ohne Lichtgruppen)
+    exclude: [light.nachtlicht] # optional
   - type: energy
     solar: sensor.pv_power
     battery: sensor.battery_level
@@ -244,7 +247,7 @@ Nicht erreichbare Entitäten erscheinen gestrichelt und blass. Ein Warn-Chip ohn
 
 ### Überschrift
 
-Ein Abschnittstitel mit rundem Symbol, einer Zeile darunter und kleinen Glas-Badges, oder ein Untertitel in Großbuchstaben zum Gliedern. Das Symbol bleibt standardmäßig neutral; mit `glow_entity` leuchtet es, solange diese Entität an ist, in `glow_color` (Farbwähler im Editor) oder sonst in der Farbe des Lichts.
+Ein Abschnittstitel mit rundem Symbol, einer Zeile darunter und kleinen Glas-Badges, oder ein Untertitel in Großbuchstaben zum Gliedern. Das Symbol bleibt standardmäßig neutral. Mit `glow_color` (Farbwähler „Farbe“ im Editor) wird es in dieser Farbe gezeigt, auch ohne Leuchten. Mit `glow_entity` leuchtet es, solange diese Entität an ist, in `glow_color` oder sonst in der Farbe des Lichts.
 
 ```yaml
 type: custom:glowcard-heading

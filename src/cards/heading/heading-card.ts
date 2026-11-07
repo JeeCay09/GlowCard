@@ -8,7 +8,7 @@ import type { HomeAssistant } from '../../types/hass';
 import { GlowStatusBase, dot, toneDot } from '../status/status-base';
 import type { SegmentConfig, SegmentView } from '../status/status-logic';
 import { dotStyles, statusPopupStyles, statusTokens } from '../status/status-styles';
-import { badgeSegment, badgeView, glowActive, glowColor, type BadgeConfig } from './heading-logic';
+import { badgeSegment, badgeView, glowColor, iconLook, type BadgeConfig } from './heading-logic';
 
 export interface HeadingCardConfig extends GlowCardConfig {
   /** The heading text. */
@@ -21,7 +21,10 @@ export interface HeadingCardConfig extends GlowCardConfig {
   badges?: BadgeConfig[];
   /** Optional: the icon glows while this entity is on. Default: the icon stays neutral. */
   glow_entity?: string;
-  /** Glow colour (name, hex or [r, g, b]); default: the light's colour, else warm. */
+  /**
+   * Icon colour (name, hex or [r, g, b]). Shown as a tint without glow, and as the glow
+   * colour while `glow_entity` is on. Default: neutral icon; glow in the light's colour.
+   */
   glow_color?: string | number[];
 }
 
@@ -212,7 +215,7 @@ export class GlowHeadingCard extends GlowStatusBase<HeadingCardConfig> {
     if (!this.config || !this.hass) return nothing;
     const c = this.config;
     const glowEntity = c.glow_entity ? this.hass.states[c.glow_entity] : undefined;
-    const glowing = glowActive(glowEntity);
+    const look = iconLook(glowEntity, c.glow_color, this.dark);
     const rgb = rgbTriplet(glowColor(glowEntity, c.glow_color, this.dark));
     const clickable = this.titleAction.action !== 'none';
     const heading = c.heading ?? '';
@@ -229,7 +232,7 @@ export class GlowHeadingCard extends GlowStatusBase<HeadingCardConfig> {
           @click=${this.runTitle}
           @keydown=${this.titleKey}
         >
-          <span class="mark ${glowing ? 'on' : ''}"></span>
+          <span class="mark ${look}"></span>
           <span class="caps">${heading}</span>
           ${clickable ? this.chevron() : nothing}
         </div>
@@ -248,9 +251,7 @@ export class GlowHeadingCard extends GlowStatusBase<HeadingCardConfig> {
       >
         ${
           c.icon
-            ? html`<span class="orb ${glowing ? 'on' : ''}"
-                ><ha-icon .icon=${c.icon}></ha-icon
-              ></span>`
+            ? html`<span class="orb ${look}"><ha-icon .icon=${c.icon}></ha-icon></span>`
             : nothing
         }
         <span class="texts">
@@ -389,12 +390,17 @@ export class GlowHeadingCard extends GlowStatusBase<HeadingCardConfig> {
         border: 0;
         background: radial-gradient(
           circle at 35% 30%,
-          rgba(255, 255, 255, 0.6),
+          color-mix(in srgb, #ffffff 60%, rgb(var(--hc))),
           rgb(var(--hc)) 62%
         );
         box-shadow: 0 0 calc(var(--hd-orb-glow) * var(--gc-glow-f))
           rgba(var(--hc), var(--gc-glow-a));
         color: #ffffff;
+      }
+      .orb.tint {
+        background: rgba(var(--hc), 0.14);
+        border-color: rgba(var(--hc), 0.32);
+        color: rgb(var(--hc));
       }
       .texts {
         min-width: 0;
@@ -416,6 +422,10 @@ export class GlowHeadingCard extends GlowStatusBase<HeadingCardConfig> {
         white-space: nowrap;
         overflow: hidden;
         text-overflow: ellipsis;
+        /* overflow: hidden clips at the 1.1 line box, which cuts the descenders of
+           g/j/p/y and the dots of Ä/Ö/Ü. Grow the clip box, keep the layout unchanged. */
+        padding: 0.15em 0;
+        margin: -0.15em 0;
       }
       .subline {
         font-size: 13px;
@@ -525,6 +535,10 @@ export class GlowHeadingCard extends GlowStatusBase<HeadingCardConfig> {
         border-radius: 999px;
         background: var(--glow-muted);
         opacity: 0.5;
+      }
+      .mark.tint {
+        opacity: 1;
+        background: rgb(var(--hc));
       }
       .mark.on {
         opacity: 1;
