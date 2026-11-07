@@ -59,7 +59,7 @@ export class GlowLightCard extends GlowCardBase<LightCardConfig> {
     );
   }
 
-  /** No entity is picked for the user; "by entity" passes the chosen ones. */
+  /** No entity is picked for the user; "by entity" uses the suggestion from `registerCard`. */
   static getStubConfig(): Partial<LightCardConfig> {
     return stubEntity();
   }
@@ -147,7 +147,6 @@ export class GlowLightCard extends GlowCardBase<LightCardConfig> {
 
   private dragColumn = (ev: CustomEvent<{ value: number }>) => {
     this.dragging = ev.detail.value;
-    this.refreshPopup();
   };
 
   private pickSwatch = (ev: CustomEvent<{ value: { name: string } }>) => {
@@ -159,7 +158,6 @@ export class GlowLightCard extends GlowCardBase<LightCardConfig> {
 
   private pickTab = (ev: CustomEvent<{ value: string }>) => {
     this.tab = ev.detail.value as Tab;
-    this.refreshPopup();
   };
 
   // ---------- rendering ----------
@@ -534,6 +532,7 @@ registerCard(
     type: 'glowcard-light',
     name: 'GlowCard Light',
     description: 'Light with its current colour, drag bar for brightness and a colour popup',
+    domains: ['light'],
   },
   GlowLightCard,
 );

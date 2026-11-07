@@ -22,6 +22,8 @@ export interface FormSchema {
   schema?: FormSchema[];
   /** What the card uses when the key is not set; the editor shows it instead of an empty field. */
   default?: unknown;
+  /** Shows the field only while this returns true for the current form data. */
+  visible?: (data: Record<string, unknown>) => boolean;
 }
 
 export interface ConfigForm {
@@ -94,6 +96,8 @@ const LABELS = {
     greeting_name_helper: 'Leer = Name des angemeldeten Benutzers',
     weather: 'Wetter',
     all_lights: 'Alle Lichter zählen',
+    exclude_lights: 'Lichter ausschließen',
+    exclude_lights_helper: 'Diese Lichter werden nicht gezählt und nicht im Popup gezeigt',
     lights: 'Lichter',
     lights_helper: 'Leer lassen und „Alle Lichter zählen“ einschalten, um alle Lichter zu zählen',
     energy_section: 'Energie',
@@ -130,11 +134,12 @@ const LABELS = {
     badges: 'Badges',
     badges_helper: 'Entitäten als kleine Badges neben der Überschrift',
     badges_yaml_only: 'Badges mit eigenen Einstellungen lassen sich nur im YAML-Modus bearbeiten',
-    glow_section: 'Leuchten',
+    glow_section: 'Farbe & Leuchten',
     glow_entity: 'Symbol leuchtet bei',
-    glow_entity_helper: 'Leer = Symbol bleibt neutral. Z. B. eine Lichtgruppe',
-    glow_color: 'Leuchtfarbe',
-    glow_color_helper: 'Leer = Farbe des Lichts, sonst Glow-Warmton',
+    glow_entity_helper: 'Leer = Symbol leuchtet nie. Z. B. eine Lichtgruppe',
+    glow_color: 'Farbe',
+    glow_color_helper:
+      'Färbt das Symbol, auch ohne Leuchten. Leer = neutral, beim Leuchten Farbe des Lichts',
     heading_tap_helper: 'Standardaktion = keine. Mit Aktion erscheint ein Pfeil',
   },
   en: {
@@ -197,6 +202,8 @@ const LABELS = {
     greeting_name_helper: 'Empty = name of the signed-in user',
     weather: 'Weather',
     all_lights: 'Count all lights',
+    exclude_lights: 'Exclude lights',
+    exclude_lights_helper: 'These lights are not counted and not shown in the popup',
     lights: 'Lights',
     lights_helper: 'Leave empty and turn on “Count all lights” to count every light',
     energy_section: 'Energy',
@@ -233,11 +240,12 @@ const LABELS = {
     badges: 'Badges',
     badges_helper: 'Entities shown as small badges next to the heading',
     badges_yaml_only: 'Badges with their own settings can only be edited in YAML mode',
-    glow_section: 'Glow',
+    glow_section: 'Colour & glow',
     glow_entity: 'Icon glows while',
-    glow_entity_helper: 'Empty = the icon stays neutral. E.g. a light group',
-    glow_color: 'Glow colour',
-    glow_color_helper: 'Empty = the light’s colour, else the warm Glow tone',
+    glow_entity_helper: 'Empty = the icon never glows. E.g. a light group',
+    glow_color: 'Colour',
+    glow_color_helper:
+      'Tints the icon, also without glow. Empty = neutral, glow in the light’s colour',
     heading_tap_helper: 'Default action = none. With an action an arrow is shown',
   },
 };
@@ -530,6 +538,17 @@ export function configForm(
     },
     assertConfig,
   };
+}
+
+/** Drops fields whose `visible` check fails and strips the check before ha-form sees it. */
+export function visibleSchema(schema: FormSchema[], data: Record<string, unknown>): FormSchema[] {
+  return schema
+    .filter((s) => !s.visible || s.visible(data))
+    .map((field) => {
+      const s = { ...field };
+      delete s.visible;
+      return s.schema ? { ...s, schema: visibleSchema(s.schema, data) } : s;
+    });
 }
 
 /** HA shows an expandable's `title` as it is, so section titles are translated up front. */

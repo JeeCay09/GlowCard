@@ -5,6 +5,7 @@ import {
   compactValue,
   glowActive,
   glowColor,
+  iconLook,
   parseColor,
 } from '../src/cards/heading/heading-logic';
 import type { HassEntity, HomeAssistant } from '../src/types/hass';
@@ -92,6 +93,15 @@ describe('heading glow', () => {
     expect(glowColor(light, undefined, true)).toEqual([255, 165, 110]);
     expect(glowColor(e('switch.x', 'on'), undefined, true)).toEqual([255, 165, 110]);
     expect(glowColor(e('switch.x', 'on'), undefined, false)).toEqual([249, 140, 80]);
+  });
+
+  it('tints the icon with a chosen colour even without glow', () => {
+    expect(iconLook(undefined, undefined, true)).toBe('off');
+    expect(iconLook(undefined, [10, 20, 30], true)).toBe('tint');
+    expect(iconLook(e('light.x', 'off'), 'green', true)).toBe('tint');
+    expect(iconLook(light, 'green', true)).toBe('on');
+    expect(iconLook(light, undefined, true)).toBe('on');
+    expect(iconLook(undefined, 'nonsense', true)).toBe('off');
   });
 
   it('parses accent names, hex and rgb lists', () => {

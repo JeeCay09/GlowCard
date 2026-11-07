@@ -357,7 +357,11 @@ export class GlowChipCard extends GlowStatusBase<ChipCardConfig> {
       }
       .icon-chip.on {
         border: 0;
-        background: radial-gradient(circle at 35% 30%, rgba(255, 255, 255, 0.6), rgb(var(--c)) 62%);
+        background: radial-gradient(
+          circle at 35% 30%,
+          color-mix(in srgb, #ffffff 60%, rgb(var(--c))),
+          rgb(var(--c)) 62%
+        );
         box-shadow: 0 0 calc(var(--g) * var(--gc-glow-f)) rgba(var(--c), var(--gc-glow-a));
         color: #ffffff;
       }

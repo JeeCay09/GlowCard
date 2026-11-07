@@ -18,6 +18,9 @@
         grid-template-columns: repeat(12, minmax(0, 1fr));
         grid-auto-rows: 56px;
         gap: 8px;
+      }
+      /* ?rows=1 draws HA's 56 px rows behind the cards (only for checking heights). */
+      .section.rows {
         background-image: repeating-linear-gradient(
           to bottom,
           rgba(255, 255, 255, 0.06) 0 56px,
@@ -46,6 +49,7 @@
       if (params.get('w')) document.body.style.setProperty('--w', `${params.get('w')}px`);
       const size = params.get('size') ?? 'normal';
       const section = document.querySelector('.section');
+      if (params.get('rows')) section.classList.add('rows');
       const cards = [
         ['glowcard-light', { entity: 'light.living', size }],
         ['ha-tile', 'Decke (HA)', 6, 1],
