@@ -34,19 +34,53 @@ function unit(e?: HassEntity): string {
   return String(e?.attributes.unit_of_measurement ?? '');
 }
 
+/** Candidate entities for the plug parts: same device first, then by object id prefix. */
+type PlugPools = [sameDevice: string[], byPrefix: string[]];
+
+function plugPools(hass: HomeAssistant, entityId: string): PlugPools {
+  const device = hass.entities?.[entityId]?.device_id;
+  const base = objectId(entityId);
+  const all = Object.keys(hass.states).filter((id) => id !== entityId);
+  const sameDevice = device ? all.filter((id) => hass.entities?.[id]?.device_id === device) : [];
+  const byPrefix = all.filter((id) => objectId(id).startsWith(`${base}_`));
+  return [sameDevice, byPrefix];
+}
+
 /**
  * Finds the plug's power/energy sensors, countdown, child lock and selects: first among the
  * entities of the same device, then by the switch's object id as prefix
  * (switch.office → sensor.office_power).
  */
 export function findPlugParts(hass: HomeAssistant, entityId: string): PlugParts {
-  const device = hass.entities?.[entityId]?.device_id;
-  const base = objectId(entityId);
-  const all = Object.keys(hass.states).filter((id) => id !== entityId);
-  const sameDevice = device ? all.filter((id) => hass.entities?.[id]?.device_id === device) : [];
-  const byPrefix = all.filter((id) => objectId(id).startsWith(`${base}_`));
-  const pools = [sameDevice, byPrefix];
+  return pickPlugParts(hass, plugPools(hass, entityId));
+}
 
+/**
+ * Same result as findPlugParts, but remembers the candidate entities between calls. Only
+ * the scan over all states is cached: it depends on entity ids and the entity registry,
+ * which change rarely, while Home Assistant sends a new `hass` on every state change.
+ * The parts themselves are picked from the current states on every call.
+ */
+export function plugPartsFinder(): (hass: HomeAssistant, entityId: string) => PlugParts {
+  let key: { entityId: string; entities: unknown; count: number } | undefined;
+  let pools: PlugPools = [[], []];
+  return (hass, entityId) => {
+    const count = Object.keys(hass.states).length;
+    const stale =
+      !key ||
+      key.entityId !== entityId ||
+      key.entities !== hass.entities ||
+      key.count !== count ||
+      pools.some((pool) => pool.some((id) => !hass.states[id]));
+    if (stale) {
+      pools = plugPools(hass, entityId);
+      key = { entityId, entities: hass.entities, count };
+    }
+    return pickPlugParts(hass, pools);
+  };
+}
+
+function pickPlugParts(hass: HomeAssistant, pools: PlugPools): PlugParts {
   const pick = (test: (id: string, e: HassEntity) => boolean): string | undefined => {
     for (const pool of pools) {
       const hit = pool.find((id) => test(id, hass.states[id]!));
