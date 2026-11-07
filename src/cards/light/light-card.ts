@@ -147,7 +147,6 @@ export class GlowLightCard extends GlowCardBase<LightCardConfig> {
 
   private dragColumn = (ev: CustomEvent<{ value: number }>) => {
     this.dragging = ev.detail.value;
-    this.refreshPopup();
   };
 
   private pickSwatch = (ev: CustomEvent<{ value: { name: string } }>) => {
@@ -159,7 +158,6 @@ export class GlowLightCard extends GlowCardBase<LightCardConfig> {
 
   private pickTab = (ev: CustomEvent<{ value: string }>) => {
     this.tab = ev.detail.value as Tab;
-    this.refreshPopup();
   };
 
   // ---------- rendering ----------
