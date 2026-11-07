@@ -269,27 +269,71 @@
         ['glowcard-switch', { entity: 'switch.fairy_lights' }, ''],
         ['glowcard-switch', { entity: 'switch.home_office', show_power: true }, 'span4'],
       ];
-      const daily = {
-        solar_energy: 'sensor.energy_daily_pv',
-        home_energy: 'sensor.energy_daily_consumed',
-        grid_import_energy: 'sensor.energy_daily_grid_import',
-        grid_export_energy: 'sensor.energy_daily_grid_export',
-        battery_charge_energy: 'sensor.energy_daily_battery_charge',
-        battery_discharge_energy: 'sensor.energy_daily_battery_discharge',
+      const devices = [
+        { entity: 'sensor.heat_pump_power', name: 'Wärmepumpe' },
+        { entity: 'sensor.tv_power', name: 'TV' },
+        { entity: 'sensor.fridge_power', name: 'Kühlschrank' },
+      ];
+      const base = {
+        home: 'sensor.house_power',
+        devices,
+        energy_today: 'sensor.energy_today',
+        price: 'sensor.electricity_price',
       };
-      const scene = (k) => ({
-        solar: `sensor.energy_${k}_pv`,
-        home: `sensor.energy_${k}_load`,
-        battery: `sensor.energy_${k}_soc`,
-        battery_power: `sensor.energy_${k}_battery`,
-        grid: `sensor.energy_${k}_grid`,
-        ...daily,
-      });
-      const energyCards = ['day', 'eve', 'night'].map((k) => [
-        'glowcard-energy',
-        scene(k),
-        'span2',
-      ]);
+      const energyCards = [
+        ['glowcard-energy', base, 'span2'],
+        [
+          'glowcard-energy',
+          {
+            ...base,
+            solar: 'sensor.pv2_power',
+            grid: 'sensor.grid2_power',
+            solar_energy: 'sensor.pv_energy_today',
+            grid_import_energy: 'sensor.import2_today',
+            grid_export_energy: 'sensor.export2_today',
+          },
+          'span2',
+        ],
+        [
+          'glowcard-energy',
+          {
+            ...base,
+            solar: 'sensor.pv3_power',
+            battery: 'sensor.bat3_soc',
+            battery_power: 'sensor.bat3_power',
+            grid: 'sensor.grid3_power',
+            solar_energy: 'sensor.pv_energy_today',
+            grid_import_energy: 'sensor.import3_today',
+            grid_export_energy: 'sensor.export3_today',
+          },
+          'span2',
+        ],
+        [
+          'glowcard-energy',
+          {
+            ...base,
+            home: 'sensor.house_power_night',
+            energy_today: 'sensor.energy_today_night',
+            solar: 'sensor.pvn_power',
+            battery: 'sensor.batn_soc',
+            battery_power: 'sensor.batn_power',
+            grid: 'sensor.gridn_power',
+            solar_energy: 'sensor.pv_energy_today',
+            grid_import_energy: 'sensor.import3_today',
+            grid_export_energy: 'sensor.export3_today',
+          },
+          'span2',
+        ],
+        [
+          'glowcard-energy',
+          {
+            home: 'sensor.house_power',
+            energy_today: 'sensor.energy_today',
+            price: 'sensor.electricity_price',
+          },
+          'span2',
+        ],
+      ];
       const set = new URLSearchParams(location.search).get('set');
       const cards =
         set === 'energy'

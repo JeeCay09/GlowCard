@@ -2,53 +2,54 @@ import type { HomeAssistant } from '../../types/hass';
 import { language } from '../../core/localize';
 import { numberState, powerW } from '../status/status-logic';
 
+/** A measured device: entity id or `{ entity, name }`. */
+export type DeviceConfig = string | { entity: string; name?: string };
+
 /**
- * Entities of the energy card. Power sensors in W or kW (sign conventions as in HA's
- * energy dashboard): battery_power > 0 = charging, grid > 0 = import, grid < 0 = export.
- * Daily energy sensors (kWh, reset at midnight) are optional and feed the tiles + popup.
+ * Entities of the energy card "Lastring". Only one is needed: the house consumption
+ * (`home`) or the grid power (`grid`, + = import, − = export). Everything else is optional
+ * and extends the same card: devices, today's kWh, price, solar and battery.
  */
 export interface EnergyEntities {
-  solar?: string;
   home?: string;
+  grid?: string;
+  solar?: string;
   battery?: string;
   battery_power?: string;
-  grid?: string;
+  devices?: DeviceConfig[];
+  energy_today?: string;
+  price?: string | number;
+  cost_today?: string;
   solar_energy?: string;
-  home_energy?: string;
   grid_import_energy?: string;
   grid_export_energy?: string;
-  battery_charge_energy?: string;
-  battery_discharge_energy?: string;
+  /** Upper end of the ring in kW (default 3). */
+  max_power?: number;
 }
 
 /** Below this (W) a flow counts as idle. */
 export const IDLE_W = 10;
 
 export interface EnergyNow {
-  solar: number | null;
+  /** House consumption in W (measured or derived), null if unknown. */
   home: number | null;
+  solar: number | null;
+  /** + charging, − discharging. */
   battery: number | null;
   soc: number | null;
+  /** + import, − export. */
   grid: number | null;
 }
 
-export interface EnergyToday {
-  solar: number | null;
-  home: number | null;
-  gridImport: number | null;
-  gridExport: number | null;
-  batteryCharge: number | null;
-  batteryDischarge: number | null;
-}
-
 export function readNow(hass: HomeAssistant, c: EnergyEntities): EnergyNow {
-  return {
-    solar: powerW(hass, c.solar),
-    home: powerW(hass, c.home),
-    battery: powerW(hass, c.battery_power),
-    soc: numberState(hass, c.battery),
-    grid: powerW(hass, c.grid),
-  };
+  const solar = powerW(hass, c.solar);
+  const battery = powerW(hass, c.battery_power);
+  const grid = powerW(hass, c.grid);
+  let home = powerW(hass, c.home);
+  if (home === null && grid !== null) {
+    home = Math.max(0, grid + (solar ?? 0) - (battery ?? 0));
+  }
+  return { home, solar, battery, soc: numberState(hass, c.battery), grid };
 }
 
 /** kWh of an energy sensor (Wh / MWh are converted). */
@@ -61,109 +62,169 @@ export function energyKwh(hass: HomeAssistant, id?: string): number | null {
   return v;
 }
 
-export function readToday(hass: HomeAssistant, c: EnergyEntities): EnergyToday {
-  return {
-    solar: energyKwh(hass, c.solar_energy),
-    home: energyKwh(hass, c.home_energy),
-    gridImport: energyKwh(hass, c.grid_import_energy),
-    gridExport: energyKwh(hass, c.grid_export_energy),
-    batteryCharge: energyKwh(hass, c.battery_charge_energy),
-    batteryDischarge: energyKwh(hass, c.battery_discharge_energy),
-  };
+/** Price in currency per kWh: a number in the config or a sensor. */
+export function priceValue(hass: HomeAssistant, price?: string | number): number | null {
+  if (typeof price === 'number') return price;
+  return numberState(hass, price);
 }
 
-const clamp01 = (v: number) => Math.max(0, Math.min(1, v));
-
-/** Share of the consumption not taken from the grid (0–100), or null. */
-export function autarky(t: EnergyToday): number | null {
-  if (t.home === null || t.gridImport === null || t.home <= 0) return null;
-  return Math.round(clamp01(1 - t.gridImport / t.home) * 100);
+/** Currency of the price sensor (default €). */
+export function currency(hass: HomeAssistant, price?: string | number): string {
+  if (typeof price !== 'string') return '€';
+  const unit = String(hass.states[price]?.attributes.unit_of_measurement ?? '€');
+  const cur = unit.split('/')[0].trim();
+  return cur === 'EUR' ? '€' : cur || '€';
 }
 
-/** Share of the solar energy used in the house or battery (0–100), or null. */
-export function selfConsumption(t: EnergyToday): number | null {
-  if (t.solar === null || t.gridExport === null || t.solar <= 0) return null;
-  return Math.round(clamp01(1 - t.gridExport / t.solar) * 100);
+// ---------- devices ----------
+
+export interface DeviceNow {
+  entity?: string;
+  name: string;
+  watts: number;
+  /** Colour slot 1–5 for measured devices, 0 = "Sonstiges" (not measured). */
+  slot: number;
 }
 
-export type Situation =
-  | 'solar_charges'
-  | 'solar_exports'
-  | 'solar_home'
-  | 'battery_home'
-  | 'grid_home'
-  | 'grid_charges'
-  | 'idle';
-
-/** What the house is doing now, for the line under the title. */
-export function situation(n: EnergyNow): Situation {
-  const solar = n.solar ?? 0;
-  const bat = n.battery ?? 0;
-  const grid = n.grid ?? 0;
-  // A little evening sun next to a discharging battery: the battery is what counts.
-  const pv = solar > IDLE_W && solar >= -bat;
-  if (pv && bat > IDLE_W) return 'solar_charges';
-  if (pv && grid < -IDLE_W) return 'solar_exports';
-  if (pv) return 'solar_home';
-  if (bat < -IDLE_W) return 'battery_home';
-  if (solar > IDLE_W) return 'solar_home';
-  if (grid > IDLE_W && bat > IDLE_W) return 'grid_charges';
-  if (grid > IDLE_W) return 'grid_home';
-  return 'idle';
-}
-
-/** Dash animation length (s): faster for more power, as in the board. */
-export function flowSpeed(watts: number): number {
-  const kw = Math.abs(watts) / 1000;
-  return Math.max(1.2, Math.min(8, 5 / (kw + 0.3)));
-}
-
-/** "0,42 kW" without sign (board labels). */
-export function kw(hass: HomeAssistant | undefined, watts: number, digits = 2): string {
-  const n = new Intl.NumberFormat(language(hass), {
-    minimumFractionDigits: digits,
-    maximumFractionDigits: digits,
-  }).format(Math.abs(watts) / 1000);
-  return `${n} kW`;
-}
-
-export function kwh(hass: HomeAssistant | undefined, v: number, digits = 2): string {
-  const n = new Intl.NumberFormat(language(hass), {
-    minimumFractionDigits: digits,
-    maximumFractionDigits: digits,
-  }).format(v);
-  return `${n} kWh`;
-}
-
-// ---------- day chart (popup) ----------
-
-export interface ChartSeries {
-  /** Solar power per slot in W. */
-  solar: number[];
-  /** House power per slot in W. */
-  home: number[];
-  /** Battery state of charge per slot in %. */
-  soc: number[];
-}
-
-export const CHART = { w: 400, top: 10, base: 140, socTop: 10 } as const;
-
-/** Upper end of the power axis in W: 6 kW like the board, more if the day needs it. */
-export function chartMax(series: ChartSeries): number {
-  const peak = Math.max(0, ...series.solar, ...series.home);
-  return Math.max(6000, Math.ceil(peak / 1000) * 1000);
+export function deviceId(d: DeviceConfig): string {
+  return typeof d === 'string' ? d : d.entity;
 }
 
 /**
- * SVG path through the values of a day. Slots cover [0, `upTo`] of the day (0–1);
- * x runs over the full 24 h width.
+ * Devices sorted by power (colour slot follows the config order, so a device keeps its
+ * colour), plus "Sonstiges" for the unmeasured rest of the house consumption.
  */
-export function chartPath(values: number[], upTo: number, y: (v: number) => number): string {
-  if (!values.length) return '';
-  const step = (upTo * CHART.w) / values.length;
-  return values
-    .map((v, i) => `${i ? 'L' : 'M'}${(i * step + step / 2).toFixed(1)},${y(v).toFixed(1)}`)
-    .join(' ');
+export function readDevices(
+  hass: HomeAssistant,
+  devices: DeviceConfig[] | undefined,
+  home: number | null,
+  restName: string,
+): DeviceNow[] {
+  const list: DeviceNow[] = (devices ?? []).slice(0, 5).map((d, i) => {
+    const id = deviceId(d);
+    const name =
+      (typeof d === 'object' && d.name) || hass.states[id]?.attributes.friendly_name || id;
+    return {
+      entity: id,
+      name: String(name),
+      watts: Math.max(0, powerW(hass, id) ?? 0),
+      slot: i + 1,
+    };
+  });
+  if (!list.length) return [];
+  list.sort((a, b) => b.watts - a.watts);
+  const sum = list.reduce((s, d) => s + d.watts, 0);
+  if (home !== null && home - sum > IDLE_W) {
+    list.push({ name: restName, watts: home - sum, slot: 0 });
+  }
+  return list;
+}
+
+// ---------- sources ----------
+
+export type Source = 'grid' | 'solar' | 'bat';
+
+export interface Flows {
+  /** Shares of the house consumption by source, W. */
+  toHome: Record<Source, number>;
+  /** Solar surplus beyond the house, W. */
+  toBattery: number;
+  toGrid: number;
+  /** The source covering most of the house now. */
+  main: Source;
+}
+
+export function flows(n: EnergyNow): Flows {
+  const home = Math.max(0, n.home ?? 0);
+  const solar = Math.max(0, n.solar ?? 0);
+  const bat = n.battery ?? 0;
+  const fromSolar = Math.min(solar, home);
+  const fromBat = Math.min(Math.max(0, -bat), home - fromSolar);
+  const fromGrid = Math.max(0, home - fromSolar - fromBat);
+  const surplus = Math.max(0, solar - fromSolar);
+  const toBattery = Math.min(surplus, Math.max(0, bat));
+  const toGrid = Math.max(0, surplus - toBattery);
+  const toHome = { solar: fromSolar, bat: fromBat, grid: fromGrid };
+  const main = (Object.keys(toHome) as Source[]).reduce(
+    (a, b) => (toHome[b] > toHome[a] + 1 ? b : a),
+    'grid' as Source,
+  );
+  return { toHome, toBattery, toGrid, main };
+}
+
+// ---------- "usual now" from long-term statistics ----------
+
+export interface HourStat {
+  start: number;
+  mean: number | null;
+  min: number | null;
+}
+
+/** Value at quantile q (0–1) of a list (linear interpolation). */
+export function quantile(values: number[], q: number): number | null {
+  const v = values.filter((x) => Number.isFinite(x)).sort((a, b) => a - b);
+  if (!v.length) return null;
+  const pos = (v.length - 1) * q;
+  const lo = Math.floor(pos);
+  const hi = Math.ceil(pos);
+  return v[lo] + (v[hi] - v[lo]) * (pos - lo);
+}
+
+export interface Usual {
+  /** P20–P80 of the hourly means at this hour of day (W). */
+  lo: number;
+  hi: number;
+}
+
+/** Usual range per hour of day (0–23) from hourly statistics of the last days. */
+export function usualByHour(stats: HourStat[], scale = 1): (Usual | null)[] {
+  const byHour: number[][] = Array.from({ length: 24 }, () => []);
+  for (const s of stats) {
+    if (s.mean === null || !Number.isFinite(s.mean)) continue;
+    byHour[new Date(s.start).getHours()].push(s.mean * scale);
+  }
+  return byHour.map((v) => {
+    if (v.length < 3) return null;
+    return { lo: quantile(v, 0.2)!, hi: quantile(v, 0.8)! };
+  });
+}
+
+/** Base load: 10th percentile of the hourly minimums (W). */
+export function baseLoad(stats: HourStat[], scale = 1): number | null {
+  const mins = stats.map((s) => s.min).filter((x): x is number => x !== null && Number.isFinite(x));
+  if (mins.length < 12) return null;
+  return Math.max(0, quantile(mins, 0.1)! * scale);
+}
+
+export type Verdict = 'normal' | 'high' | 'low';
+
+export function verdict(home: number, usual: Usual | null): Verdict | null {
+  if (!usual) return null;
+  if (home > usual.hi) return 'high';
+  if (home < usual.lo) return 'low';
+  return 'normal';
+}
+
+// ---------- ring geometry (Lastring mockup) ----------
+
+export const RING = { a0: -125, a1: 125 } as const;
+
+/** Angle (deg from top) on the ring for a power in W, sqrt scale up to `maxKw`. */
+export function ringAngle(watts: number, maxKw: number): number {
+  const v = Math.max(0, Math.min(watts / 1000, maxKw));
+  return RING.a0 + (RING.a1 - RING.a0) * Math.sqrt(v / maxKw);
+}
+
+export function ringPoint(cx: number, cy: number, r: number, deg: number): [number, number] {
+  const a = (deg * Math.PI) / 180;
+  return [cx + r * Math.sin(a), cy - r * Math.cos(a)];
+}
+
+export function ringArc(cx: number, cy: number, r: number, a: number, b: number): string {
+  if (b - a < 0.01) b = a + 0.01;
+  const [x0, y0] = ringPoint(cx, cy, r, a);
+  const [x1, y1] = ringPoint(cx, cy, r, b);
+  return `M${x0.toFixed(2)} ${y0.toFixed(2)}A${r} ${r} 0 ${b - a > 180 ? 1 : 0} 1 ${x1.toFixed(2)} ${y1.toFixed(2)}`;
 }
 
 /** Fraction of the local day that has passed (0–1). */
@@ -175,101 +236,147 @@ export function dayFraction(now: Date): number {
   return (now.getTime() - start.getTime()) / (end.getTime() - start.getTime());
 }
 
+// ---------- formatting ----------
+
+function num(hass: HomeAssistant | undefined, v: number, digits: number): string {
+  return new Intl.NumberFormat(language(hass), {
+    minimumFractionDigits: digits,
+    maximumFractionDigits: digits,
+  }).format(v);
+}
+
+/** "0,62 kW" (no sign). */
+export function kw(hass: HomeAssistant | undefined, watts: number, digits = 2): string {
+  if (Math.abs(watts) < IDLE_W) return '0 kW';
+  return `${num(hass, Math.abs(watts) / 1000, digits)} kW`;
+}
+
+/** "0,62" (kW value without unit). */
+export function kwValue(hass: HomeAssistant | undefined, watts: number, digits = 2): string {
+  return num(hass, Math.abs(watts) / 1000, digits);
+}
+
+export function kwh(hass: HomeAssistant | undefined, v: number, digits = 1): string {
+  return `${num(hass, v, digits)} kWh`;
+}
+
+export function money(hass: HomeAssistant | undefined, v: number, cur = '€'): string {
+  return `${num(hass, v, 2)} ${cur}`;
+}
+
+export function range(hass: HomeAssistant | undefined, u: Usual): string {
+  return `${num(hass, u.lo / 1000, 1)}–${num(hass, u.hi / 1000, 1)}`;
+}
+
 // ---------- texts ----------
 
 const de = {
   energy: 'Energie',
-  solar: 'Solar',
-  solar_caps: 'SOLAR',
   consumption_caps: 'VERBRAUCH',
-  house: 'Haus',
-  battery: 'Akku',
-  grid: 'Netz',
-  out: 'raus',
-  in: 'rein',
+  usual_now: 'üblich jetzt',
+  normal: '✓ normal',
+  high: '↑ erhöht',
+  low: '✓ niedrig',
+  normal_for: 'Normal für',
+  high_for: 'Erhöht für',
+  low_for: 'Niedrig für',
+  all_grid: 'alles aus dem Netz',
+  grid_short: 'Netz',
+  solar_all_export: 'Solar deckt alles · Rest geht ins Netz',
+  solar_all_charge: 'Solar deckt alles · Akku lädt',
+  solar_all: 'Solar deckt alles',
+  battery_home: 'Akku versorgt das Haus',
   grid_idle: 'Netz ruht',
-  pv_today: 'PV heute',
-  autarky_today: 'Autarkie heute',
-  import_today: 'Netzbezug heute',
-  autarky: 'Autarkie',
-  self_use: 'Eigenverbrauch',
-  self_covered: 'selbst gedeckt',
-  solar_used: 'Solar selbst genutzt',
-  charging_with: 'lädt mit',
-  discharging_with: 'entlädt mit',
-  idle: 'ruht',
-  history_today: 'Verlauf heute',
-  consumption: 'Verbrauch',
-  soc: 'Akku %',
-  now_caps: 'JETZT',
-  balance_today: 'Bilanz heute',
-  produced: 'erzeugt',
-  yesterday: 'gestern',
-  consumed: 'verbraucht',
-  now: 'jetzt',
-  charged_discharged: 'geladen · entladen',
-  imported_exported: 'bezogen · eingespeist',
-  hour_axis: 'Uhr',
+  house_consumption: 'Hausverbrauch',
+  who_draws: 'Wer zieht gerade',
+  devices: 'Geräte',
+  rest: 'Sonstiges',
+  not_measured: '(nicht gemessen)',
   today: 'Heute',
-  week: 'Woche',
-  month: 'Monat',
-  year: 'Jahr',
-  solar_charges: 'Solar lädt den Akku',
-  solar_exports: 'Solar speist ins Netz',
-  solar_home: 'Solar versorgt das Haus',
-  battery_home: 'Der Akku versorgt das Haus',
-  grid_home: 'Strom kommt aus dem Netz',
-  grid_charges: 'Das Netz lädt den Akku',
+  yesterday_so_far: 'Gestern bis jetzt',
+  cost_today: 'Kosten heute',
+  consumed: 'Verbraucht',
+  solar: 'Solar',
+  import: 'Bezug',
+  export: 'Einspeisung',
+  solar_produced: 'Solar erzeugt',
+  night: 'Nacht',
+  charging: 'lädt',
+  delivering: 'liefert',
+  idle: 'ruht',
+  battery: 'Akku',
+  base_load: 'Grundlast',
+  base_load_long: 'Grundlast (immer an)',
+  per_day: '/Tag',
+  consumption_now: 'Verbrauch jetzt',
+  usual_this_time: 'Üblich um diese Zeit',
+  sum: 'Summe',
+  history_today: 'Verlauf heute',
+  legend_today: 'heute',
+  legend_yesterday: 'gestern',
+  legend_usual: 'üblich',
+  today_so_far: 'Heute bis jetzt',
+  yesterday_at: 'Gestern um',
+  yesterday_total: 'gestern ges.',
+  hour_axis: 'Uhr',
+  from: 'aus',
 };
 
 const en: typeof de = {
   energy: 'Energy',
-  solar: 'Solar',
-  solar_caps: 'SOLAR',
   consumption_caps: 'CONSUMPTION',
-  house: 'Home',
-  battery: 'Battery',
-  grid: 'Grid',
-  out: 'out',
-  in: 'in',
-  grid_idle: 'Grid idle',
-  pv_today: 'Solar today',
-  autarky_today: 'Self-sufficiency',
-  import_today: 'Grid today',
-  autarky: 'Self-sufficiency',
-  self_use: 'Self-consumption',
-  self_covered: 'covered by own power',
-  solar_used: 'solar used at home',
-  charging_with: 'charging at',
-  discharging_with: 'discharging at',
-  idle: 'idle',
-  history_today: 'Today',
-  consumption: 'Consumption',
-  soc: 'Battery %',
-  now_caps: 'NOW',
-  balance_today: 'Today’s balance',
-  produced: 'produced',
-  yesterday: 'yesterday',
-  consumed: 'consumed',
-  now: 'now',
-  charged_discharged: 'charged · discharged',
-  imported_exported: 'imported · exported',
-  hour_axis: 'h',
+  usual_now: 'usual now',
+  normal: '✓ normal',
+  high: '↑ high',
+  low: '✓ low',
+  normal_for: 'Normal for',
+  high_for: 'High for',
+  low_for: 'Low for',
+  all_grid: 'all from the grid',
+  grid_short: 'grid',
+  solar_all_export: 'Solar covers all · rest to the grid',
+  solar_all_charge: 'Solar covers all · battery charging',
+  solar_all: 'Solar covers all',
+  battery_home: 'Battery powers the home',
+  grid_idle: 'grid idle',
+  house_consumption: 'Home consumption',
+  who_draws: 'Drawing now',
+  devices: 'devices',
+  rest: 'Other',
+  not_measured: '(not measured)',
   today: 'Today',
-  week: 'Week',
-  month: 'Month',
-  year: 'Year',
-  solar_charges: 'Solar is charging the battery',
-  solar_exports: 'Solar is feeding the grid',
-  solar_home: 'Solar is powering the home',
-  battery_home: 'The battery is powering the home',
-  grid_home: 'Power comes from the grid',
-  grid_charges: 'The grid is charging the battery',
+  yesterday_so_far: 'Yesterday so far',
+  cost_today: 'Cost today',
+  consumed: 'Consumed',
+  solar: 'Solar',
+  import: 'Import',
+  export: 'Export',
+  solar_produced: 'Solar',
+  night: 'Night',
+  charging: 'charging',
+  delivering: 'supplying',
+  idle: 'idle',
+  battery: 'Battery',
+  base_load: 'Base load',
+  base_load_long: 'Base load (always on)',
+  per_day: '/day',
+  consumption_now: 'Consumption now',
+  usual_this_time: 'Usual at this time',
+  sum: 'Total',
+  history_today: 'Today',
+  legend_today: 'today',
+  legend_yesterday: 'yesterday',
+  legend_usual: 'usual',
+  today_so_far: 'Today so far',
+  yesterday_at: 'Yesterday at',
+  yesterday_total: 'yesterday',
+  hour_axis: 'h',
+  from: 'from',
 };
 
 export type EnergyKey = keyof typeof de;
 
-export function et(hass: HomeAssistant | undefined, key: EnergyKey | 'idle'): string {
+export function et(hass: HomeAssistant | undefined, key: EnergyKey): string {
   const dict = language(hass).startsWith('de') ? de : en;
   return dict[key];
 }
