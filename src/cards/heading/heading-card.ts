@@ -389,7 +389,7 @@ export class GlowHeadingCard extends GlowStatusBase<HeadingCardConfig> {
         border: 0;
         background: radial-gradient(
           circle at 35% 30%,
-          rgba(255, 255, 255, 0.6),
+          color-mix(in srgb, #ffffff 60%, rgb(var(--hc))),
           rgb(var(--hc)) 62%
         );
         box-shadow: 0 0 calc(var(--hd-orb-glow) * var(--gc-glow-f))

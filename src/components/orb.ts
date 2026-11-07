@@ -45,10 +45,12 @@ export class GlowOrb extends LitElement {
       outline: 2px solid rgb(var(--glow-accent));
       outline-offset: 3px;
     }
+    /* The highlight is opaque (white mixed into the accent): a translucent white
+       let the dark card show through and looked grey in dark mode. */
     :host([active]) button {
       background: radial-gradient(
         circle at 35% 30%,
-        rgba(255, 255, 255, 0.6),
+        color-mix(in srgb, #ffffff 60%, rgb(var(--glow-accent))),
         rgb(var(--glow-accent)) 62%
       );
       box-shadow: var(--glow-orb-glow);
