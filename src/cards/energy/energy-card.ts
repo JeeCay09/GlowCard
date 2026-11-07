@@ -1,7 +1,13 @@
 import { css, html, nothing, svg, type PropertyValues, type TemplateResult } from 'lit';
 import { GlowCardBase, type GlowCardConfig } from '../../core/base-card';
 import type { ActionConfig } from '../../core/action';
-import { fetchHistory, fetchStatistics, type StatePoint, type StatRow } from '../../core/history';
+import {
+  fetchHistory,
+  fetchStatChange,
+  fetchStatistics,
+  type StatePoint,
+  type StatRow,
+} from '../../core/history';
 import { registerCard } from '../../core/register';
 import {
   actionsField,
@@ -19,6 +25,7 @@ import {
   IDLE_W,
   baseLoad,
   currency,
+  dashboardTariff,
   dayFraction,
   deviceId,
   energyKwh,
@@ -39,6 +46,9 @@ import {
   usualByHour,
   verdict,
   type DeviceNow,
+  type EnergyInfo,
+  type EnergyPrefs,
+  type Tariff,
   type EnergyEntities,
   type EnergyNow,
   type Flows,
@@ -93,6 +103,11 @@ export class GlowEnergyCard extends GlowCardBase<EnergyCardConfig> {
   private stats: StatRow[] = [];
   private yesterdayAtNow?: number;
   private yesterdayTotal?: number;
+  /** Grid tariff from HA's energy dashboard (null = not loaded / not available). */
+  private tariff: Tariff | null = null;
+  private dashCostToday?: number;
+  private dashCostYesterday?: number;
+  private costLoadedAt = 0;
   private loadedAt = 0;
   private loading = false;
 
@@ -161,6 +176,7 @@ export class GlowEnergyCard extends GlowCardBase<EnergyCardConfig> {
         devices: 'devices_helper',
         energy_today: 'energy_today_helper',
         cost_today: 'cost_today_helper',
+        price: 'fixed_price_helper',
         fixed_price: 'fixed_price_helper',
         solar: 'solar_helper',
         max_power: 'max_power_helper',
@@ -259,6 +275,8 @@ export class GlowEnergyCard extends GlowCardBase<EnergyCardConfig> {
   protected updated(changed: PropertyValues): void {
     super.updated(changed);
     if (this.hass && this.config && Date.now() - this.loadedAt > 30 * 60_000) void this.load();
+    else if (this.tariff?.costIds.length && Date.now() - this.costLoadedAt > 5 * 60_000)
+      void this.loadCost();
   }
 
   /** Statistic used for "usual" and base load: the consumption sensor, or the grid without PV. */
@@ -291,6 +309,8 @@ export class GlowEnergyCard extends GlowCardBase<EnergyCardConfig> {
         this.usual = usualByHour(this.stats.filter((r) => r.start < startOfDay(now)));
         this.base = baseLoad(this.stats);
       }
+      await this.loadTariff();
+      await this.loadCost();
       if (c.energy_today) {
         const midnight = startOfDay(now);
         const hist = await fetchHistory(h, [c.energy_today], new Date(midnight - DAY), now);
@@ -302,6 +322,45 @@ export class GlowEnergyCard extends GlowCardBase<EnergyCardConfig> {
       this.loading = false;
       this.requestUpdate();
     }
+  }
+
+  /** Price and cost statistics as set up in HA's energy dashboard (works for dynamic prices). */
+  private async loadTariff(): Promise<void> {
+    const h = this.hass;
+    if (!h?.callWS || this.tariff) return;
+    try {
+      const [prefs, info] = await Promise.all([
+        h.callWS<EnergyPrefs>({ type: 'energy/get_prefs' }),
+        h.callWS<EnergyInfo>({ type: 'energy/info' }).catch(() => null),
+      ]);
+      this.tariff = dashboardTariff(prefs, info);
+    } catch {
+      this.tariff = { costIds: [] }; // no energy dashboard set up
+    }
+  }
+
+  /** Today's and yesterday's cost from the dashboard's cost statistics. */
+  private async loadCost(): Promise<void> {
+    const h = this.hass;
+    const ids = this.tariff?.costIds ?? [];
+    this.costLoadedAt = Date.now();
+    if (!h || !ids.length) return;
+    const now = new Date();
+    const midnight = new Date(startOfDay(now));
+    const [today, yesterday] = await Promise.all([
+      fetchStatChange(h, ids, midnight, now),
+      fetchStatChange(h, ids, new Date(midnight.getTime() - DAY), midnight),
+    ]);
+    const sum = (r: Record<string, number>) =>
+      Object.keys(r).length ? Object.values(r).reduce((a, b) => a + b, 0) : undefined;
+    this.dashCostToday = sum(today);
+    this.dashCostYesterday = sum(yesterday);
+    this.requestUpdate();
+  }
+
+  /** Price per kWh: config, else the energy dashboard. */
+  private get priceSrc(): string | number | undefined {
+    return this.config ? priceSource(this.config, this.tariff?.price) : undefined;
   }
 
   // ---------- model ----------
@@ -572,11 +631,29 @@ export class GlowEnergyCard extends GlowCardBase<EnergyCardConfig> {
     if (!h || !c) return null;
     const direct = numberState(h, c.cost_today);
     if (direct !== null) return direct;
-    const price = priceValue(h, priceSource(c));
+    // Without own price settings: the dashboard's cost statistics (right for dynamic prices).
+    if (c.price === undefined && c.fixed_price === undefined && this.dashCostToday !== undefined)
+      return this.dashCostToday;
+    const price = priceValue(h, this.priceSrc);
     const kwhToday = this.hasSources
       ? energyKwh(h, c.grid_import_energy)
       : energyKwh(h, c.energy_today);
     return price !== null && kwhToday !== null ? price * kwhToday : null;
+  }
+
+  /** Yesterday's total cost: dashboard statistics, else yesterday's kWh × price (no PV). */
+  private costYesterday(price: number | null): number | null {
+    const c = this.config;
+    if (!c) return null;
+    if (
+      c.price === undefined &&
+      c.fixed_price === undefined &&
+      this.dashCostYesterday !== undefined
+    )
+      return this.dashCostYesterday;
+    if (price !== null && this.yesterdayTotal !== undefined && !this.hasSources)
+      return price * this.yesterdayTotal;
+    return null;
   }
 
   private foot(): TemplateResult | typeof nothing {
@@ -608,7 +685,7 @@ export class GlowEnergyCard extends GlowCardBase<EnergyCardConfig> {
       }
       const cost = this.costToday();
       if (cost !== null)
-        items.push([et(h, 'cost_today'), money(h, cost, currency(h, priceSource(c)))]);
+        items.push([et(h, 'cost_today'), money(h, cost, currency(h, this.priceSrc))]);
     }
     if (!items.length) return nothing;
     return html`<div class="foot n${items.length}">
@@ -1167,8 +1244,8 @@ export class GlowEnergyCard extends GlowCardBase<EnergyCardConfig> {
     const c = this.config;
     if (!h || !c) return undefined;
     const g = this.gauge();
-    const price = priceValue(h, priceSource(c));
-    const cur = currency(h, priceSource(c));
+    const price = priceValue(h, this.priceSrc);
+    const cur = currency(h, this.priceSrc);
     const f = g.flows;
     const srcText = this.hasSources ? this.subtitle(g) : `100 % ${et(h, 'grid_short')}`;
     const srcKind: Source = f.main;
@@ -1264,8 +1341,8 @@ export class GlowEnergyCard extends GlowCardBase<EnergyCardConfig> {
     if (cost !== null) {
       const extra = [
         price !== null ? `${money(h, price, cur)}/kWh` : '',
-        price !== null && this.yesterdayTotal !== undefined && !this.hasSources
-          ? `${et(h, 'yesterday_total')} ${money(h, price * this.yesterdayTotal, cur)}`
+        this.costYesterday(price) !== null
+          ? `${et(h, 'yesterday_total')} ${money(h, this.costYesterday(price)!, cur)}`
           : '',
       ]
         .filter(Boolean)

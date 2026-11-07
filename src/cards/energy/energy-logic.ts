@@ -65,9 +65,12 @@ export function energyKwh(hass: HomeAssistant, id?: string): number | null {
   return v;
 }
 
-/** The configured price: sensor, number or the fixed price field. */
-export function priceSource(c: EnergyEntities): string | number | undefined {
-  return c.price ?? c.fixed_price;
+/** The price: sensor or number from the config, the fixed price field, else the energy dashboard. */
+export function priceSource(
+  c: EnergyEntities,
+  dashboard?: string | number,
+): string | number | undefined {
+  return c.price ?? c.fixed_price ?? dashboard;
 }
 
 /** Price in currency per kWh: a number or a sensor. */
@@ -82,6 +85,50 @@ export function currency(hass: HomeAssistant, price?: string | number): string {
   const unit = String(hass.states[price]?.attributes.unit_of_measurement ?? '€');
   const cur = unit.split('/')[0].trim();
   return cur === 'EUR' ? '€' : cur || '€';
+}
+
+// ---------- tariff from HA's energy dashboard ----------
+
+interface GridFlow {
+  stat_energy_from?: string;
+  stat_cost?: string | null;
+  entity_energy_price?: string | null;
+  number_energy_price?: number | null;
+}
+
+export interface EnergyPrefs {
+  energy_sources?: (GridFlow & { type: string; flow_from?: GridFlow[] })[];
+}
+
+export interface EnergyInfo {
+  /** Cost entity HA creates per energy statistic when a price is set. */
+  cost_sensors?: Record<string, string>;
+}
+
+export interface Tariff {
+  /** Cost statistics of all grid imports (they apply the price of each moment). */
+  costIds: string[];
+  /** Price sensor or fixed price from the dashboard (first grid import). */
+  price?: string | number;
+}
+
+/**
+ * Grid tariff from the energy dashboard (`energy/get_prefs` + `energy/info`). Handles the
+ * flat grid source (HA 2025.x) and the older `flow_from` list.
+ */
+export function dashboardTariff(prefs?: EnergyPrefs | null, info?: EnergyInfo | null): Tariff {
+  const flows: GridFlow[] = (prefs?.energy_sources ?? [])
+    .filter((s) => s.type === 'grid')
+    .flatMap((s) => (s.flow_from?.length ? s.flow_from : s.stat_energy_from ? [s] : []));
+  const costIds: string[] = [];
+  let price: string | number | undefined;
+  for (const f of flows) {
+    const cost =
+      f.stat_cost || (f.stat_energy_from ? info?.cost_sensors?.[f.stat_energy_from] : undefined);
+    if (cost && !costIds.includes(cost)) costIds.push(cost);
+    price ??= f.entity_energy_price || (f.number_energy_price ?? undefined);
+  }
+  return { costIds, price };
 }
 
 // ---------- devices ----------

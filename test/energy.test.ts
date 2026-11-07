@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   baseLoad,
   currency,
+  dashboardTariff,
   energyKwh,
   flows,
   kw,
@@ -161,6 +162,53 @@ describe('energy: values and formatting', () => {
     expect(ringAngle(0, 3)).toBe(-125);
     expect(ringAngle(3000, 3)).toBe(125);
     expect(ringAngle(750, 3)).toBeCloseTo(0);
+  });
+});
+
+describe('energy: tariff from the energy dashboard', () => {
+  it('finds the cost sensor HA creates for a fixed price (flat grid source)', () => {
+    const prefs = {
+      energy_sources: [
+        { type: 'solar', stat_energy_from: 'sensor.pv' },
+        {
+          type: 'grid',
+          stat_energy_from: 'sensor.import',
+          stat_cost: null,
+          entity_energy_price: null,
+          number_energy_price: 0.3536,
+        },
+      ],
+    };
+    const info = { cost_sensors: { 'sensor.import': 'sensor.import_cost' } };
+    expect(dashboardTariff(prefs, info)).toEqual({
+      costIds: ['sensor.import_cost'],
+      price: 0.3536,
+    });
+  });
+
+  it('uses a price sensor and an own cost statistic (older flow_from list)', () => {
+    const prefs = {
+      energy_sources: [
+        {
+          type: 'grid',
+          flow_from: [
+            { stat_energy_from: 'sensor.t1', entity_energy_price: 'sensor.tibber_price' },
+            { stat_energy_from: 'sensor.t2', stat_cost: 'sensor.t2_cost' },
+          ],
+        },
+      ],
+    };
+    const info = { cost_sensors: { 'sensor.t1': 'sensor.t1_cost' } };
+    expect(dashboardTariff(prefs, info)).toEqual({
+      costIds: ['sensor.t1_cost', 'sensor.t2_cost'],
+      price: 'sensor.tibber_price',
+    });
+  });
+
+  it('is empty without an energy dashboard and lets the config win', () => {
+    expect(dashboardTariff(null, null)).toEqual({ costIds: [], price: undefined });
+    expect(priceSource({}, 'sensor.tibber_price')).toBe('sensor.tibber_price');
+    expect(priceSource({ fixed_price: 0.3 }, 'sensor.tibber_price')).toBe(0.3);
   });
 });
 

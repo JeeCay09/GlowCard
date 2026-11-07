@@ -176,6 +176,38 @@ export function meterIncrease(points: StatePoint[], from: number, to: number): n
   return seen || prev !== undefined ? sum : undefined;
 }
 
+/**
+ * Sum of the statistics `change` per id between start and end (e.g. today's cost from
+ * HA's energy cost sensor, which already applies the price of each moment). Missing ids
+ * are left out; returns {} on error.
+ */
+export async function fetchStatChange(
+  hass: HomeAssistant,
+  ids: string[],
+  start: Date,
+  end = new Date(),
+): Promise<Record<string, number>> {
+  const out: Record<string, number> = {};
+  if (!hass.callWS || ids.length === 0) return out;
+  try {
+    const res = await hass.callWS<Record<string, { change?: number | null }[]>>({
+      type: 'recorder/statistics_during_period',
+      start_time: start.toISOString(),
+      end_time: end.toISOString(),
+      statistic_ids: ids,
+      period: 'hour',
+      types: ['change'],
+    });
+    for (const id of ids) {
+      const rows = res?.[id];
+      if (rows?.length) out[id] = rows.reduce((s, r) => s + (r.change ?? 0), 0);
+    }
+  } catch {
+    /* statistics are optional */
+  }
+  return out;
+}
+
 /** One long-term statistics row (`recorder/statistics_during_period`). */
 export interface StatRow {
   start: number; // epoch ms
