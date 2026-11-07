@@ -156,7 +156,7 @@ export class GlowSwitchCard extends GlowCardBase<SwitchCardConfig> {
     );
   }
 
-  /** No entity is picked for the user; "by entity" passes the chosen ones. */
+  /** No entity is picked for the user; "by entity" uses the suggestion from `registerCard`. */
   static getStubConfig(): Partial<SwitchCardConfig> {
     return stubEntity();
   }
@@ -1329,6 +1329,7 @@ registerCard(
     type: 'glowcard-switch',
     name: 'GlowCard Switch',
     description: 'Switch, smart plug or input_boolean with glow, 7-day history, power and popup',
+    domains: SWITCH_DOMAINS,
   },
   GlowSwitchCard,
 );

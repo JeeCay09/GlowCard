@@ -59,7 +59,7 @@ export class GlowLightCard extends GlowCardBase<LightCardConfig> {
     );
   }
 
-  /** No entity is picked for the user; "by entity" passes the chosen ones. */
+  /** No entity is picked for the user; "by entity" uses the suggestion from `registerCard`. */
   static getStubConfig(): Partial<LightCardConfig> {
     return stubEntity();
   }
@@ -534,6 +534,7 @@ registerCard(
     type: 'glowcard-light',
     name: 'GlowCard Light',
     description: 'Light with its current colour, drag bar for brightness and a colour popup',
+    domains: ['light'],
   },
   GlowLightCard,
 );
