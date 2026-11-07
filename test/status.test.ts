@@ -60,6 +60,8 @@ describe('status segments', () => {
       e('light.group', 'on', { entity_id: ['light.a', 'light.b'] }),
     ]);
     expect(lightIds(h, { type: 'lights' })).toEqual(['light.a', 'light.b', 'light.c']);
+    expect(lightIds(h, { type: 'lights', exclude: ['light.b'] })).toEqual(['light.a', 'light.c']);
+    expect(view(h, { type: 'lights', exclude: ['light.a'] }).value).toBe('1 an');
     const v = view(h, { type: 'lights' });
     expect(v.value).toBe('2 an');
     expect(v.chipText).toBe('2 Lichter an');
@@ -223,6 +225,16 @@ describe('card configs', () => {
       alerts: ['binary_sensor.vesta_problem'],
     });
     expect(segs.map((s) => s.type)).toEqual(['weather', 'lights', 'energy', 'security', 'alert']);
+  });
+
+  it('passes excluded lights only when all lights are counted', () => {
+    const base = { type: 'custom:glowcard-status', exclude_lights: ['light.x'] };
+    expect(simpleSegments({ ...base, all_lights: true })).toEqual([
+      { type: 'lights', exclude: ['light.x'] },
+    ]);
+    expect(simpleSegments({ ...base, lights: ['light.a'] })).toEqual([
+      { type: 'lights', entities: ['light.a'] },
+    ]);
   });
 
   it('guesses the chip kind from the entity', () => {
