@@ -3,6 +3,16 @@ import { GlowCardBase, type GlowCardConfig } from '../../core/base-card';
 import type { ActionConfig } from '../../core/action';
 import { fetchHistory, fetchStatistics, type StatePoint, type StatRow } from '../../core/history';
 import { registerCard } from '../../core/register';
+import {
+  actionsField,
+  configForm,
+  editorLabel,
+  fontField,
+  lookSection,
+  nameIconFields,
+  type FormSchema,
+  type GestureSpec,
+} from '../../core/editor';
 import type { Rgb } from '../../core/color';
 import { formatPct, numberState } from '../status/status-logic';
 import {
@@ -18,6 +28,7 @@ import {
   kwValue,
   kwh,
   money,
+  priceSource,
   priceValue,
   range,
   readDevices,
@@ -43,6 +54,14 @@ const ACCENT: Record<Source, { dark: Rgb; light: Rgb }> = {
   grid: { dark: [255, 214, 140], light: [245, 158, 11] },
   solar: { dark: [251, 191, 36], light: [245, 158, 11] },
   bat: { dark: [52, 211, 153], light: [16, 185, 129] },
+};
+
+const ENERGY_GESTURES: GestureSpec = {
+  modes: {
+    tap: ['popup', 'more-info', 'navigate', 'url', 'perform-action', 'none'],
+    hold: ['more-info', 'popup', 'navigate', 'url', 'perform-action', 'none'],
+  },
+  defaults: { tap: 'popup', hold: 'more-info' },
 };
 
 const HOUR = 3_600_000;
@@ -76,6 +95,95 @@ export class GlowEnergyCard extends GlowCardBase<EnergyCardConfig> {
   private yesterdayTotal?: number;
   private loadedAt = 0;
   private loading = false;
+
+  static getConfigForm() {
+    const power: FormSchema['selector'] = { entity: { domain: ['sensor'], device_class: 'power' } };
+    const energy: FormSchema['selector'] = {
+      entity: { domain: ['sensor'], device_class: 'energy' },
+    };
+    const grid = (...schema: FormSchema[]): FormSchema => ({ name: '', type: 'grid', schema });
+    const section = (title: string, icon: string, ...schema: FormSchema[]): FormSchema => ({
+      name: '',
+      type: 'expandable',
+      title,
+      icon,
+      schema,
+    });
+    return configForm(
+      [
+        grid({ name: 'home', selector: power }, { name: 'grid', selector: power }),
+        {
+          name: 'devices',
+          selector: { entity: { domain: ['sensor'], device_class: 'power', multiple: true } },
+        },
+        section(
+          'costs_section',
+          'mdi:currency-eur',
+          grid(
+            { name: 'energy_today', selector: energy },
+            { name: 'cost_today', selector: { entity: { domain: ['sensor'] } } },
+            { name: 'price', selector: { entity: { domain: ['sensor', 'input_number'] } } },
+            {
+              name: 'fixed_price',
+              selector: { number: { min: 0, step: 0.01, mode: 'box' } },
+              visible: (data) => !data.price,
+            },
+          ),
+        ),
+        section(
+          'solar_section',
+          'mdi:solar-power-variant-outline',
+          grid(
+            { name: 'solar', selector: power },
+            { name: 'solar_energy', selector: energy },
+            {
+              name: 'battery',
+              selector: { entity: { domain: ['sensor'], device_class: 'battery' } },
+            },
+            { name: 'battery_power', selector: power },
+            { name: 'grid_import_energy', selector: energy },
+            { name: 'grid_export_energy', selector: energy },
+          ),
+        ),
+        lookSection(
+          nameIconFields,
+          grid(fontField, {
+            name: 'max_power',
+            default: 3,
+            selector: { number: { min: 0.5, max: 50, step: 0.5, mode: 'box' } },
+          }),
+        ),
+        actionsField,
+      ],
+      {
+        home: 'home_helper',
+        grid: 'grid_energy_helper',
+        devices: 'devices_helper',
+        energy_today: 'energy_today_helper',
+        cost_today: 'cost_today_helper',
+        fixed_price: 'fixed_price_helper',
+        solar: 'solar_helper',
+        max_power: 'max_power_helper',
+      },
+      (config) => {
+        const list = config.devices;
+        if (Array.isArray(list) && list.some((d) => typeof d !== 'string')) {
+          throw new Error(editorLabel('devices_yaml_only'));
+        }
+      },
+      (config) => {
+        // A number in `price` is the fixed price field in the editor.
+        if (typeof config.price !== 'number') return config;
+        const { price, ...rest } = config;
+        return { ...rest, fixed_price: price };
+      },
+    );
+  }
+
+  /** Tap opens the GlowCard popup, hold the consumption sensor's more info. */
+  static gestureSpec(): GestureSpec {
+    return ENERGY_GESTURES;
+  }
 
   static getStubConfig(): Partial<EnergyCardConfig> {
     return {};
@@ -464,7 +572,7 @@ export class GlowEnergyCard extends GlowCardBase<EnergyCardConfig> {
     if (!h || !c) return null;
     const direct = numberState(h, c.cost_today);
     if (direct !== null) return direct;
-    const price = priceValue(h, c.price);
+    const price = priceValue(h, priceSource(c));
     const kwhToday = this.hasSources
       ? energyKwh(h, c.grid_import_energy)
       : energyKwh(h, c.energy_today);
@@ -499,7 +607,8 @@ export class GlowEnergyCard extends GlowCardBase<EnergyCardConfig> {
         ]);
       }
       const cost = this.costToday();
-      if (cost !== null) items.push([et(h, 'cost_today'), money(h, cost, currency(h, c.price))]);
+      if (cost !== null)
+        items.push([et(h, 'cost_today'), money(h, cost, currency(h, priceSource(c)))]);
     }
     if (!items.length) return nothing;
     return html`<div class="foot n${items.length}">
@@ -1058,8 +1167,8 @@ export class GlowEnergyCard extends GlowCardBase<EnergyCardConfig> {
     const c = this.config;
     if (!h || !c) return undefined;
     const g = this.gauge();
-    const price = priceValue(h, c.price);
-    const cur = currency(h, c.price);
+    const price = priceValue(h, priceSource(c));
+    const cur = currency(h, priceSource(c));
     const f = g.flows;
     const srcText = this.hasSources ? this.subtitle(g) : `100 % ${et(h, 'grid_short')}`;
     const srcKind: Source = f.main;
