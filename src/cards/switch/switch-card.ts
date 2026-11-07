@@ -319,7 +319,6 @@ export class GlowSwitchCard extends GlowCardBase<SwitchCardConfig> {
     const last = list[list.length - 1];
     if (last && last.start >= start) return;
     this[field] = [...list, { state: e.state, start }];
-    this.refreshPopup();
   }
 
   private async loadPower(force: boolean): Promise<void> {
@@ -340,7 +339,6 @@ export class GlowSwitchCard extends GlowCardBase<SwitchCardConfig> {
     ]);
     this.powerHistory = p.power ? power?.[p.power] : undefined;
     this.energyHistory = p.energy ? energy?.[p.energy] : undefined;
-    this.refreshPopup();
   }
 
   private get series(): number[] {
@@ -379,7 +377,6 @@ export class GlowSwitchCard extends GlowCardBase<SwitchCardConfig> {
     start.setDate(start.getDate() - 6);
     const res = await fetchHistory(this.hass, [this.config.entity], start);
     this.history = res[this.config.entity];
-    this.refreshPopup();
   }
 
   private get stats() {
