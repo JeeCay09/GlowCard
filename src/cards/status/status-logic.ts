@@ -147,17 +147,46 @@ function isGroup(e: HassEntity | undefined): boolean {
 }
 
 /**
+ * Scan results that depend only on entity ids and the entity registry. Home Assistant
+ * sends a new `hass` on every state change but keeps `hass.entities` until the registry
+ * changes, so results are kept per registry object and number of entities.
+ */
+const scanCache = new WeakMap<object, { count: number; results: Map<string, unknown> }>();
+
+function cachedScan<T>(hass: HomeAssistant, key: string, scan: () => T): T {
+  if (!hass.entities) return scan();
+  const count = Object.keys(hass.states).length;
+  let entry = scanCache.get(hass.entities);
+  if (!entry || entry.count !== count) {
+    entry = { count, results: new Map() };
+    scanCache.set(hass.entities, entry);
+  }
+  if (!entry.results.has(key)) entry.results.set(key, scan());
+  return entry.results.get(key) as T;
+}
+
+/**
  * Lights of a lights segment; "all" skips light groups, hidden entities and the
  * lights listed in `exclude`.
  */
 export function lightIds(hass: HomeAssistant, cfg: SegmentConfig): string[] {
   if (Array.isArray(cfg.entities) && cfg.entities.length) return cfg.entities.map(refId);
-  const exclude = new Set(cfg.exclude ?? []);
+  const exclude = cfg.exclude ?? [];
+  let candidates = cachedScan(hass, `lights\n${exclude.join('\n')}`, () =>
+    lightCandidates(hass, exclude),
+  );
+  // A light without registry entry was removed and another added in the same update.
+  if (candidates.some((id) => !hass.states[id])) candidates = lightCandidates(hass, exclude);
+  // Groups are checked on the current state: a group can start without its member list.
+  return candidates.filter((id) => !isGroup(hass.states[id]));
+}
+
+function lightCandidates(hass: HomeAssistant, excluded: string[]): string[] {
+  const exclude = new Set(excluded);
   return Object.keys(hass.states).filter((id) => {
     if (!id.startsWith('light.') || exclude.has(id)) return false;
     const entry = hass.entities?.[id];
-    if (entry?.hidden || entry?.entity_category) return false;
-    return !isGroup(hass.states[id]);
+    return !entry?.hidden && !entry?.entity_category;
   });
 }
 
@@ -530,7 +559,9 @@ export function findAlertParts(hass: HomeAssistant, cfg: SegmentConfig): AlertPa
   if (id.startsWith('vacuum.')) parts.vacuum ??= id;
   const dev = hass.entities?.[id]?.device_id;
   if (!dev) return parts;
-  const siblings = Object.values(hass.entities ?? {}).filter((x) => x?.device_id === dev);
+  const siblings = cachedScan(hass, `device\n${dev}`, () =>
+    Object.values(hass.entities ?? {}).filter((x) => x?.device_id === dev),
+  );
   for (const s of siblings) {
     if (!s) continue;
     const sid = s.entity_id;
