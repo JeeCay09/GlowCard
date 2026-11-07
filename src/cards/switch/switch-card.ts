@@ -42,7 +42,7 @@ import {
   chartPaths,
   countdownFactor,
   countdownSeconds,
-  findPlugParts,
+  plugPartsFinder,
   formatWatts,
   niceMax,
   selectedTimer,
@@ -50,6 +50,7 @@ import {
   watts,
   type PlugParts,
 } from './power-logic';
+import type { HomeAssistant } from '../../types/hass';
 import '../../components/orb';
 import '../../components/segments';
 
@@ -219,11 +220,17 @@ export class GlowSwitchCard extends GlowCardBase<SwitchCardConfig> {
 
   // ---------- plug parts (found on the device) ----------
 
+  private findParts = plugPartsFinder();
+  private partsCache?: { hass?: HomeAssistant; config: SwitchCardConfig; parts: PlugParts };
+
+  /** Parts for the current hass and config; computed once per update, not per use. */
   private get parts(): PlugParts {
     const c = this.config;
     if (!c || this.isGroup) return {};
-    const found = this.hass && c.entity ? findPlugParts(this.hass, c.entity) : {};
-    return {
+    const cache = this.partsCache;
+    if (cache && cache.hass === this.hass && cache.config === c) return cache.parts;
+    const found = this.hass && c.entity ? this.findParts(this.hass, c.entity) : {};
+    const parts: PlugParts = {
       power: c.power_entity ?? found.power,
       energy: c.energy_entity ?? found.energy,
       countdown: c.countdown_entity ?? found.countdown,
@@ -231,6 +238,8 @@ export class GlowSwitchCard extends GlowCardBase<SwitchCardConfig> {
       power_on: c.power_on_entity ?? found.power_on,
       indicator: c.indicator_entity ?? found.indicator,
     };
+    this.partsCache = { hass: this.hass, config: c, parts };
+    return parts;
   }
 
   private st(id?: string) {
