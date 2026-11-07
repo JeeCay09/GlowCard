@@ -222,33 +222,25 @@ export class GlowEnergyCard extends GlowCardBase<EnergyCardConfig> {
     }).format(new Date());
   }
 
-  private subtitle(g: Gauge, short = false): string {
+  /** Factual status line: supply shares, plus surplus; grid only: position vs usual range. */
+  private subtitle(g: Gauge): string {
     const h = this.hass;
-    const n = this.now;
     const f = g.flows;
+    const shares =
+      g.home > IDLE_W
+        ? (['solar', 'bat', 'grid'] as Source[])
+            .filter((s) => f.toHome[s] > IDLE_W)
+            .map((s) => `${Math.round((f.toHome[s] / g.home) * 100)} % ${sourceName(h, s)}`)
+        : [];
     if (this.hasSources) {
-      const bat = n.battery ?? 0;
-      if (f.main === 'solar' && f.toHome.grid < IDLE_W && f.toHome.bat < IDLE_W) {
-        if (f.toBattery > IDLE_W) return et(h, 'solar_all_charge');
-        if (f.toGrid > IDLE_W) return et(h, 'solar_all_export');
-        return et(h, 'solar_all');
-      }
-      if (f.main === 'bat' && bat < -IDLE_W) {
-        return f.toHome.grid < IDLE_W
-          ? `${et(h, 'battery_home')} · ${et(h, 'grid_idle')}`
-          : et(h, 'battery_home');
-      }
-      if (g.home > IDLE_W) {
-        const parts = (['solar', 'bat', 'grid'] as Source[])
-          .filter((s) => f.toHome[s] > IDLE_W)
-          .map((s) => `${Math.round((f.toHome[s] / g.home) * 100)} % ${sourceName(h, s)}`);
-        if (parts.length > 1) return parts.join(' · ');
-      }
+      const extra: string[] = [];
+      if (f.toBattery > IDLE_W) extra.push(`${et(h, 'battery_charge')} ${kw(h, f.toBattery)}`);
+      else if (f.toGrid > IDLE_W) extra.push(`${et(h, 'export')} ${kw(h, f.toGrid)}`);
+      return [...shares, ...extra].join(' · ') || et(h, 'house_consumption');
     }
-    const src = short ? et(h, 'grid_short') : et(h, 'all_grid');
+    const src = `100 % ${et(h, 'grid_short')}`;
     if (!g.verdict) return `${et(h, 'house_consumption')} · ${src}`;
-    const word = et(h, `${g.verdict}_for` as 'normal_for');
-    return `${word} ${this.timeNow()} · ${src}`;
+    return `${et(h, `${g.verdict}_range` as 'normal_range')} · ${src}`;
   }
 
   // ---------- ring ----------
@@ -420,7 +412,7 @@ export class GlowEnergyCard extends GlowCardBase<EnergyCardConfig> {
           on,
           on ? 'mdi:white-balance-sunny' : 'mdi:weather-night',
           kw(h, n.solar ?? 0),
-          on ? et(h, 'solar_produced') : et(h, 'night'),
+          et(h, 'solar_produced'),
         ),
       );
     }
@@ -429,9 +421,9 @@ export class GlowEnergyCard extends GlowCardBase<EnergyCardConfig> {
       const on = Math.abs(bat) > IDLE_W;
       const sub =
         bat > IDLE_W
-          ? `${et(h, 'charging')} +${kw(h, bat, 1)}`
+          ? `${et(h, 'charging')} ${kw(h, bat, 1)}`
           : bat < -IDLE_W
-            ? `${et(h, 'delivering')} ${kw(h, bat)}`
+            ? `${et(h, 'delivering')} ${kw(h, bat, 1)}`
             : et(h, 'idle');
       items.push(
         this.chip(
@@ -452,7 +444,7 @@ export class GlowEnergyCard extends GlowCardBase<EnergyCardConfig> {
           on,
           'mdi:transmission-tower',
           g < -IDLE_W ? `↑ ${kw(h, g)}` : g > IDLE_W ? `↓ ${kw(h, g)}` : '0 kW',
-          g < -IDLE_W ? et(h, 'export') : g > IDLE_W ? et(h, 'import') : et(h, 'grid_idle'),
+          g < -IDLE_W ? et(h, 'export') : g > IDLE_W ? et(h, 'import') : et(h, 'grid_short'),
         ),
       );
     }
@@ -555,7 +547,7 @@ export class GlowEnergyCard extends GlowCardBase<EnergyCardConfig> {
         ></glowcard-orb>
         <div class="titles">
           <span class="title">${this.config.name ?? et(h, 'energy')}</span>
-          <span class="subt">${this.subtitle(g, compact)}</span>
+          <span class="subt">${this.subtitle(g)}</span>
         </div>
         <div class="hero">
           <span class="hv">${kwValue(h, g.home)}<small> kW</small></span>
@@ -764,7 +756,7 @@ export class GlowEnergyCard extends GlowCardBase<EnergyCardConfig> {
         grid-template-columns: 1fr 1fr;
       }
       .srcs.n3 {
-        grid-template-columns: repeat(3, minmax(0, 1fr));
+        grid-template-columns: minmax(0, 1fr) minmax(0, 1.3fr) minmax(0, 1fr);
       }
       .sc {
         display: flex;
@@ -1069,7 +1061,7 @@ export class GlowEnergyCard extends GlowCardBase<EnergyCardConfig> {
     const price = priceValue(h, c.price);
     const cur = currency(h, c.price);
     const f = g.flows;
-    const srcText = this.hasSources ? this.subtitle(g) : et(h, 'all_grid');
+    const srcText = this.hasSources ? this.subtitle(g) : `100 % ${et(h, 'grid_short')}`;
     const srcKind: Source = f.main;
     const stats = html`<div class="pstats">
       <div><small>${et(h, 'consumption_now')}</small><b class="hvp">${kw(h, g.home)}</b></div>
@@ -1111,9 +1103,7 @@ export class GlowEnergyCard extends GlowCardBase<EnergyCardConfig> {
             ${g.devices.map(
               (d) =>
                 html`<li>
-                  <i class="dot c${d.slot}"></i
-                  ><span class="cn"
-                    >${d.name}${d.slot ? nothing : html` <small>${et(h, 'not_measured')}</small>`}</span
+                  <i class="dot c${d.slot}"></i><span class="cn">${d.name}</span
                   ><b class="bar"
                     ><b
                       class="c${d.slot}"
