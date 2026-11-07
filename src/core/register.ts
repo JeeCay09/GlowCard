@@ -5,6 +5,19 @@ export interface CardInfo {
   type: string;
   name: string;
   description: string;
+  /**
+   * Entity domains the card is made for. HA's "by entity" tab then lists the card
+   * as a suggestion for such an entity and creates it with that entity filled in.
+   */
+  domains?: string[];
+}
+
+/** HA's card suggestion for a picked entity (`getEntitySuggestion` in `window.customCards`). */
+function entitySuggestion(type: string, domains: string[]) {
+  return (_hass: unknown, entityId: string) =>
+    domains.includes(entityId.split('.')[0])
+      ? { config: { type: `custom:${type}`, entity: entityId } }
+      : null;
 }
 
 /**
@@ -20,6 +33,12 @@ export function registerCard(info: CardInfo, element: CustomElementConstructor):
   }
   window.customCards = window.customCards ?? [];
   if (!window.customCards.some((c) => c.type === info.type)) {
-    window.customCards.push({ ...info, preview: true, documentationURL: DOCS_URL });
+    const { domains, ...entry } = info;
+    window.customCards.push({
+      ...entry,
+      preview: true,
+      documentationURL: DOCS_URL,
+      ...(domains?.length ? { getEntitySuggestion: entitySuggestion(info.type, domains) } : {}),
+    });
   }
 }
