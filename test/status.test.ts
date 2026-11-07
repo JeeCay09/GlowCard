@@ -248,3 +248,43 @@ describe('card configs', () => {
     });
   });
 });
+
+describe('cached entity scans', () => {
+  it('keeps "all lights" in step with added lights and groups that load later', () => {
+    const entities = {};
+    const lights = (...s: HassEntity[]) => hass(s, { entities });
+    const a = e('light.a', 'on');
+    expect(lightIds(lights(a, e('light.g', 'on')), { type: 'lights' })).toEqual([
+      'light.a',
+      'light.g',
+    ]);
+    // Same registry and count, but light.g now reports its members: it is a group.
+    const group = e('light.g', 'on', { entity_id: ['light.a'] });
+    expect(lightIds(lights(a, group), { type: 'lights' })).toEqual(['light.a']);
+    expect(lightIds(lights(a, group, e('light.b', 'off')), { type: 'lights' })).toEqual([
+      'light.a',
+      'light.b',
+    ]);
+    // A light without registry entry replaced by another one in the same update.
+    expect(lightIds(lights(a, group, e('light.c', 'off')), { type: 'lights' })).toEqual([
+      'light.a',
+      'light.c',
+    ]);
+  });
+
+  it('finds alert parts again after a registry change', () => {
+    const cfg: SegmentConfig = { type: 'alert', entity: 'binary_sensor.v_problem' };
+    const states = [e('binary_sensor.v_problem', 'on'), e('sensor.v_error', 'x')];
+    const reg = (withError: boolean) =>
+      hass(states, {
+        entities: {
+          'binary_sensor.v_problem': { entity_id: 'binary_sensor.v_problem', device_id: 'd' },
+          ...(withError
+            ? { 'sensor.v_error': { entity_id: 'sensor.v_error', device_id: 'd' } }
+            : {}),
+        },
+      });
+    expect(findAlertParts(reg(false), cfg).detail).toBeUndefined();
+    expect(findAlertParts(reg(true), cfg).detail).toBe('sensor.v_error');
+  });
+});
