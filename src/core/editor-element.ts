@@ -8,6 +8,7 @@ import {
   gestureSchema,
   schemaDefaults,
   toFormData,
+  visibleSchema,
   withDefaults,
   withoutDefaults,
   type ConfigForm,
@@ -78,9 +79,10 @@ export class GlowCardEditor extends LitElement {
     const spec = this.spec;
     const defaults = schemaDefaults(this.form.schema);
     const data = withDefaults(spec ? toFormData(this.config, spec) : this.config, defaults);
-    const schema = spec
-      ? gestureSchema(this.form.schema, spec, data, this.hass?.language)
-      : this.form.schema;
+    const schema = visibleSchema(
+      spec ? gestureSchema(this.form.schema, spec, data, this.hass?.language) : this.form.schema,
+      data,
+    );
     return html`<ha-form
       .hass=${this.hass}
       .data=${data}

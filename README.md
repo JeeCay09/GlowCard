@@ -158,6 +158,8 @@ Simple (this is also what the visual editor saves; order as in the screenshot):
 type: custom:glowcard-status
 weather: weather.home
 all_lights: true # or lights: [light.a, light.b]
+exclude_lights: # optional, only with all_lights
+  - light.night_light
 solar: sensor.pv_power
 battery: sensor.battery_level # state of charge in %
 battery_power: sensor.battery_power # + = charging
@@ -180,6 +182,7 @@ segments:
     tap_action:
       action: none # no arrow, not tappable
   - type: lights # without entities: all lights (light groups are skipped)
+    exclude: [light.night_light] # optional
   - type: energy
     solar: sensor.pv_power
     battery: sensor.battery_level
