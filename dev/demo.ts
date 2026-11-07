@@ -34,6 +34,9 @@ const ICON_PATHS: Record<string, string> = {
     'M6 3h12a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2zM4 8h16M8 5.5h1',
   'mdi:flash': 'M13 3L5 14h6l-1 7 8-11h-6l1-7z',
   'mdi:lightning-bolt': 'M13 2L4 14h7l-1 8 9-12h-7z',
+  'mdi:home-lightning-bolt': 'M4 11 12 4l8 7v9H4zM12.8 9.8l-2.6 3.6h2.2l-1 3 2.8-3.8H12z',
+  'mdi:battery-high': 'M8 5h8v16H8zM10 3h4M10 11h4v8h-4z',
+  'mdi:weather-night': 'M15.5 3.5a8.5 8.5 0 1 0 5 13.6A7 7 0 0 1 15.5 3.5z',
   'mdi:power-socket-de':
     'M12 4a8 8 0 1 0 0 16a8 8 0 1 0 0-16M9.3 12h.01M14.7 12h.01M12 4.5v1.5M12 18v1.5',
   'mdi:power-plug-off-outline': 'M12 4a8 8 0 1 0 0 16a8 8 0 1 0 0-16M5 19L19 5',
@@ -337,81 +340,122 @@ const entities: HomeAssistant['entities'] = {
   'vacuum.vesta': { entity_id: 'vacuum.vesta', device_id: 'vesta' },
 };
 
-// Energy card "Haus" (GlowEnergyHaus board): Jetzt / Abend / Nacht scenarios
-const ENERGY_SCENES: Record<
-  string,
-  [pv: number, bat: number, soc: number, grid: number, load: number]
-> = {
-  day: [4.86, 4.2, 38.7, -0.23, 0.42],
-  eve: [0.3, -0.9, 72, 0, 1.2],
-  night: [0, 0, 10, 0.55, 0.55],
-};
-for (const [k, [pv, bat, soc, grid, load]] of Object.entries(ENERGY_SCENES)) {
-  const kwE = (n: string, v: number) =>
-    entity(`sensor.energy_${k}_${n}`, String(v), {
-      device_class: 'power',
-      unit_of_measurement: 'kW',
-    });
-  Object.assign(states, {
-    [`sensor.energy_${k}_pv`]: kwE('pv', pv),
-    [`sensor.energy_${k}_battery`]: kwE('battery', bat),
-    [`sensor.energy_${k}_grid`]: kwE('grid', grid),
-    [`sensor.energy_${k}_load`]: kwE('load', load),
-    [`sensor.energy_${k}_soc`]: entity(`sensor.energy_${k}_soc`, String(soc), {
-      device_class: 'battery',
-      unit_of_measurement: '%',
-    }),
+// Energy card "Lastring": nur Netz / mit PV / mit PV + Akku / Nacht
+const kwE = (id: string, v: number) =>
+  entity(id, String(v), {
+    device_class: 'power',
+    unit_of_measurement: 'kW',
+    state_class: 'measurement',
   });
-}
-for (const [n, v] of Object.entries({
-  pv: 4.9,
-  consumed: 3.99,
-  grid_import: 2.26,
-  grid_export: 0.16,
-  battery_charge: 3.51,
-  battery_discharge: 0.5,
-})) {
-  states[`sensor.energy_daily_${n}`] = entity(`sensor.energy_daily_${n}`, String(v), {
+const kwhE = (id: string, v: number) =>
+  entity(id, String(v), {
     device_class: 'energy',
     unit_of_measurement: 'kWh',
+    state_class: 'total_increasing',
   });
+Object.assign(states, {
+  'sensor.house_power': kwE('sensor.house_power', 0.62),
+  'sensor.house_power_night': kwE('sensor.house_power_night', 0.6),
+  'sensor.heat_pump_power': {
+    ...kwE('sensor.heat_pump_power', 0.38),
+    attributes: { unit_of_measurement: 'kW', friendly_name: 'Wärmepumpe' },
+  },
+  'sensor.tv_power': {
+    ...kwE('sensor.tv_power', 0.11),
+    attributes: { unit_of_measurement: 'kW', friendly_name: 'TV' },
+  },
+  'sensor.fridge_power': {
+    ...kwE('sensor.fridge_power', 0.09),
+    attributes: { unit_of_measurement: 'kW', friendly_name: 'Kühlschrank' },
+  },
+  'sensor.energy_today': kwhE('sensor.energy_today', 6.8),
+  'sensor.energy_today_night': kwhE('sensor.energy_today_night', 9.6),
+  'sensor.electricity_price': entity('sensor.electricity_price', '0.32', {
+    unit_of_measurement: 'EUR/kWh',
+  }),
+  'sensor.pv2_power': kwE('sensor.pv2_power', 2.4),
+  'sensor.grid2_power': kwE('sensor.grid2_power', -1.78),
+  'sensor.pv3_power': kwE('sensor.pv3_power', 2.4),
+  'sensor.bat3_power': kwE('sensor.bat3_power', 1.5),
+  'sensor.bat3_soc': entity('sensor.bat3_soc', '64', {
+    device_class: 'battery',
+    unit_of_measurement: '%',
+  }),
+  'sensor.grid3_power': kwE('sensor.grid3_power', -0.28),
+  'sensor.pvn_power': kwE('sensor.pvn_power', 0),
+  'sensor.batn_power': kwE('sensor.batn_power', -0.6),
+  'sensor.batn_soc': entity('sensor.batn_soc', '41', {
+    device_class: 'battery',
+    unit_of_measurement: '%',
+  }),
+  'sensor.gridn_power': kwE('sensor.gridn_power', 0),
+  'sensor.pv_energy_today': kwhE('sensor.pv_energy_today', 9.1),
+  'sensor.import2_today': kwhE('sensor.import2_today', 1.9),
+  'sensor.export2_today': kwhE('sensor.export2_today', 4.2),
+  'sensor.import3_today': kwhE('sensor.import3_today', 0.4),
+  'sensor.export3_today': kwhE('sensor.export3_today', 2.7),
+});
+
+/** Typical day (kW per hour) for the fake statistics of the house power. */
+const DAY_LO = [
+  0.22, 0.2, 0.2, 0.2, 0.22, 0.3, 0.45, 0.6, 0.55, 0.45, 0.4, 0.4, 0.42, 0.4, 0.38, 0.4, 0.5, 0.7,
+  0.85, 0.8, 0.65, 0.5, 0.35, 0.26,
+];
+const DAY_HI = [
+  0.42, 0.38, 0.36, 0.36, 0.4, 0.55, 0.95, 1.4, 1.2, 0.95, 0.9, 0.9, 1.0, 0.92, 0.88, 0.9, 1.1, 1.6,
+  1.9, 1.8, 1.5, 1.1, 0.75, 0.5,
+];
+const TODAY = [
+  0.26, 0.22, 0.2, 0.2, 0.21, 0.28, 0.6, 1.25, 0.95, 0.55, 0.48, 0.44, 0.7, 0.5, 0.58, 0.62,
+];
+const YDAY = [
+  0.24, 0.21, 0.2, 0.2, 0.22, 0.32, 0.7, 1.1, 0.75, 0.6, 0.5, 0.42, 0.48, 0.45, 0.42, 0.5, 0.7,
+  1.15, 1.7, 1.5, 1.1, 0.72, 0.45, 0.3,
+];
+
+function fakeStatistics(id: string, start: number) {
+  if (!id.startsWith('sensor.house_power')) return [];
+  const day0 = new Date(nowMs);
+  day0.setHours(0, 0, 0, 0);
+  const rows: { start: number; mean: number; min: number; max: number; state: null }[] = [];
+  for (let t = Math.ceil(start / HOUR) * HOUR; t < nowMs; t += HOUR) {
+    const h = new Date(t).getHours();
+    const d = Math.floor((day0.getTime() - t) / (24 * HOUR)) + 1; // 0 = today, 1 = yesterday
+    const r = (((t / HOUR) * 7919) % 100) / 100; // stable pseudo random
+    const mean =
+      d <= 0
+        ? (TODAY[h] ?? 0.6)
+        : d === 1
+          ? YDAY[h]
+          : DAY_LO[h] + (DAY_HI[h] - DAY_LO[h]) * (0.05 + r * 0.9);
+    rows.push({
+      start: t,
+      mean,
+      min: Math.min(mean, 0.16 + r * 0.06),
+      max: mean * 1.6,
+      state: null,
+    });
+  }
+  return rows;
 }
 
-/** Today's curves for the energy popup chart (board shape: sunrise ~7:30, now ~9:40). */
+/** Today's kWh meter for "gestern bis jetzt" (yesterday 5,9 at this time, 9,4 in total). */
 function energyHistory(id: string, start: number) {
   const day0 = new Date(nowMs);
   day0.setHours(0, 0, 0, 0);
   const d0 = day0.getTime();
   const pts: { s: string; lu: number }[] = [];
-  const push = (t: number, v: number) => t <= nowMs && pts.push({ s: v.toFixed(3), lu: t / 1000 });
-  if (id === 'sensor.energy_daily_pv') {
-    push(start, 1.2);
-    push(d0 - 3 * HOUR, 8.33);
-    push(d0 + 60_000, 0);
-    push(nowMs - HOUR, 3.2);
-    return pts;
+  const total = id.endsWith('_night') ? 12.1 : 9.4;
+  const atNow = id.endsWith('_night') ? 10.4 : 5.9;
+  const frac = (nowMs - d0) / (24 * HOUR);
+  pts.push({ s: '0', lu: Math.max(start, d0 - 24 * HOUR) / 1000 });
+  for (let i = 1; i <= 24; i++) {
+    const t = d0 - 24 * HOUR + i * HOUR;
+    const f = i / 24;
+    const v = f <= frac ? (atNow * f) / frac : atNow + ((total - atNow) * (f - frac)) / (1 - frac);
+    pts.push({ s: v.toFixed(2), lu: (t - 60_000) / 1000 });
   }
-  const hNow = (nowMs - d0) / HOUR;
-  for (let t = 0; t <= hNow; t += 0.25) {
-    const ts = d0 + t * HOUR;
-    let v = 0;
-    if (id.endsWith('_pv'))
-      v = t < 7.5 ? 0 : 4.86 * Math.pow(Math.min(1, (t - 7.5) / Math.max(0.5, hNow - 7.5)), 2.2);
-    else if (id.endsWith('_load'))
-      v = 0.35 + (t > 6 && t < 9 ? 0.25 : 0) + 0.05 * Math.sin(t * 2.3);
-    push(ts, v);
-  }
-  if (id.endsWith('_soc')) {
-    // dips until sunrise, then charges up to the current 38,7 %… board: 49 % at 0 h → 39 % now
-    pts.length = 0;
-    for (let t = 0; t <= hNow; t += 0.25) {
-      const v =
-        t < 7.5
-          ? 49 - (t / 7.5) * 10
-          : 39 + Math.sin(((t - 7.5) / Math.max(0.5, hNow - 7.5)) * Math.PI) * 4 - 0.3;
-      push(d0 + t * HOUR, v);
-    }
-  }
+  pts.push({ s: '0', lu: (d0 + 60_000) / 1000 });
   return pts;
 }
 
@@ -424,7 +468,7 @@ const STATE_TEXT: Record<string, string> = {
 
 /** Recorder-like history: TV Wand pattern from the mockup, simple patterns for the rest. */
 function fakeHistory(id: string, start: number) {
-  if (id.startsWith('sensor.energy_')) return energyHistory(id, start);
+  if (id.startsWith('sensor.energy_today')) return energyHistory(id, start);
   if (id === 'sensor.home_office_power') {
     const step = (nowMs - start) / OFFICE_SERIES.length;
     return OFFICE_SERIES.map((v, i) => ({ s: String(v), lu: (start + i * step) / 1000 }));
@@ -472,8 +516,12 @@ export function fakeHass(darkMode: boolean): HomeAssistant {
     formatEntityState: (e: HassEntity) => STATE_TEXT[e.state] ?? e.state,
     themes: { darkMode },
     async callWS<T>(msg: Record<string, unknown>): Promise<T> {
-      const ids = (msg.entity_ids as string[]) ?? [];
       const start = new Date(String(msg.start_time)).getTime();
+      if (msg.type === 'recorder/statistics_during_period') {
+        const sids = (msg.statistic_ids as string[]) ?? [];
+        return Object.fromEntries(sids.map((id) => [id, fakeStatistics(id, start)])) as T;
+      }
+      const ids = (msg.entity_ids as string[]) ?? [];
       return Object.fromEntries(ids.map((id) => [id, fakeHistory(id, start)])) as T;
     },
     async callService(domain, service, data) {

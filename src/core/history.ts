@@ -175,3 +175,57 @@ export function meterIncrease(points: StatePoint[], from: number, to: number): n
   }
   return seen || prev !== undefined ? sum : undefined;
 }
+
+/** One long-term statistics row (`recorder/statistics_during_period`). */
+export interface StatRow {
+  start: number; // epoch ms
+  mean: number | null;
+  min: number | null;
+  max: number | null;
+  state: number | null;
+}
+
+interface RawStat {
+  start: number | string;
+  mean?: number | null;
+  min?: number | null;
+  max?: number | null;
+  state?: number | null;
+}
+
+/**
+ * Hourly (or daily) long-term statistics via the standard recorder WebSocket command.
+ * Works for every sensor with a state_class. Returns [] per id on error.
+ */
+export async function fetchStatistics(
+  hass: HomeAssistant,
+  ids: string[],
+  start: Date,
+  end = new Date(),
+  period: 'hour' | 'day' = 'hour',
+): Promise<Record<string, StatRow[]>> {
+  const empty = Object.fromEntries(ids.map((id) => [id, [] as StatRow[]]));
+  if (!hass.callWS || ids.length === 0) return empty;
+  try {
+    const res = await hass.callWS<Record<string, RawStat[]>>({
+      type: 'recorder/statistics_during_period',
+      start_time: start.toISOString(),
+      end_time: end.toISOString(),
+      statistic_ids: ids,
+      period,
+      types: ['mean', 'min', 'max', 'state'],
+    });
+    for (const id of ids) {
+      empty[id] = (res?.[id] ?? []).map((r) => ({
+        start: typeof r.start === 'number' ? r.start : new Date(r.start).getTime(),
+        mean: r.mean ?? null,
+        min: r.min ?? null,
+        max: r.max ?? null,
+        state: r.state ?? null,
+      }));
+    }
+  } catch {
+    /* statistics are optional */
+  }
+  return empty;
+}
