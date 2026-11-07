@@ -517,6 +517,41 @@ export function fakeHass(darkMode: boolean): HomeAssistant {
     themes: { darkMode },
     async callWS<T>(msg: Record<string, unknown>): Promise<T> {
       const start = new Date(String(msg.start_time)).getTime();
+      if (msg.type === 'energy/get_prefs') {
+        return {
+          energy_sources: [
+            {
+              type: 'grid',
+              stat_energy_from: 'sensor.grid_import_total',
+              number_energy_price: 0.32,
+            },
+          ],
+        } as T;
+      }
+      if (msg.type === 'energy/info') {
+        return {
+          cost_sensors: { 'sensor.grid_import_total': 'sensor.grid_import_total_cost' },
+        } as T;
+      }
+      if (
+        msg.type === 'recorder/statistics_during_period' &&
+        (msg.types as string[])?.[0] === 'change'
+      ) {
+        // Cost per hour of the demo tariff: about 2.10 € so far today, 3.05 € yesterday.
+        const sids = (msg.statistic_ids as string[]) ?? [];
+        const end = new Date(String(msg.end_time)).getTime();
+        const hours = Math.max(1, Math.round((end - start) / 3_600_000));
+        const total = hours >= 24 ? 3.05 : 2.1;
+        return Object.fromEntries(
+          sids.map((id) => [
+            id,
+            Array.from({ length: hours }, (_, i) => ({
+              start: start + i * 3_600_000,
+              change: total / hours,
+            })),
+          ]),
+        ) as T;
+      }
       if (msg.type === 'recorder/statistics_during_period') {
         const sids = (msg.statistic_ids as string[]) ?? [];
         return Object.fromEntries(sids.map((id) => [id, fakeStatistics(id, start)])) as T;

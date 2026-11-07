@@ -279,7 +279,8 @@ A load ring for every home, with or without solar: how much the house draws righ
 One sensor is enough: the house consumption (`home`) or the grid power (`grid`, positive = import). Everything else is optional and extends the same card:
 
 - `devices`: up to 5 power sensors. The card lists them by power; the rest of the house is shown as "Not measured".
-- `energy_today`, `price` (sensor or number) or `cost_today`: today's usage, the comparison with yesterday at the same time, and today's cost.
+- `energy_today`: today's usage and the comparison with yesterday at the same time.
+- Costs come from Home Assistant's energy dashboard without any setting: if a price is set there (fixed or a sensor, e.g. Tibber or Nordpool), the card shows today's and yesterday's cost from HA's cost statistics, so dynamic prices are billed correctly per hour. `price` (sensor or number), `fixed_price` or `cost_today` override this; then the cost is today's kWh × the current price.
 - `solar`, `battery` (state of charge) and `battery_power` (positive = charging): the card grows by one row, shows where the power comes from in an outer ring and tiles for solar, battery and grid. Without a house sensor the house is calculated from grid, solar and battery.
 
 Tap opens the popup (ring, usual range, base load with cost per day, devices with share, today's curve against yesterday and the usual band, comparison tiles). Hold opens more info of the house sensor.
@@ -292,7 +293,7 @@ devices: # optional
   - entity: sensor.tv_plug_power
     name: TV
 energy_today: sensor.house_energy_today # optional, daily meter
-price: 0.32 # optional, sensor or number per kWh
+# price: 0.32 # optional, overrides the energy dashboard price
 # optional, with solar / battery:
 solar: sensor.pv_power
 battery: sensor.battery_state_of_charge
