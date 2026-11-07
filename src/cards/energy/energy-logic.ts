@@ -18,7 +18,10 @@ export interface EnergyEntities {
   battery_power?: string;
   devices?: DeviceConfig[];
   energy_today?: string;
+  /** Price sensor (or a fixed price as a number in YAML). */
   price?: string | number;
+  /** Fixed price per kWh, used when `price` is not set (the editor's number field). */
+  fixed_price?: number;
   cost_today?: string;
   solar_energy?: string;
   grid_import_energy?: string;
@@ -62,7 +65,12 @@ export function energyKwh(hass: HomeAssistant, id?: string): number | null {
   return v;
 }
 
-/** Price in currency per kWh: a number in the config or a sensor. */
+/** The configured price: sensor, number or the fixed price field. */
+export function priceSource(c: EnergyEntities): string | number | undefined {
+  return c.price ?? c.fixed_price;
+}
+
+/** Price in currency per kWh: a number or a sensor. */
 export function priceValue(hass: HomeAssistant, price?: string | number): number | null {
   if (typeof price === 'number') return price;
   return numberState(hass, price);
@@ -82,7 +90,7 @@ export interface DeviceNow {
   entity?: string;
   name: string;
   watts: number;
-  /** Colour slot 1–5 for measured devices, 0 = "Sonstiges" (not measured). */
+  /** Colour slot 1–5 for measured devices, 0 = "Nicht erfasst" (not measured). */
   slot: number;
 }
 
@@ -92,7 +100,7 @@ export function deviceId(d: DeviceConfig): string {
 
 /**
  * Devices sorted by power (colour slot follows the config order, so a device keeps its
- * colour), plus "Sonstiges" for the unmeasured rest of the house consumption.
+ * colour), plus "Nicht erfasst" for the unmeasured rest of the house consumption.
  */
 export function readDevices(
   hass: HomeAssistant,
