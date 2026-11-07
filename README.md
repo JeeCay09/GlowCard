@@ -244,7 +244,7 @@ Unavailable entities are shown dashed and faded. An alert chip without a problem
 
 ### Heading
 
-A section title with a round icon, a line below and small glass badges, or a small caps subtitle to group sections. The icon stays neutral by default; with `glow_entity` it glows while that entity is on, in `glow_color` (colour picker in the editor) or else the light's own colour.
+A section title with a round icon, a line below and small glass badges, or a small caps subtitle to group sections. The icon stays neutral by default. With `glow_color` ("Colour" picker in the editor) it is shown in that colour, also without glow. With `glow_entity` it glows while that entity is on, in `glow_color` or else the light's own colour.
 
 ```yaml
 type: custom:glowcard-heading
