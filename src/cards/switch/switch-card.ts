@@ -178,12 +178,16 @@ export class GlowSwitchCard extends GlowCardBase<SwitchCardConfig> {
     return 3;
   }
 
-  /** Fixed rows on HA's grid: mini 1, tile 2 (compact) or 3, group and power card 3. */
+  /**
+   * Fixed rows on HA's grid: mini 1, tile 2 (compact) or 3, group and power card 3.
+   * The tile starts at half width (a quarter cut name and state on phones) and can be
+   * shrunk to a quarter in the dashboard editor.
+   */
   getGridOptions() {
     if (this.isMini) return this.gridOptions(6, 1, 3);
     if (this.powerCard) return this.gridOptions(12, 3, 6);
     if (this.isGroup) return this.gridOptions(6, 3);
-    return this.gridOptions(3, this.gridSize === 'compact' ? 2 : 3);
+    return this.gridOptions(6, this.gridSize === 'compact' ? 2 : 3, 3);
   }
 
   /** One line (56 px): `size: mini`, or the former `variant: row`. Not for groups. */
