@@ -210,9 +210,11 @@ describe('visual editor', () => {
       el.setConfig({ type: `custom:${type}`, ...config });
       return el.getGridOptions().columns;
     };
-    expect(grid('glowcard-switch', { entity: 'switch.a' })).toBe(3);
-    // The former wide switch variant is shown as a small tile.
-    expect(grid('glowcard-switch', { entity: 'switch.a', variant: 'wide' })).toBe(3);
+    // The tile starts at half width; a quarter cuts name and state on phones.
+    expect(grid('glowcard-switch', { entity: 'switch.a' })).toBe(6);
+    expect(grid('glowcard-switch', { entity: '' })).toBe(6);
+    // The former wide switch variant is shown as a tile.
+    expect(grid('glowcard-switch', { entity: 'switch.a', variant: 'wide' })).toBe(6);
     expect(grid('glowcard-switch', { entity: 'switch.a', variant: 'row' })).toBe(6);
     // Smart plugs: power card (full width) only with show_power; not for rows or groups.
     expect(grid('glowcard-switch', { entity: 'switch.a', show_power: true })).toBe(12);
@@ -281,8 +283,8 @@ describe('visual editor', () => {
       const o = el.getGridOptions();
       return `${o.columns}x${o.rows}`;
     };
-    expect(rows('glowcard-switch', { entity: 'switch.a', size: 'normal' })).toBe('3x3');
-    expect(rows('glowcard-switch', { entity: 'switch.a', size: 'compact' })).toBe('3x2');
+    expect(rows('glowcard-switch', { entity: 'switch.a', size: 'normal' })).toBe('6x3');
+    expect(rows('glowcard-switch', { entity: 'switch.a', size: 'compact' })).toBe('6x2');
     expect(rows('glowcard-switch', { entity: 'switch.a', size: 'mini' })).toBe('6x1');
     expect(rows('glowcard-switch', { entity: 'switch.a', variant: 'row' })).toBe('6x1');
     expect(rows('glowcard-switch', { entities: ['switch.a', 'switch.b'] })).toBe('6x3');
@@ -291,6 +293,13 @@ describe('visual editor', () => {
     expect(rows('glowcard-light', { entity: 'light.a', size: 'compact' })).toBe('6x2');
     expect(rows('glowcard-light', { entity: 'light.a', size: 'mini' })).toBe('6x1');
     expect(rows('glowcard-status', { weather: 'weather.home' })).toBe('12x1');
+    // The tile can still be shrunk to a quarter in the dashboard editor.
+    const tile = document.createElement('glowcard-switch') as HTMLElement & {
+      setConfig(c: unknown): void;
+      getGridOptions(): { min_columns: number };
+    };
+    tile.setConfig({ type: 'custom:glowcard-switch', entity: 'switch.a' });
+    expect(tile.getGridOptions().min_columns).toBe(3);
     expect(rows('glowcard-chip', { chip: 'lights' })).toBe('6x1');
 
     const form = card('glowcard-switch').getConfigForm();
