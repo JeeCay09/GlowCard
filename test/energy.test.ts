@@ -1,7 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import {
   baseLoad,
+  autoMaxKw,
   currency,
+  dayEnergy,
   dashboardTariff,
   energyKwh,
   flows,
@@ -180,7 +182,7 @@ describe('energy: tariff from the energy dashboard', () => {
       ],
     };
     const info = { cost_sensors: { 'sensor.import': 'sensor.import_cost' } };
-    expect(dashboardTariff(prefs, info)).toEqual({
+    expect(dashboardTariff(prefs, info)).toMatchObject({
       costIds: ['sensor.import_cost'],
       price: 0.3536,
     });
@@ -199,16 +201,83 @@ describe('energy: tariff from the energy dashboard', () => {
       ],
     };
     const info = { cost_sensors: { 'sensor.t1': 'sensor.t1_cost' } };
-    expect(dashboardTariff(prefs, info)).toEqual({
+    expect(dashboardTariff(prefs, info)).toMatchObject({
       costIds: ['sensor.t1_cost', 'sensor.t2_cost'],
       price: 'sensor.tibber_price',
     });
   });
 
   it('is empty without an energy dashboard and lets the config win', () => {
-    expect(dashboardTariff(null, null)).toEqual({ costIds: [], price: undefined });
+    expect(dashboardTariff(null, null)).toMatchObject({ costIds: [], price: undefined });
     expect(priceSource({}, 'sensor.tibber_price')).toBe('sensor.tibber_price');
     expect(priceSource({ fixed_price: 0.3 }, 'sensor.tibber_price')).toBe(0.3);
+  });
+});
+
+describe('energy: kWh from the energy dashboard', () => {
+  const prefs = {
+    energy_sources: [
+      { type: 'solar', stat_energy_from: 'sensor.pv_total' },
+      {
+        type: 'grid',
+        stat_energy_from: 'sensor.import_total',
+        stat_energy_to: 'sensor.export_total',
+      },
+      { type: 'battery', stat_energy_from: 'sensor.bat_out', stat_energy_to: 'sensor.bat_in' },
+    ],
+  };
+
+  it('finds the meters of grid, solar and battery', () => {
+    expect(dashboardTariff(prefs, null).meters).toEqual({
+      import: ['sensor.import_total'],
+      export: ['sensor.export_total'],
+      solar: ['sensor.pv_total'],
+      charge: ['sensor.bat_in'],
+      discharge: ['sensor.bat_out'],
+    });
+  });
+
+  it('works out the house like the energy dashboard', () => {
+    const meters = dashboardTariff(prefs, null).meters;
+    const changes = {
+      'sensor.import_total': 2.9,
+      'sensor.export_total': 0.7,
+      'sensor.pv_total': 6.7,
+      'sensor.bat_in': 3,
+      'sensor.bat_out': 1.4,
+    };
+    const day = dayEnergy(changes, meters);
+    expect(day.home).toBeCloseTo(7.3);
+    expect(day).toMatchObject({ import: 2.9, export: 0.7, solar: 6.7 });
+  });
+
+  it('gives no house value without a grid meter', () => {
+    expect(dayEnergy({ 'sensor.pv_total': 3 }, dashboardTariff(prefs, null).meters).home).toBe(
+      undefined,
+    );
+    expect(dayEnergy({}, undefined)).toEqual({});
+  });
+});
+
+describe('energy: ring maximum and signs', () => {
+  it('derives the ring maximum from the peaks', () => {
+    const peaks = Array.from({ length: 100 }, (_, i) => (i < 99 ? 2000 : 9000));
+    expect(autoMaxKw(peaks)).toBe(2.5);
+    expect(autoMaxKw(Array(30).fill(300))).toBe(1);
+    expect(autoMaxKw([5000])).toBeNull();
+  });
+
+  it('inverts battery and grid power when asked', () => {
+    const h = hass([e('sensor.bat', '600', W), e('sensor.grid', '200', W)]);
+    const n = readNow(h, {
+      grid: 'sensor.grid',
+      battery_power: 'sensor.bat',
+      invert_battery: true,
+      invert_grid: true,
+    });
+    expect(n.battery).toBe(-600);
+    expect(n.grid).toBe(-200);
+    expect(n.home).toBe(400);
   });
 });
 
