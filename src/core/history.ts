@@ -175,3 +175,89 @@ export function meterIncrease(points: StatePoint[], from: number, to: number): n
   }
   return seen || prev !== undefined ? sum : undefined;
 }
+
+/**
+ * Sum of the statistics `change` per id between start and end (e.g. today's cost from
+ * HA's energy cost sensor, which already applies the price of each moment). Missing ids
+ * are left out; returns {} on error.
+ */
+export async function fetchStatChange(
+  hass: HomeAssistant,
+  ids: string[],
+  start: Date,
+  end = new Date(),
+): Promise<Record<string, number>> {
+  const out: Record<string, number> = {};
+  if (!hass.callWS || ids.length === 0) return out;
+  try {
+    const res = await hass.callWS<Record<string, { change?: number | null }[]>>({
+      type: 'recorder/statistics_during_period',
+      start_time: start.toISOString(),
+      end_time: end.toISOString(),
+      statistic_ids: ids,
+      period: 'hour',
+      types: ['change'],
+    });
+    for (const id of ids) {
+      const rows = res?.[id];
+      if (rows?.length) out[id] = rows.reduce((s, r) => s + (r.change ?? 0), 0);
+    }
+  } catch {
+    /* statistics are optional */
+  }
+  return out;
+}
+
+/** One long-term statistics row (`recorder/statistics_during_period`). */
+export interface StatRow {
+  start: number; // epoch ms
+  mean: number | null;
+  min: number | null;
+  max: number | null;
+  state: number | null;
+}
+
+interface RawStat {
+  start: number | string;
+  mean?: number | null;
+  min?: number | null;
+  max?: number | null;
+  state?: number | null;
+}
+
+/**
+ * Hourly (or daily) long-term statistics via the standard recorder WebSocket command.
+ * Works for every sensor with a state_class. Returns [] per id on error.
+ */
+export async function fetchStatistics(
+  hass: HomeAssistant,
+  ids: string[],
+  start: Date,
+  end = new Date(),
+  period: 'hour' | 'day' = 'hour',
+): Promise<Record<string, StatRow[]>> {
+  const empty = Object.fromEntries(ids.map((id) => [id, [] as StatRow[]]));
+  if (!hass.callWS || ids.length === 0) return empty;
+  try {
+    const res = await hass.callWS<Record<string, RawStat[]>>({
+      type: 'recorder/statistics_during_period',
+      start_time: start.toISOString(),
+      end_time: end.toISOString(),
+      statistic_ids: ids,
+      period,
+      types: ['mean', 'min', 'max', 'state'],
+    });
+    for (const id of ids) {
+      empty[id] = (res?.[id] ?? []).map((r) => ({
+        start: typeof r.start === 'number' ? r.start : new Date(r.start).getTime(),
+        mean: r.mean ?? null,
+        min: r.min ?? null,
+        max: r.max ?? null,
+        state: r.state ?? null,
+      }));
+    }
+  } catch {
+    /* statistics are optional */
+  }
+  return empty;
+}
