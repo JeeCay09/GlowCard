@@ -25,15 +25,15 @@
 
 ## Karten
 
-| Karte          | Typ                       | Entitäten                                        | Status           |
-| -------------- | ------------------------- | ------------------------------------------------ | ---------------- |
-| Schalter       | `custom:glowcard-switch`  | `switch.*` (auch Steckdosen), `input_boolean.*`  | Beta (v0.1)      |
-| Licht          | `custom:glowcard-light`   | `light.*`                                        | Beta (v0.2)      |
-| Kopfzeile      | `custom:glowcard-header`  | `person.*`, Begrüßung, Datum/Uhrzeit             | Beta (v0.3)      |
-| Status-Leiste  | `custom:glowcard-status`  | Wetter, Lichter, Energie, Sicherheit, Warnungen  | Beta (v0.3)      |
-| Chip           | `custom:glowcard-chip`    | wie die Status-Leiste, plus Personen und Akku    | Beta (v0.3)      |
-| Überschrift    | `custom:glowcard-heading` | beliebige Entitäten als Badges                   | Beta (v0.4)      |
-| Energie „Haus“ | `custom:glowcard-energy`  | Leistungs-`sensor.*` für Solar, Akku, Netz, Haus | geplant für v0.4 |
+| Karte         | Typ                       | Entitäten                                               | Status      |
+| ------------- | ------------------------- | ------------------------------------------------------- | ----------- |
+| Schalter      | `custom:glowcard-switch`  | `switch.*` (auch Steckdosen), `input_boolean.*`         | Beta (v0.1) |
+| Licht         | `custom:glowcard-light`   | `light.*`                                               | Beta (v0.2) |
+| Kopfzeile     | `custom:glowcard-header`  | `person.*`, Begrüßung, Datum/Uhrzeit                    | Beta (v0.3) |
+| Status-Leiste | `custom:glowcard-status`  | Wetter, Lichter, Energie, Sicherheit, Warnungen         | Beta (v0.3) |
+| Chip          | `custom:glowcard-chip`    | wie die Status-Leiste, plus Personen und Akku           | Beta (v0.3) |
+| Überschrift   | `custom:glowcard-heading` | beliebige Entitäten als Badges                          | Beta (v0.4) |
+| Energie       | `custom:glowcard-energy`  | Leistungs-`sensor.*` für Haus oder Netz; Solar optional | Beta (v0.7) |
 
 Alle Karten haben einen visuellen Editor (ab Home Assistant 2025.1). In einem Sections-Dashboard passen die Karten genau ins Raster von Home Assistant (Zeilen zu 56 px): Kachel 2 Zeilen am Handy bzw. 3 am PC, Schalter-Gruppe und Leistungs-Karte 3, Mini, Status-Leiste und Chip 1 Zeile. Breite: Kachel, Licht, Mini und Schalter-Gruppe = 1/2 (Kachel und Mini lassen sich auf 1/4 verkleinern), Schalter mit Leistung/Verbrauch, Kopfzeile, Status-Leiste, Überschrift und Chip-Reihen = ganze Breite, einzelner Chip = 1/2, Symbol-Chip = 1/4. Die Breite kannst du im Dashboard-Editor weiterhin ändern. Neue Karten starten ohne Entität; fügst du eine Karte „nach Entität“ hinzu, nimmt sie die gewählte Entität.
 
@@ -272,15 +272,36 @@ heading: Erdgeschoss
 subtitle: 6 Räume
 ```
 
-### Energie „Haus“
+### Energie
+
+Ein Lastring für jedes Zuhause, mit oder ohne Solaranlage: wie viel das Haus gerade verbraucht und ob das für diese Uhrzeit üblich ist. Der Ring ist nach Geräten eingefärbt. Dahinter zeigt ein Band den üblichen Bereich für diese Stunde (die mittleren 60 % der letzten 14 Tage zu dieser Stunde) und eine Marke die Grundlast. Beides kommt aus den Langzeitstatistiken von Home Assistant, der Sensor braucht also eine `state_class` (bei Leistungssensoren gängiger Integrationen vorhanden). Status: „normal“, „erhöht“ oder „niedrig“.
+
+Ein Sensor genügt: der Hausverbrauch (`home`) oder die Netzleistung (`grid`, positiv = Bezug). Alles andere ist optional und erweitert dieselbe Karte:
+
+- `devices`: bis zu 5 Leistungssensoren. Die Karte listet sie nach Leistung; der Rest des Hauses erscheint als „Nicht erfasst“.
+- `energy_today`: Verbrauch heute und Vergleich mit dem Vortag zur gleichen Uhrzeit.
+- Die Kosten kommen ohne Einstellung aus dem Energie-Dashboard von Home Assistant: Ist dort ein Preis hinterlegt (fest oder als Sensor, z. B. Tibber oder Nordpool), zeigt die Karte die Kosten von heute und gestern aus den Kosten-Statistiken von HA, dynamische Preise werden also stundengenau abgerechnet. `price` (Sensor oder Zahl), `fixed_price` oder `cost_today` übersteuern das; dann sind die Kosten kWh heute × aktueller Preis.
+- `solar`, `battery` (Ladestand) und `battery_power` (positiv = Laden): Die Karte wird eine Reihe höher, zeigt in einem äußeren Ring, woher der Strom kommt, und Kacheln für Solar, Akku und Netz. Ohne Haussensor wird der Verbrauch aus Netz, Solar und Akku berechnet.
+
+Antippen öffnet das Popup (Ring, üblicher Bereich, Grundlast mit Kosten pro Tag, Geräte mit Anteil, Verlauf heute gegen Vortag und üblichen Bereich, Vergleichskacheln). Gedrückt halten öffnet die Detailansicht des Haussensors.
 
 ```yaml
 type: custom:glowcard-energy
+home: sensor.house_power # oder grid: sensor.grid_power
+devices: # optional
+  - sensor.heat_pump_power
+  - entity: sensor.tv_plug_power
+    name: Fernseher
+energy_today: sensor.house_energy_today # optional, Tageszähler
+# price: 0.32 # optional, übersteuert den Preis aus dem Energie-Dashboard
+# optional, mit Solar / Akku:
 solar: sensor.pv_power
-battery: sensor.battery_power # positiv = Laden
-battery_soc: sensor.battery_state_of_charge
-grid: sensor.grid_power # negativ = Einspeisung
-home: sensor.home_load_power
+battery: sensor.battery_state_of_charge
+battery_power: sensor.battery_power # positiv = Laden
+solar_energy: sensor.pv_energy_today
+grid_import_energy: sensor.grid_import_today
+grid_export_energy: sensor.grid_export_today
+max_power: 3 # kW, bei denen der Ring voll ist (Standard 3)
 ```
 
 ## Roadmap
@@ -289,7 +310,7 @@ home: sensor.home_load_power
 2. Schalter- und Steckdosen-Karte → v0.1.0 (Beta)
 3. Licht-Karte und Popup → v0.2.0 (Beta)
 4. Kopfzeile, Status-Leiste und Chips, visueller Editor und Standard-Breiten → **v0.3.0 (Beta)**
-5. Überschrift-Karte (Abschnittstitel mit Badges, zusätzlich zum Plan) und Energie-Karte „Haus“ mit Popup → v0.4.0
+5. Überschrift-Karte (Abschnittstitel mit Badges, zusätzlich zum Plan) → v0.4.0; Energie-Karte „Lastring“ mit Popup → v0.7.0
 6. Visuelle Editoren für alle Karten, vollständige Doku, Antrag auf HACS-Standardliste → v1.0.0
 
 Später: Raum-Karte, Binärsensor, Bewässerung/Pflanze, Popups für Medien, Rollos und Saugroboter.
