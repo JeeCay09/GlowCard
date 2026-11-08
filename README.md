@@ -25,15 +25,15 @@
 
 ## Cards
 
-| Card           | Type                      | Entities                                        | Status           |
-| -------------- | ------------------------- | ----------------------------------------------- | ---------------- |
-| Switch         | `custom:glowcard-switch`  | `switch.*` (plugs too), `input_boolean.*`       | beta (v0.1)      |
-| Light          | `custom:glowcard-light`   | `light.*`                                       | beta (v0.2)      |
-| Header         | `custom:glowcard-header`  | `person.*`, greeting, date/time                 | beta (v0.3)      |
-| Status bar     | `custom:glowcard-status`  | weather, lights, energy, security, alerts       | beta (v0.3)      |
-| Chip           | `custom:glowcard-chip`    | like the status bar, plus people and battery    | beta (v0.3)      |
-| Heading        | `custom:glowcard-heading` | any entities as badges                          | beta (v0.4)      |
-| Energy "House" | `custom:glowcard-energy`  | power `sensor.*` for solar, battery, grid, home | planned for v0.4 |
+| Card       | Type                      | Entities                                       | Status      |
+| ---------- | ------------------------- | ---------------------------------------------- | ----------- |
+| Switch     | `custom:glowcard-switch`  | `switch.*` (plugs too), `input_boolean.*`      | beta (v0.1) |
+| Light      | `custom:glowcard-light`   | `light.*`                                      | beta (v0.2) |
+| Header     | `custom:glowcard-header`  | `person.*`, greeting, date/time                | beta (v0.3) |
+| Status bar | `custom:glowcard-status`  | weather, lights, energy, security, alerts      | beta (v0.3) |
+| Chip       | `custom:glowcard-chip`    | like the status bar, plus people and battery   | beta (v0.3) |
+| Heading    | `custom:glowcard-heading` | any entities as badges                         | beta (v0.4) |
+| Energy     | `custom:glowcard-energy`  | house or grid power `sensor.*`; solar optional | beta (v0.7) |
 
 All cards have a visual editor (Home Assistant 2025.1 or newer). In a sections dashboard, the cards fit Home Assistant's grid exactly (rows of 56 px): tile 2 rows on phones or 3 on desktop, switch group and power card 3, mini, status bar and chip 1 row. Width: tile, light, mini and switch group = 1/2 (tile and mini can shrink to 1/4), switch with power/usage, header, status bar, heading and chip rows = full width, single chip = 1/2, icon-only chip = 1/4. You can still change the width in the dashboard editor. New cards start without an entity; when you add a card "by entity", it uses the entity you picked.
 
@@ -272,15 +272,36 @@ heading: Ground floor
 subtitle: 6 rooms
 ```
 
-### Energy "House"
+### Energy
+
+A load ring for every home, with or without solar: how much the house draws right now, and whether that is usual for this time of day. The ring is coloured by device. Behind it, a band shows the usual range for this hour (the middle 60 % of the last 14 days at this hour) and a mark shows the base load. Both come from Home Assistant's long-term statistics, so the sensor needs a `state_class` (all power sensors of common integrations have one). Status: "normal", "high" or "low".
+
+One sensor is enough: the house consumption (`home`) or the grid power (`grid`, positive = import). Everything else is optional and extends the same card:
+
+- `devices`: up to 5 power sensors. The card lists them by power; the rest of the house is shown as "Not measured".
+- `energy_today`: today's usage and the comparison with yesterday at the same time.
+- Costs come from Home Assistant's energy dashboard without any setting: if a price is set there (fixed or a sensor, e.g. Tibber or Nordpool), the card shows today's and yesterday's cost from HA's cost statistics, so dynamic prices are billed correctly per hour. `price` (sensor or number), `fixed_price` or `cost_today` override this; then the cost is today's kWh × the current price.
+- `solar`, `battery` (state of charge) and `battery_power` (positive = charging): the card grows by one row, shows where the power comes from in an outer ring and tiles for solar, battery and grid. Without a house sensor the house is calculated from grid, solar and battery.
+
+Tap opens the popup (ring, usual range, base load with cost per day, devices with share, today's curve against yesterday and the usual band, comparison tiles). Hold opens more info of the house sensor.
 
 ```yaml
 type: custom:glowcard-energy
+home: sensor.house_power # or grid: sensor.grid_power
+devices: # optional
+  - sensor.heat_pump_power
+  - entity: sensor.tv_plug_power
+    name: TV
+energy_today: sensor.house_energy_today # optional, daily meter
+# price: 0.32 # optional, overrides the energy dashboard price
+# optional, with solar / battery:
 solar: sensor.pv_power
-battery: sensor.battery_power # positive = charging
-battery_soc: sensor.battery_state_of_charge
-grid: sensor.grid_power # negative = export
-home: sensor.home_load_power
+battery: sensor.battery_state_of_charge
+battery_power: sensor.battery_power # positive = charging
+solar_energy: sensor.pv_energy_today
+grid_import_energy: sensor.grid_import_today
+grid_export_energy: sensor.grid_export_today
+max_power: 3 # kW at which the ring is full (default 3)
 ```
 
 ## Roadmap
@@ -289,7 +310,7 @@ home: sensor.home_load_power
 2. Switch and plug cards → v0.1.0 (beta)
 3. Light card and popup → v0.2.0 (beta)
 4. Header, status bar and chips, visual editor and default widths → **v0.3.0 (beta)**
-5. Heading card (section titles with badges, added to the plan) and Energy "House" card and popup → v0.4.0
+5. Heading card (section titles with badges, added to the plan) → v0.4.0; Energy card "load ring" with popup → v0.7.0
 6. Visual editors for all cards, full docs, submission to the HACS default list → v1.0.0
 
 Later: room card, binary sensor, irrigation/plant, media, cover and vacuum popups.

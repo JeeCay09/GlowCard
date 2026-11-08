@@ -269,15 +269,81 @@
         ['glowcard-switch', { entity: 'switch.fairy_lights' }, ''],
         ['glowcard-switch', { entity: 'switch.home_office', show_power: true }, 'span4'],
       ];
+      const devices = [
+        { entity: 'sensor.heat_pump_power', name: 'Wärmepumpe' },
+        { entity: 'sensor.tv_power', name: 'TV' },
+        { entity: 'sensor.fridge_power', name: 'Kühlschrank' },
+      ];
+      const base = {
+        home: 'sensor.house_power',
+        devices,
+        energy_today: 'sensor.energy_today',
+      };
+      const energyCards = [
+        ['glowcard-energy', base, 'span2'],
+        [
+          'glowcard-energy',
+          {
+            ...base,
+            solar: 'sensor.pv2_power',
+            grid: 'sensor.grid2_power',
+            solar_energy: 'sensor.pv_energy_today',
+            grid_import_energy: 'sensor.import2_today',
+            grid_export_energy: 'sensor.export2_today',
+          },
+          'span2',
+        ],
+        [
+          'glowcard-energy',
+          {
+            ...base,
+            solar: 'sensor.pv3_power',
+            battery: 'sensor.bat3_soc',
+            battery_power: 'sensor.bat3_power',
+            grid: 'sensor.grid3_power',
+            solar_energy: 'sensor.pv_energy_today',
+            grid_import_energy: 'sensor.import3_today',
+            grid_export_energy: 'sensor.export3_today',
+          },
+          'span2',
+        ],
+        [
+          'glowcard-energy',
+          {
+            ...base,
+            home: 'sensor.house_power_night',
+            energy_today: 'sensor.energy_today_night',
+            solar: 'sensor.pvn_power',
+            battery: 'sensor.batn_soc',
+            battery_power: 'sensor.batn_power',
+            grid: 'sensor.gridn_power',
+            solar_energy: 'sensor.pv_energy_today',
+            grid_import_energy: 'sensor.import3_today',
+            grid_export_energy: 'sensor.export3_today',
+          },
+          'span2',
+        ],
+        [
+          'glowcard-energy',
+          {
+            home: 'sensor.house_power',
+            energy_today: 'sensor.energy_today',
+            price: 'sensor.electricity_price',
+          },
+          'span2',
+        ],
+      ];
       const set = new URLSearchParams(location.search).get('set');
       const cards =
-        set === 'status'
-          ? statusCards
-          : set === 'heading'
-            ? headingCards
-            : set === 'classic'
-              ? classicCards
-              : [...statusCards, ...headingCards, ...classicCards];
+        set === 'energy'
+          ? energyCards
+          : set === 'status'
+            ? statusCards
+            : set === 'heading'
+              ? headingCards
+              : set === 'classic'
+                ? classicCards
+                : [...statusCards, ...headingCards, ...classicCards];
       for (const grid of document.querySelectorAll('.grid')) {
         for (const [tag, config, cls] of cards) {
           const el = document.createElement(tag);
