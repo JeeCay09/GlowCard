@@ -24,7 +24,10 @@ import { formatPct, numberState } from '../status/status-logic';
 import {
   IDLE_W,
   baseLoad,
+  autoMaxKw,
   currency,
+  dayEnergy,
+  meterIds,
   dashboardTariff,
   dayFraction,
   deviceId,
@@ -45,6 +48,8 @@ import {
   ringPoint,
   usualByHour,
   verdict,
+  type DayKind,
+  type DayKwh,
   type DeviceNow,
   type EnergyInfo,
   type EnergyPrefs,
@@ -108,6 +113,12 @@ export class GlowEnergyCard extends GlowCardBase<EnergyCardConfig> {
   private dashCostToday?: number;
   private dashCostYesterday?: number;
   private costLoadedAt = 0;
+  /** kWh from the dashboard meters: today, yesterday until now, yesterday in total. */
+  private day: DayKwh = {};
+  private dayYesterdayAt: DayKwh = {};
+  private dayYesterday: DayKwh = {};
+  /** Ring maximum from the last 14 days (kW). */
+  private autoMax: number | null = null;
   private loadedAt = 0;
   private loading = false;
 
@@ -128,58 +139,72 @@ export class GlowEnergyCard extends GlowCardBase<EnergyCardConfig> {
       [
         grid({ name: 'home', selector: power }, { name: 'grid', selector: power }),
         {
+          name: 'invert_grid',
+          selector: { boolean: {} },
+          visible: (data) => !!data.grid,
+        },
+        {
           name: 'devices',
           selector: { entity: { domain: ['sensor'], device_class: 'power', multiple: true } },
         },
-        section(
-          'costs_section',
-          'mdi:currency-eur',
-          grid(
-            { name: 'energy_today', selector: energy },
-            { name: 'cost_today', selector: { entity: { domain: ['sensor'] } } },
-            { name: 'price', selector: { entity: { domain: ['sensor', 'input_number'] } } },
-            {
-              name: 'fixed_price',
-              selector: { number: { min: 0, step: 0.01, mode: 'box' } },
-              visible: (data) => !data.price,
-            },
-          ),
-        ),
         section(
           'solar_section',
           'mdi:solar-power-variant-outline',
           grid(
             { name: 'solar', selector: power },
-            { name: 'solar_energy', selector: energy },
             {
               name: 'battery',
               selector: { entity: { domain: ['sensor'], device_class: 'battery' } },
             },
             { name: 'battery_power', selector: power },
-            { name: 'grid_import_energy', selector: energy },
-            { name: 'grid_export_energy', selector: energy },
+            {
+              name: 'invert_battery',
+              selector: { boolean: {} },
+              visible: (data) => !!data.battery_power,
+            },
           ),
         ),
         lookSection(
           nameIconFields,
           grid(fontField, {
             name: 'max_power',
-            default: 3,
             selector: { number: { min: 0.5, max: 50, step: 0.5, mode: 'box' } },
           }),
         ),
         actionsField,
+        section(
+          'advanced_section',
+          'mdi:tune-variant',
+          grid(
+            { name: 'energy_today', selector: energy },
+            { name: 'solar_energy', selector: energy },
+            { name: 'grid_import_energy', selector: energy },
+            { name: 'grid_export_energy', selector: energy },
+            { name: 'price', selector: { entity: { domain: ['sensor', 'input_number'] } } },
+            {
+              name: 'fixed_price',
+              selector: { number: { min: 0, step: 0.01, mode: 'box' } },
+              visible: (data) => !data.price,
+            },
+            { name: 'cost_today', selector: { entity: { domain: ['sensor'] } } },
+          ),
+        ),
       ],
       {
         home: 'home_helper',
         grid: 'grid_energy_helper',
         devices: 'devices_helper',
-        energy_today: 'energy_today_helper',
-        cost_today: 'cost_today_helper',
-        price: 'fixed_price_helper',
-        fixed_price: 'fixed_price_helper',
         solar: 'solar_helper',
         max_power: 'max_power_helper',
+        invert_grid: 'invert_grid_helper',
+        invert_battery: 'invert_battery_helper',
+        energy_today: 'dashboard_helper',
+        solar_energy: 'dashboard_helper',
+        grid_import_energy: 'dashboard_helper',
+        grid_export_energy: 'dashboard_helper',
+        price: 'dashboard_helper',
+        fixed_price: 'fixed_price_helper',
+        cost_today: 'cost_today_helper',
       },
       (config) => {
         const list = config.devices;
@@ -275,7 +300,7 @@ export class GlowEnergyCard extends GlowCardBase<EnergyCardConfig> {
   protected updated(changed: PropertyValues): void {
     super.updated(changed);
     if (this.hass && this.config && Date.now() - this.loadedAt > 30 * 60_000) void this.load();
-    else if (this.tariff?.costIds.length && Date.now() - this.costLoadedAt > 5 * 60_000)
+    else if (this.dashboardIds.length && Date.now() - this.costLoadedAt > 5 * 60_000)
       void this.loadCost();
   }
 
@@ -305,7 +330,11 @@ export class GlowEnergyCard extends GlowCardBase<EnergyCardConfig> {
           ...r,
           mean: r.mean === null ? null : Math.max(0, r.mean * k),
           min: r.min === null ? null : Math.max(0, r.min * k),
+          max: r.max === null ? null : Math.max(0, r.max * k),
         }));
+        this.autoMax = autoMaxKw(
+          this.stats.map((r) => r.max).filter((x): x is number => x !== null),
+        );
         this.usual = usualByHour(this.stats.filter((r) => r.start < startOfDay(now)));
         this.base = baseLoad(this.stats);
       }
@@ -339,23 +368,58 @@ export class GlowEnergyCard extends GlowCardBase<EnergyCardConfig> {
     }
   }
 
-  /** Today's and yesterday's cost from the dashboard's cost statistics. */
+  /** Cost and energy statistics of the energy dashboard the card reads. */
+  private get dashboardIds(): string[] {
+    return [...(this.tariff?.costIds ?? []), ...meterIds(this.tariff)];
+  }
+
+  /**
+   * Today's and yesterday's cost and kWh from the dashboard's statistics (5-minute
+   * statistics, so "today" is at most 5 minutes behind).
+   */
   private async loadCost(): Promise<void> {
     const h = this.hass;
-    const ids = this.tariff?.costIds ?? [];
+    const ids = this.dashboardIds;
     this.costLoadedAt = Date.now();
     if (!h || !ids.length) return;
     const now = new Date();
     const midnight = new Date(startOfDay(now));
-    const [today, yesterday] = await Promise.all([
-      fetchStatChange(h, ids, midnight, now),
-      fetchStatChange(h, ids, new Date(midnight.getTime() - DAY), midnight),
+    const yMidnight = new Date(midnight.getTime() - DAY);
+    const [today, yAt, yesterday] = await Promise.all([
+      fetchStatChange(h, ids, midnight, now, '5minute'),
+      fetchStatChange(h, ids, yMidnight, new Date(now.getTime() - DAY), '5minute'),
+      fetchStatChange(h, ids, yMidnight, midnight),
     ]);
-    const sum = (r: Record<string, number>) =>
-      Object.keys(r).length ? Object.values(r).reduce((a, b) => a + b, 0) : undefined;
-    this.dashCostToday = sum(today);
-    this.dashCostYesterday = sum(yesterday);
+    const cost = (r: Record<string, number>) => {
+      const v = (this.tariff?.costIds ?? []).filter((id) => id in r).map((id) => r[id]);
+      return v.length ? v.reduce((a, b) => a + b, 0) : undefined;
+    };
+    this.dashCostToday = cost(today);
+    this.dashCostYesterday = cost(yesterday);
+    const meters = this.tariff?.meters;
+    this.day = dayEnergy(today, meters);
+    this.dayYesterdayAt = dayEnergy(yAt, meters);
+    this.dayYesterday = dayEnergy(yesterday, meters);
+    if (!this.config?.energy_today) {
+      this.yesterdayAtNow = this.dayYesterdayAt.home;
+      this.yesterdayTotal = this.dayYesterday.home;
+    }
     this.requestUpdate();
+  }
+
+  /** kWh today: the configured daily meter, else the energy dashboard. */
+  private todayKwh(kind: DayKind): number | null {
+    const h = this.hass;
+    const c = this.config;
+    if (!h || !c) return null;
+    const sensor = {
+      home: c.energy_today,
+      solar: c.solar_energy,
+      import: c.grid_import_energy,
+      export: c.grid_export_energy,
+    }[kind];
+    if (sensor) return energyKwh(h, sensor);
+    return this.day[kind] ?? null;
   }
 
   /** Price per kWh: config, else the energy dashboard. */
@@ -378,7 +442,7 @@ export class GlowEnergyCard extends GlowCardBase<EnergyCardConfig> {
         ? readDevices(this.hass, this.config?.devices, n.home, et(this.hass, 'rest'))
         : [],
       flows: flows(n),
-      maxKw: this.config?.max_power ?? 3,
+      maxKw: this.config?.max_power ?? this.autoMax ?? 3,
     };
   }
 
@@ -390,8 +454,14 @@ export class GlowEnergyCard extends GlowCardBase<EnergyCardConfig> {
   }
 
   /** Factual status line: supply shares, plus surplus; grid only: position vs usual range. */
+  /** Neither house consumption nor grid power is set (new card). */
+  private get unconfigured(): boolean {
+    return !this.config?.home && !this.config?.grid;
+  }
+
   private subtitle(g: Gauge): string {
     const h = this.hass;
+    if (this.unconfigured) return et(h, 'pick_source');
     const f = g.flows;
     const shares =
       g.home > IDLE_W
@@ -533,8 +603,7 @@ export class GlowEnergyCard extends GlowCardBase<EnergyCardConfig> {
     const h = this.hass;
     if (!g.devices.length) {
       const rows: [string, string][] = [];
-      const today =
-        this.hass && this.config ? energyKwh(this.hass, this.config.energy_today) : null;
+      const today = this.todayKwh('home');
       if (today !== null) rows.push([et(h, 'today'), kwh(h, today)]);
       if (this.yesterdayAtNow !== undefined)
         rows.push([et(h, 'yesterday_so_far'), kwh(h, this.yesterdayAtNow)]);
@@ -635,9 +704,7 @@ export class GlowEnergyCard extends GlowCardBase<EnergyCardConfig> {
     if (c.price === undefined && c.fixed_price === undefined && this.dashCostToday !== undefined)
       return this.dashCostToday;
     const price = priceValue(h, this.priceSrc);
-    const kwhToday = this.hasSources
-      ? energyKwh(h, c.grid_import_energy)
-      : energyKwh(h, c.energy_today);
+    const kwhToday = this.hasSources ? this.todayKwh('import') : this.todayKwh('home');
     return price !== null && kwhToday !== null ? price * kwhToday : null;
   }
 
@@ -661,14 +728,14 @@ export class GlowEnergyCard extends GlowCardBase<EnergyCardConfig> {
     const c = this.config;
     if (!h || !c) return nothing;
     const items: [string, string, string?][] = [];
-    const today = energyKwh(h, c.energy_today);
+    const today = this.todayKwh('home');
     if (this.hasSources) {
       if (today !== null) items.push([et(h, 'consumed'), kwh(h, today)]);
-      const s = energyKwh(h, c.solar_energy);
+      const s = this.todayKwh('solar');
       if (s !== null) items.push([et(h, 'solar'), kwh(h, s)]);
-      const imp = energyKwh(h, c.grid_import_energy);
+      const imp = this.todayKwh('import');
       if (imp !== null) items.push([et(h, 'import'), kwh(h, imp)]);
-      const exp = energyKwh(h, c.grid_export_energy);
+      const exp = this.todayKwh('export');
       if (exp !== null) items.push([et(h, 'export'), kwh(h, exp)]);
     } else {
       if (today !== null) items.push([et(h, 'today'), kwh(h, today)]);
@@ -736,7 +803,7 @@ export class GlowEnergyCard extends GlowCardBase<EnergyCardConfig> {
           <span class="subt">${this.subtitle(g)}</span>
         </div>
         <div class="hero">
-          <span class="hv">${kwValue(h, g.home)}<small> kW</small></span>
+          <span class="hv">${this.unconfigured ? '–' : kwValue(h, g.home)}<small> kW</small></span>
           <span class="hl">${et(h, 'consumption_caps')}</span>
         </div>
       </div>
@@ -1302,7 +1369,7 @@ export class GlowEnergyCard extends GlowCardBase<EnergyCardConfig> {
           </ul>
         </div>`
       : nothing;
-    const today = energyKwh(h, c.energy_today);
+    const today = this.todayKwh('home');
     const cmp: TemplateResult[] = [];
     const ref = this.yesterdayTotal ?? Math.max(today ?? 0, this.yesterdayAtNow ?? 0, 1);
     if (today !== null) {
