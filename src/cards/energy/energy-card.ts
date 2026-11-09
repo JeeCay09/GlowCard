@@ -24,7 +24,6 @@ import { formatPct, numberState } from '../status/status-logic';
 import {
   IDLE_W,
   baseLoad,
-  autoMaxKw,
   currency,
   dayEnergy,
   meterIds,
@@ -43,9 +42,6 @@ import {
   range,
   readDevices,
   readNow,
-  ringAngle,
-  ringArc,
-  ringPoint,
   usualByHour,
   verdict,
   type DayKind,
@@ -89,7 +85,6 @@ interface Gauge {
   verdict: Verdict | null;
   devices: DeviceNow[];
   flows: Flows;
-  maxKw: number;
 }
 
 /**
@@ -118,7 +113,6 @@ export class GlowEnergyCard extends GlowCardBase<EnergyCardConfig> {
   private dayYesterdayAt: DayKwh = {};
   private dayYesterday: DayKwh = {};
   /** Ring maximum from the last 14 days (kW). */
-  private autoMax: number | null = null;
   private loadedAt = 0;
   private loading = false;
 
@@ -164,13 +158,7 @@ export class GlowEnergyCard extends GlowCardBase<EnergyCardConfig> {
             },
           ),
         ),
-        lookSection(
-          nameIconFields,
-          grid(fontField, {
-            name: 'max_power',
-            selector: { number: { min: 0.5, max: 50, step: 0.5, mode: 'box' } },
-          }),
-        ),
+        lookSection(nameIconFields, fontField),
         actionsField,
         section(
           'advanced_section',
@@ -195,7 +183,6 @@ export class GlowEnergyCard extends GlowCardBase<EnergyCardConfig> {
         grid: 'grid_energy_helper',
         devices: 'devices_helper',
         solar: 'solar_helper',
-        max_power: 'max_power_helper',
         invert_grid: 'invert_grid_helper',
         invert_battery: 'invert_battery_helper',
         energy_today: 'dashboard_helper',
@@ -333,9 +320,6 @@ export class GlowEnergyCard extends GlowCardBase<EnergyCardConfig> {
           min: r.min === null ? null : Math.max(0, r.min * k),
           max: r.max === null ? null : Math.max(0, r.max * k),
         }));
-        this.autoMax = autoMaxKw(
-          this.stats.map((r) => r.max).filter((x): x is number => x !== null),
-        );
         this.usual = usualByHour(this.stats.filter((r) => r.start < startOfDay(now)));
         this.base = baseLoad(this.stats);
       }
@@ -443,7 +427,6 @@ export class GlowEnergyCard extends GlowCardBase<EnergyCardConfig> {
         ? readDevices(this.hass, this.config?.devices, n.home, et(this.hass, 'rest'))
         : [],
       flows: flows(n),
-      maxKw: this.config?.max_power ?? this.autoMax ?? 3,
     };
   }
 
@@ -483,119 +466,19 @@ export class GlowEnergyCard extends GlowCardBase<EnergyCardConfig> {
 
   // ---------- ring ----------
 
-  private ring(g: Gauge, W: number, big = false): TemplateResult {
+  /** Card: consumption now as a big number, with the usual range below. */
+  private nowBlock(g: Gauge): TemplateResult {
     const h = this.hass;
-    const H = W * 0.86;
-    const cx = W / 2;
-    const cy = W * 0.5;
-    const rIn = W * 0.33;
-    const wIn = W * 0.09;
-    const rOut = W * 0.435;
-    const wOut = W * 0.03;
-    const ang = (w: number) => ringAngle(w, g.maxKw);
-    const parts: TemplateResult[] = [];
-    parts.push(
-      svg`<path class="trk" d=${ringArc(cx, cy, rIn, -125, 125)} stroke-width=${wIn}></path>`,
-    );
-    parts.push(
-      svg`<path class="trk2" d=${ringArc(cx, cy, rOut, -125, 125)} stroke-width=${wOut}></path>`,
-    );
-    if (g.usual) {
-      parts.push(
-        svg`<path class="band" d=${ringArc(cx, cy, rIn, ang(g.usual.lo), ang(g.usual.hi))} stroke-width=${wIn + W * 0.05}></path>`,
-      );
-    }
-    for (const t of [500, 1000, 2000]) {
-      if (t / 1000 >= g.maxKw) continue;
-      const a = ang(t);
-      const [x0, y0] = ringPoint(cx, cy, rIn - wIn * 0.5 - 3, a);
-      const [x1, y1] = ringPoint(cx, cy, rIn - wIn * 0.5 - (big ? 8 : 6), a);
-      parts.push(svg`<line class="tick" x1=${x0} y1=${y0} x2=${x1} y2=${y1}></line>`);
-    }
-    // consumption, stacked by device (or one segment in the house colour)
-    const segs = g.devices.length
-      ? g.devices.map((d) => ({ w: d.watts, cls: `seg c${d.slot}` }))
-      : [{ w: g.home, cls: 'seg home' }];
-    let acc = 0;
-    segs.forEach((s, i) => {
-      if (s.w <= 0) return;
-      const a = ang(acc);
-      const b = ang(acc + s.w);
-      parts.push(
-        svg`<path class=${s.cls} d=${ringArc(cx, cy, rIn, a + (i ? 0.9 : 0), b)} stroke-width=${wIn} stroke-linecap=${i === 0 ? 'round' : 'butt'}></path>`,
-      );
-      acc += s.w;
-    });
-    if (g.base !== null) {
-      const a = ang(g.base);
-      const [x0, y0] = ringPoint(cx, cy, rIn - wIn * 0.5 - 1, a);
-      const [x1, y1] = ringPoint(cx, cy, rIn + wIn * 0.5 + 1, a);
-      parts.push(svg`<line class="basemk" x1=${x0} y1=${y0} x2=${x1} y2=${y1}></line>`);
-    }
-    {
-      const [x, y] = ringPoint(cx, cy, rIn, ang(g.home));
-      parts.push(svg`<circle class="ecap" cx=${x} cy=${y} r=${wIn * 0.5}></circle>`);
-    }
-    // outer ring: sources of the consumption, then the solar surplus by destination
-    let a2 = 0;
-    for (const s of ['solar', 'bat', 'grid'] as Source[]) {
-      const w = g.flows.toHome[s];
-      if (w <= IDLE_W) continue;
-      parts.push(
-        svg`<path class="src ${s}" d=${ringArc(cx, cy, rOut, ang(a2), ang(a2 + w) - 0.6)} stroke-width=${wOut}></path>`,
-      );
-      a2 += w;
-    }
-    const surplus: [string, number][] = [
-      ['bat', g.flows.toBattery],
-      ['grid', g.flows.toGrid],
-    ];
-    let hasSurplus = false;
-    for (const [k, w] of surplus) {
-      if (w <= IDLE_W) continue;
-      parts.push(
-        svg`<path class="sur ${k}" d=${ringArc(cx, cy, rOut, ang(a2) + 0.6, ang(a2 + w))} stroke-width=${wOut}></path>`,
-      );
-      a2 += w;
-      hasSurplus = true;
-    }
-    if (hasSurplus) {
-      const [x, y] = ringPoint(cx, cy, rOut, ang(a2));
-      parts.push(svg`<circle class="surcap" cx=${x} cy=${y} r=${wOut * 0.9}></circle>`);
-    }
-    // centre text + verdict pill
-    const fs1 = big ? 12 : 9.5;
-    const fs2 = big ? 19 : 13.5;
-    if (g.usual) {
-      parts.push(
-        svg`<text class="cl" x=${cx} y=${cy - fs2 * 0.55} text-anchor="middle" font-size=${fs1}>${et(h, 'usual_now')}</text>`,
-        svg`<text class="cv" x=${cx} y=${cy + fs2 * 0.5} text-anchor="middle" font-size=${fs2}>${range(h, g.usual)}</text>`,
-        svg`<text class="cl" x=${cx} y=${cy + fs2 * 0.5 + fs1 * 1.35} text-anchor="middle" font-size=${fs1}>kW</text>`,
-      );
-    } else if (g.base !== null) {
-      parts.push(
-        svg`<text class="cl" x=${cx} y=${cy - fs2 * 0.55} text-anchor="middle" font-size=${fs1}>${et(h, 'base_load')}</text>`,
-        svg`<text class="cv" x=${cx} y=${cy + fs2 * 0.5} text-anchor="middle" font-size=${fs2}>${kwValue(h, g.base)}</text>`,
-        svg`<text class="cl" x=${cx} y=${cy + fs2 * 0.5 + fs1 * 1.35} text-anchor="middle" font-size=${fs1}>kW</text>`,
-      );
-    }
-    if (g.verdict) {
-      const pw = big ? 92 : 70;
-      const ph = big ? 24 : 18;
-      const py = H - ph - (big ? 4 : 1);
-      parts.push(
-        svg`<rect class="pill ${g.verdict}" x=${cx - pw / 2} y=${py} width=${pw} height=${ph} rx=${ph / 2}></rect>`,
-        svg`<text class="pillt ${g.verdict}" x=${cx} y=${py + ph * 0.68} text-anchor="middle" font-size=${big ? 12 : 10}>${et(h, g.verdict)}</text>`,
-      );
-    }
-    return html`<svg
-      class="gauge"
-      viewBox="0 0 ${W} ${H.toFixed(1)}"
-      style="width:${W}px;height:${H.toFixed(1)}px"
-      aria-hidden="true"
-    >
-      ${parts}
-    </svg>`;
+    const v = this.unconfigured ? '–' : kwValue(h, g.home);
+    return html`<div class="now ${g.verdict ?? ''}">
+      <span class="nl">${et(h, 'consumption_now')}</span>
+      <b class="nv">${v}<small>kW</small></b>
+      ${
+        g.usual
+          ? html`<span class="nu">${et(h, 'usual_now')} ${range(h, g.usual)} kW</span>`
+          : nothing
+      }
+    </div>`;
   }
 
   // ---------- card parts ----------
@@ -803,13 +686,9 @@ export class GlowEnergyCard extends GlowCardBase<EnergyCardConfig> {
           <span class="title">${this.config.name ?? et(h, 'energy')}</span>
           <span class="subt">${this.subtitle(g)}</span>
         </div>
-        <div class="hero">
-          <span class="hv">${this.unconfigured ? '–' : kwValue(h, g.home)}<small> kW</small></span>
-          <span class="hl">${et(h, 'consumption_caps')}</span>
-        </div>
       </div>
       <div class="body">
-        ${this.ring(g, compact ? 116 : 128)}
+        ${this.nowBlock(g)}
         <div class="right">${this.consList(g)}</div>
       </div>
       ${this.sources()} ${this.foot()}
@@ -913,10 +792,53 @@ export class GlowEnergyCard extends GlowCardBase<EnergyCardConfig> {
         flex: 1 1 110px;
         min-height: 0;
       }
-      .gauge {
-        display: block;
-        flex-shrink: 0;
-        overflow: visible;
+      .now {
+        flex: 0 0 auto;
+        width: 118px;
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+        min-width: 0;
+      }
+      .nl {
+        font-size: 10.5px;
+        font-weight: 700;
+        color: var(--glow-muted);
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+        white-space: nowrap;
+      }
+      .nv {
+        font-size: 38px;
+        font-weight: 800;
+        letter-spacing: -0.04em;
+        line-height: 1.05;
+        color: var(--glow-text);
+        white-space: nowrap;
+      }
+      .nv small {
+        font-size: 14px;
+        font-weight: 700;
+        letter-spacing: 0;
+        margin-left: 4px;
+        color: var(--glow-muted);
+      }
+      .now.high .nv {
+        color: var(--e-hi);
+      }
+      .nu {
+        font-size: 11.5px;
+        font-weight: 700;
+        color: var(--e-band-t);
+        white-space: nowrap;
+      }
+      @container (max-width: 300px) {
+        .now {
+          width: 96px;
+        }
+        .nv {
+          font-size: 30px;
+        }
       }
       .right {
         flex: 1;
@@ -1471,7 +1393,7 @@ export class GlowEnergyCard extends GlowCardBase<EnergyCardConfig> {
       heading: c.name ?? et(h, 'energy'),
       subtitle: `${et(h, 'house_consumption')} · ${this.timeNow()}`,
       content: html`<div class="epop acc-${g.flows.main}">
-        <div class="phero">${this.ring(g, 168, true)} ${stats}</div>
+        <div class="phero">${stats}</div>
         ${rows} ${this.chart(g)}
         ${cmp.length ? html`<div class="cmp n${cmp.length}">${cmp}</div>` : nothing}
       </div>`,
@@ -1497,17 +1419,15 @@ export class GlowEnergyCard extends GlowCardBase<EnergyCardConfig> {
           gap: 14px;
           align-items: center;
         }
-        .gauge {
-          display: block;
-          flex-shrink: 0;
-          overflow: visible;
-        }
         .pstats {
           flex: 1;
           min-width: 0;
-          display: flex;
-          flex-direction: column;
-          gap: 7px;
+          display: grid;
+          grid-template-columns: repeat(auto-fit, minmax(110px, 1fr));
+          gap: 10px 14px;
+        }
+        .pstats .srcline {
+          grid-column: 1 / -1;
         }
         .pstats div {
           display: flex;
@@ -1534,8 +1454,8 @@ export class GlowEnergyCard extends GlowCardBase<EnergyCardConfig> {
         }
         .pstats .hvp {
           white-space: nowrap;
-          font-size: 24px;
-          letter-spacing: -0.03em;
+          font-size: 30px;
+          letter-spacing: -0.04em;
           color: var(--e-acc-t);
         }
         .srcline {
@@ -1819,10 +1739,6 @@ export class GlowEnergyCard extends GlowCardBase<EnergyCardConfig> {
           white-space: nowrap;
         }
         @media (max-width: 480px) {
-          .phero .gauge {
-            width: 140px !important;
-            height: auto !important;
-          }
           .pstats .hvp {
             font-size: 22px;
           }
@@ -1882,7 +1798,8 @@ function tokens() {
       --e-ok-bg: rgba(16, 185, 129, 0.14);
       --e-hi: #c2410c;
       --e-hi-bg: rgba(234, 88, 12, 0.14);
-      --e-band: rgba(245, 158, 11, 0.16);
+      --e-band: rgba(245, 158, 11, 0.3);
+      --e-band-t: #b45309;
       --e-acc-t: var(--e-home-t);
     }
     :host([dark]) {
@@ -1912,7 +1829,8 @@ function tokens() {
       --e-ok-bg: rgba(52, 211, 153, 0.16);
       --e-hi: #fdba74;
       --e-hi-bg: rgba(251, 146, 60, 0.18);
-      --e-band: rgba(255, 231, 176, 0.14);
+      --e-band: rgba(255, 231, 176, 0.28);
+      --e-band-t: rgba(255, 231, 176, 0.9);
     }
     .acc-solar {
       --e-acc-t: var(--e-solar-t);
@@ -1929,128 +1847,6 @@ function tokens() {
 /** Ring and device colours shared by card and popup. */
 function gaugeStyles() {
   return css`
-    .gauge path,
-    .gauge line {
-      fill: none;
-    }
-    .trk {
-      stroke: var(--glow-track);
-      stroke-linecap: round;
-    }
-    .trk2 {
-      stroke: var(--glow-track);
-      stroke-linecap: round;
-      opacity: 0.7;
-    }
-    .band {
-      stroke: var(--e-band);
-    }
-    .tick {
-      stroke: var(--e-faint);
-      stroke-width: 1.5;
-      stroke-linecap: round;
-    }
-    .seg.c1 {
-      stroke: var(--e-c1);
-    }
-    .seg.c2 {
-      stroke: var(--e-c2);
-    }
-    .seg.c3 {
-      stroke: var(--e-c3);
-    }
-    .seg.c4 {
-      stroke: var(--e-c4);
-    }
-    .seg.c5 {
-      stroke: var(--e-c5);
-    }
-    .seg.c0 {
-      stroke: var(--e-c0);
-    }
-    .seg.home {
-      stroke: var(--e-home);
-    }
-    :host([dark]) .seg {
-      filter: drop-shadow(0 0 4px rgba(251, 146, 60, 0.55));
-    }
-    .basemk {
-      stroke: var(--glow-text);
-      stroke-width: 2;
-      stroke-linecap: round;
-      opacity: 0.55;
-    }
-    .ecap {
-      fill: #fff;
-      stroke: rgb(var(--e-home-rgb));
-      stroke-width: 2.5;
-      filter: drop-shadow(0 0 6px rgba(var(--e-home-rgb), 0.9));
-      animation: breathe 2.6s ease-in-out infinite;
-    }
-    :host(:not([dark])) .ecap {
-      filter: drop-shadow(0 1px 3px rgba(0, 0, 0, 0.25));
-    }
-    .src {
-      stroke-linecap: round;
-    }
-    .src.grid {
-      stroke: var(--e-grid);
-    }
-    .src.solar {
-      stroke: var(--e-solar);
-    }
-    .src.bat {
-      stroke: var(--e-bat);
-    }
-    :host([dark]) .src.grid {
-      filter: drop-shadow(0 0 4px var(--e-grid));
-    }
-    :host([dark]) .src.solar {
-      filter: drop-shadow(0 0 4px var(--e-solar));
-    }
-    :host([dark]) .src.bat {
-      filter: drop-shadow(0 0 4px var(--e-bat));
-    }
-    .sur {
-      stroke-dasharray: 2 5;
-      stroke-linecap: round;
-      animation: flow 1.6s linear infinite;
-    }
-    .sur.grid {
-      stroke: var(--e-grid);
-    }
-    .sur.bat {
-      stroke: var(--e-bat);
-    }
-    .surcap {
-      fill: var(--e-solar);
-    }
-    .cl {
-      font-weight: 700;
-      fill: var(--glow-muted);
-    }
-    .cv {
-      font-weight: 800;
-      fill: var(--glow-text);
-      letter-spacing: -0.02em;
-    }
-    .pill.normal,
-    .pill.low {
-      fill: var(--e-ok-bg);
-    }
-    .pill.high {
-      fill: var(--e-hi-bg);
-    }
-    .pillt {
-      font-weight: 800;
-    }
-    .pillt.normal,
-    .pillt.low {
-      fill: var(--e-ok);
-    }
-    .pillt.high {
-      fill: var(--e-hi);
-    }
     .dot {
       width: 9px;
       height: 9px;

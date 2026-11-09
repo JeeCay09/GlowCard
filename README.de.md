@@ -274,18 +274,17 @@ subtitle: 6 Räume
 
 ### Energie
 
-Ein Lastring für jedes Zuhause, mit oder ohne Solaranlage: wie viel das Haus gerade verbraucht und ob das für diese Uhrzeit üblich ist. Der Ring ist nach Geräten eingefärbt. Dahinter zeigt ein Band den üblichen Bereich für diese Stunde (die mittleren 60 % der letzten 14 Tage zu dieser Stunde) und eine Marke die Grundlast. Beides kommt aus den Langzeitstatistiken von Home Assistant, der Sensor braucht also eine `state_class` (bei Leistungssensoren gängiger Integrationen vorhanden). Status: „normal“, „erhöht“ oder „niedrig“.
+Für jedes Zuhause, mit oder ohne Solaranlage: wie viel das Haus gerade verbraucht und ob das für diese Uhrzeit üblich ist. Die Karte zeigt den aktuellen Verbrauch als große Zahl und darunter den üblichen Bereich für diese Stunde (die mittleren 60 % der letzten 14 Tage zu dieser Stunde). Liegt der Verbrauch darüber, wird die Zahl orange. Üblicher Bereich und Grundlast kommen aus den Langzeitstatistiken von Home Assistant, der Sensor braucht also eine `state_class` (bei Leistungssensoren gängiger Integrationen vorhanden). Status: „normal“, „erhöht“ oder „niedrig“.
 
 Ein Sensor genügt: der Hausverbrauch (`home`) oder die Netzleistung (`grid`, positiv = Bezug). Alles andere ist optional und erweitert dieselbe Karte:
 
 - `devices`: bis zu 5 Leistungssensoren. Die Karte listet sie nach Leistung; der Rest des Hauses erscheint als „Nicht erfasst“.
-- `solar`, `battery` (Ladestand) und `battery_power` (positiv = Laden): Die Karte wird eine Reihe höher, zeigt in einem äußeren Ring, woher der Strom kommt, und Kacheln für Solar, Akku und Netz. Ohne Haussensor wird der Verbrauch aus Netz, Solar und Akku berechnet.
+- `solar`, `battery` (Ladestand) und `battery_power` (positiv = Laden): Die Karte wird eine Reihe höher und zeigt Kacheln für Solar, Akku und Netz. Ohne Haussensor wird der Verbrauch aus Netz, Solar und Akku berechnet.
 - `invert_grid` / `invert_battery`: für Sensoren mit umgekehrtem Vorzeichen (Einspeisung bzw. Entladen positiv).
-- `max_power`: kW, bei denen der Ring voll ist. Standard: automatisch aus den Spitzen der letzten 14 Tage.
 
 **Energie-Dashboard:** kWh heute (Verbrauch, Solar, Bezug, Einspeisung), der Vergleich mit dem Vortag und die Kosten kommen ohne Einstellung aus dem Energie-Dashboard von Home Assistant. Die Kosten stammen aus den Kosten-Statistiken von HA, dynamische Preise (z. B. Tibber oder Nordpool) werden also stundengenau abgerechnet. Unter „Erweitert“ lässt sich das mit Tageszählern (`energy_today`, `solar_energy`, `grid_import_energy`, `grid_export_energy`), einem `price` (Sensor oder Zahl), einem `fixed_price` oder einem `cost_today`-Sensor übersteuern.
 
-Antippen öffnet das Popup (Ring, üblicher Bereich, Grundlast mit Kosten pro Tag, Geräte mit Anteil, Verlauf heute gegen Vortag und üblichen Bereich, Vergleichskacheln). Gedrückt halten öffnet die Detailansicht des Haussensors.
+Antippen öffnet das Popup (Verbrauch jetzt, üblicher Bereich, Herkunft, Grundlast mit Kosten pro Tag, Geräte mit Anteil, Verlauf heute gegen Vortag und üblichen Bereich, Vergleichskacheln). Gedrückt halten öffnet die Detailansicht des Haussensors.
 
 ```yaml
 type: custom:glowcard-energy
