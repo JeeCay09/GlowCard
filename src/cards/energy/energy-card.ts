@@ -221,7 +221,8 @@ export class GlowEnergyCard extends GlowCardBase<EnergyCardConfig> {
   }
 
   getGridOptions() {
-    return this.gridOptions(12, this.hasSources ? 5 : 4, 6);
+    // Full width only: ring, list and source tiles need at least ~320 px.
+    return this.gridOptions(12, this.hasSources ? 5 : 4, 12);
   }
 
   protected watchedEntities(): string[] {
@@ -578,7 +579,7 @@ export class GlowEnergyCard extends GlowCardBase<EnergyCardConfig> {
           'solar',
           on,
           on ? 'mdi:white-balance-sunny' : 'mdi:weather-night',
-          kw(h, n.solar ?? 0),
+          kw(h, n.solar ?? 0, 1),
           et(h, 'solar_produced'),
         ),
       );
@@ -597,7 +598,7 @@ export class GlowEnergyCard extends GlowCardBase<EnergyCardConfig> {
           'bat',
           on,
           'mdi:battery-high',
-          n.soc !== null ? formatPct(h, n.soc) : kw(h, bat),
+          n.soc !== null ? formatPct(h, n.soc) : kw(h, bat, 1),
           sub,
         ),
       );
@@ -610,7 +611,7 @@ export class GlowEnergyCard extends GlowCardBase<EnergyCardConfig> {
           'grid',
           on,
           'mdi:transmission-tower',
-          g < -IDLE_W ? `↑ ${kw(h, g)}` : g > IDLE_W ? `↓ ${kw(h, g)}` : '0 kW',
+          Math.abs(g) > IDLE_W ? kw(h, Math.abs(g), 1) : '0 kW',
           g < -IDLE_W ? et(h, 'export') : g > IDLE_W ? et(h, 'import') : et(h, 'grid_short'),
         ),
       );
@@ -766,6 +767,7 @@ export class GlowEnergyCard extends GlowCardBase<EnergyCardConfig> {
         flex-direction: column;
         gap: 7px;
         overflow: hidden;
+        container-type: inline-size;
         cursor: pointer;
         user-select: none;
         -webkit-tap-highlight-color: transparent;
@@ -841,7 +843,8 @@ export class GlowEnergyCard extends GlowCardBase<EnergyCardConfig> {
         display: flex;
         gap: 16px;
         align-items: center;
-        height: 110px;
+        flex: 1 1 110px;
+        min-height: 0;
       }
       .gauge {
         display: block;
@@ -851,6 +854,8 @@ export class GlowEnergyCard extends GlowCardBase<EnergyCardConfig> {
       .right {
         flex: 1;
         min-width: 0;
+        max-height: 100%;
+        overflow: hidden;
         display: flex;
         flex-direction: column;
         gap: 5px;
@@ -967,6 +972,8 @@ export class GlowEnergyCard extends GlowCardBase<EnergyCardConfig> {
         font-size: 14.5px;
         font-weight: 800;
         white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
         letter-spacing: -0.01em;
       }
       .srcs.n3 .st b {
@@ -979,6 +986,44 @@ export class GlowEnergyCard extends GlowCardBase<EnergyCardConfig> {
         white-space: nowrap;
         overflow: hidden;
         text-overflow: ellipsis;
+      }
+      /* Narrow cards (phones): value next to the icon, label below over the full tile. */
+      @container (max-width: 440px) {
+        .srcs .sc,
+        .srcs.n3 .sc {
+          display: grid;
+          grid-template-columns: auto minmax(0, 1fr);
+          grid-template-rows: auto auto;
+          align-content: center;
+          column-gap: 6px;
+          row-gap: 1px;
+          padding: 0 9px;
+        }
+        .srcs .st {
+          display: contents;
+        }
+        .srcs .st b,
+        .srcs.n3 .st b {
+          font-size: 13.5px;
+          align-self: center;
+        }
+        .srcs .st small {
+          grid-column: 1 / 3;
+        }
+        .srcs .mini {
+          width: 18px;
+          height: 18px;
+        }
+        .srcs .mini,
+        .srcs .mini ha-icon {
+          --mdc-icon-size: 12px;
+        }
+      }
+      /* Smallest phones (card under ~336 px): the tile colour carries the source, the icon makes room for text. */
+      @container (max-width: 300px) {
+        .srcs .mini {
+          display: none;
+        }
       }
       .sc:not(.on) b {
         color: var(--glow-muted);
@@ -1421,6 +1466,7 @@ export class GlowEnergyCard extends GlowCardBase<EnergyCardConfig> {
           color: var(--glow-muted);
         }
         .pstats .hvp {
+          white-space: nowrap;
           font-size: 24px;
           letter-spacing: -0.03em;
           color: var(--e-acc-t);
@@ -1428,6 +1474,7 @@ export class GlowEnergyCard extends GlowCardBase<EnergyCardConfig> {
         .srcline {
           flex-direction: row !important;
           align-items: center;
+          white-space: nowrap;
           gap: 6px;
           font-size: 12px;
           font-weight: 700;
@@ -1474,9 +1521,10 @@ export class GlowEnergyCard extends GlowCardBase<EnergyCardConfig> {
         }
         .sech {
           display: flex;
+          flex-wrap: wrap;
           justify-content: space-between;
           align-items: baseline;
-          gap: 8px;
+          gap: 4px 8px;
           font-size: 13px;
           font-weight: 800;
         }
@@ -1495,7 +1543,7 @@ export class GlowEnergyCard extends GlowCardBase<EnergyCardConfig> {
         }
         .pcons li {
           display: grid;
-          grid-template-columns: 10px minmax(0, 1.4fr) minmax(0, 1fr) 58px 36px;
+          grid-template-columns: 10px minmax(0, 1.4fr) minmax(0, 1fr) 58px 40px;
           gap: 8px;
           align-items: center;
           font-size: 13px;
@@ -1530,6 +1578,7 @@ export class GlowEnergyCard extends GlowCardBase<EnergyCardConfig> {
         }
         .pcons .pct {
           text-align: right;
+          white-space: nowrap;
           color: var(--glow-muted);
           font-weight: 600;
           font-size: 12px;
@@ -1654,12 +1703,15 @@ export class GlowEnergyCard extends GlowCardBase<EnergyCardConfig> {
           font-weight: 700;
           color: var(--glow-muted);
           white-space: nowrap;
+          overflow: hidden;
+          text-overflow: ellipsis;
         }
         .cmp b {
           font-size: 15px;
           font-weight: 800;
           display: flex;
-          gap: 4px;
+          flex-wrap: wrap;
+          column-gap: 4px;
           align-items: baseline;
           white-space: nowrap;
         }
@@ -1696,9 +1748,19 @@ export class GlowEnergyCard extends GlowCardBase<EnergyCardConfig> {
           color: var(--glow-muted);
           line-height: 1.25;
         }
+        .sech > span:first-child {
+          white-space: nowrap;
+        }
         @media (max-width: 480px) {
+          .phero .gauge {
+            width: 140px !important;
+            height: auto !important;
+          }
+          .pstats .hvp {
+            font-size: 22px;
+          }
           .pcons li {
-            grid-template-columns: 10px 1fr 60px 58px 32px;
+            grid-template-columns: 10px minmax(0, 1fr) 48px 58px 40px;
           }
           .phero {
             gap: 8px;
