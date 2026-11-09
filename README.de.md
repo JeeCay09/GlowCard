@@ -21,7 +21,7 @@
 - Funktioniert **nur mit Standard-Entitäten von Home Assistant**. Keine Helfer, Template-Sensoren oder Automationen nötig.
 
 > [!NOTE]
-> GlowCard ist in der Beta. v0.7.0 enthält Schalter, Licht, Kopfzeile, Status-Leiste, Chips, Überschrift und Energie, alle mit visuellem Editor; weitere Karten folgen (siehe Roadmap). Optionen können sich bis v1.0 noch ändern.
+> GlowCard ist in der Beta. v0.8.0 enthält Schalter, Licht, Kopfzeile, Status-Leiste, Chips, Überschrift und Energie, alle mit visuellem Editor; weitere Karten folgen (siehe Roadmap). Optionen können sich bis v1.0 noch ändern.
 
 ## Karten
 
@@ -69,7 +69,7 @@ lovelace:
    - Typ: **JavaScript-Modul**
 4. Browser neu laden.
 
-Nach einem Update die URL z. B. auf `/local/glowcard/glowcard.js?v=0.7.0` ändern, damit Browser die neue Datei laden.
+Nach einem Update die URL z. B. auf `/local/glowcard/glowcard.js?v=0.8.0` ändern, damit Browser die neue Datei laden.
 
 ## Konfiguration
 
@@ -309,7 +309,7 @@ battery_power: sensor.battery_power # positiv = Laden
 2. Schalter- und Steckdosen-Karte → v0.1.0 (Beta)
 3. Licht-Karte und Popup → v0.2.0 (Beta)
 4. Kopfzeile, Status-Leiste und Chips, visueller Editor und Standard-Breiten → **v0.3.0 (Beta)**
-5. Überschrift-Karte (Abschnittstitel mit Badges, zusätzlich zum Plan) → v0.4.0; Energie-Karte „Lastring“ mit Popup → v0.7.0
+5. Überschrift-Karte (Abschnittstitel mit Badges, zusätzlich zum Plan) → v0.4.0; Energie-Karte „Lastring“ mit Popup → v0.7.0; Energie-Karte ohne Ring (große Zahl), Editor und Handy-Layout → v0.8.0
 6. Visuelle Editoren für alle Karten, vollständige Doku, Antrag auf HACS-Standardliste → v1.0.0
 
 Später: Raum-Karte, Binärsensor, Bewässerung/Pflanze, Popups für Medien, Rollos und Saugroboter.
