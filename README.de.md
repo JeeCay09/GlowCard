@@ -34,6 +34,7 @@
 | Chip          | `custom:glowcard-chip`    | wie die Status-Leiste, plus Personen und Akku           | Beta (v0.3) |
 | Überschrift   | `custom:glowcard-heading` | beliebige Entitäten als Badges                          | Beta (v0.4) |
 | Energie       | `custom:glowcard-energy`  | Leistungs-`sensor.*` für Haus oder Netz; Solar optional | Beta (v0.7) |
+| Navigation    | `custom:glowcard-nav`     | Ansichten, Popups (`#hash`); Status-Punkte optional     | neu         |
 
 Alle Karten haben einen visuellen Editor (ab Home Assistant 2025.1). In einem Sections-Dashboard passen die Karten genau ins Raster von Home Assistant (Zeilen zu 56 px): Kachel 2 Zeilen am Handy bzw. 3 am PC, Schalter-Gruppe und Leistungs-Karte 3, Mini, Status-Leiste und Chip 1 Zeile. Breite: Kachel, Licht, Mini und Schalter-Gruppe = 1/2 (Kachel und Mini lassen sich auf 1/4 verkleinern), Schalter mit Leistung/Verbrauch, Kopfzeile, Status-Leiste, Überschrift, Energie und Chip-Reihen = ganze Breite (die Energie-Karte lässt sich nicht schmaler machen), einzelner Chip = 1/2, Symbol-Chip = 1/4. Die Breite kannst du im Dashboard-Editor weiterhin ändern. Neue Karten starten ohne Entität; fügst du eine Karte „nach Entität“ hinzu, nimmt sie die gewählte Entität.
 
@@ -301,6 +302,40 @@ battery_power: sensor.battery_power # positiv = Laden
 # optionale Übersteuerung (sonst aus dem Energie-Dashboard):
 # energy_today: sensor.house_energy_today
 # price: 0.32
+```
+
+### Navigation
+
+Eine Leiste aus runden Symbol-Buttons, um Ansichten zu wechseln oder Popups zu öffnen (z. B. Bubble-Card-Popups per `#hash`), als eine gemeinsame Glas-Kapsel. Der Button der aktuellen Ansicht ist ein leuchtender Orb in einer sanften Markierung. Beim Wechsel bleiben alle Buttons an ihrem Platz: Die Markierung gleitet zum neuen Button und erst dann leuchtet sein Orb auf.
+
+- `position: float` (Standard): Die Leiste schwebt unten am Bildschirm, die Karten laufen darunter durch. Beim Bearbeiten des Dashboards (und in der Vorschau des Editors) sitzt sie als Karte, damit du sie anklicken kannst. Setze sie ans Ende einer Ansicht.
+- `position: card`: eine normale Karte über die ganze Breite, die mitscrollt, z. B. fürs Tablet.
+- Der aktuelle Button ergibt sich aus der Adresse: Pfad einer Ansicht (`/dashboard/ansicht` oder nur `ansicht`) oder ein offenes Popup `#hash`.
+- `entity` (optional, je Button): Ein kleiner Punkt erscheint, solange sie an ist (Licht an, Saugroboter saugt, Medien laufen …); Lichter nehmen ihre eigene Farbe.
+- `color`: Leuchtfarbe des aktuellen Buttons (Farbname oder Hex, Standard Indigo); die `color` eines Buttons gewinnt, so kann jeder Button eine eigene Farbe haben.
+- Je Button führen `tap_action` / `hold_action` (YAML) statt der Navigation eine beliebige Home-Assistant-Aktion aus.
+
+```yaml
+type: custom:glowcard-nav
+position: float # oder card
+buttons:
+  - icon: mdi:home-outline
+    name: Start
+    navigation_path: /dashboard-home/start
+  - icon: mdi:sofa-outline
+    name: Wohnzimmer
+    navigation_path: '#wohnzimmer' # öffnet ein Popup
+    entity: light.wohnzimmer # optionaler Status-Punkt
+  - icon: mdi:robot-vacuum
+    name: Vesta
+    navigation_path: '#vesta'
+    entity: vacuum.vesta
+    color: green # optional, je Button
+  - icon: mdi:heart-pulse
+    name: System
+    tap_action:
+      action: more-info
+      entity: sensor.system_health
 ```
 
 ## Roadmap

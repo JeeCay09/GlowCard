@@ -34,6 +34,7 @@
 | Chip       | `custom:glowcard-chip`    | like the status bar, plus people and battery   | beta (v0.3) |
 | Heading    | `custom:glowcard-heading` | any entities as badges                         | beta (v0.4) |
 | Energy     | `custom:glowcard-energy`  | house or grid power `sensor.*`; solar optional | beta (v0.7) |
+| Navigation | `custom:glowcard-nav`     | views, popups (`#hash`); status dots optional  | new         |
 
 All cards have a visual editor (Home Assistant 2025.1 or newer). In a sections dashboard, the cards fit Home Assistant's grid exactly (rows of 56 px): tile 2 rows on phones or 3 on desktop, switch group and power card 3, mini, status bar and chip 1 row. Width: tile, light, mini and switch group = 1/2 (tile and mini can shrink to 1/4), switch with power/usage, header, status bar, heading, energy and chip rows = full width (the energy card cannot be made narrower), single chip = 1/2, icon-only chip = 1/4. You can still change the width in the dashboard editor. New cards start without an entity; when you add a card "by entity", it uses the entity you picked.
 
@@ -301,6 +302,40 @@ battery_power: sensor.battery_power # positive = charging
 # optional overrides (otherwise from the energy dashboard):
 # energy_today: sensor.house_energy_today
 # price: 0.32
+```
+
+### Navigation
+
+A bar of round icon buttons to switch views or open popups (e.g. Bubble Card popups via `#hash`), as one frosted glass capsule. The button of the current view is a lit orb in a soft marker. On a change the buttons stay in place: the marker glides to the new button and only then its orb lights up.
+
+- `position: float` (default): the bar floats at the bottom of the screen, cards scroll underneath. While you edit the dashboard (and in the editor preview) it sits inline so you can still select it. Put it at the end of a view.
+- `position: card`: a normal full-width card in the grid that scrolls with the page, e.g. for tablets.
+- The current button is found from the address: a view path (`/dashboard/view`, or just `view`) or an open popup `#hash`.
+- `entity` (optional, per button): a small dot shows while it is on (light on, vacuum cleaning, media playing …); lights use their own colour.
+- `color`: glow colour of the current button (accent name or hex, default indigo); a button's own `color` wins, so each button can have its own.
+- Per button `tap_action` / `hold_action` (YAML) run any Home Assistant action instead of navigating.
+
+```yaml
+type: custom:glowcard-nav
+position: float # or card
+buttons:
+  - icon: mdi:home-outline
+    name: Start
+    navigation_path: /dashboard-home/start
+  - icon: mdi:sofa-outline
+    name: Living room
+    navigation_path: '#living' # opens a popup
+    entity: light.living_room # optional status dot
+  - icon: mdi:robot-vacuum
+    name: Vacuum
+    navigation_path: '#vacuum'
+    entity: vacuum.vesta
+    color: green # optional, per button
+  - icon: mdi:heart-pulse
+    name: System
+    tap_action:
+      action: more-info
+      entity: sensor.system_health
 ```
 
 ## Roadmap
