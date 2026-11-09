@@ -1,7 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
   baseLoad,
-  autoMaxKw,
   currency,
   dayEnergy,
   dashboardTariff,
@@ -13,7 +12,6 @@ import {
   quantile,
   readDevices,
   readNow,
-  ringAngle,
   usualByHour,
   verdict,
   type HourStat,
@@ -157,13 +155,10 @@ describe('energy: values and formatting', () => {
     expect(priceSource({ price: 0.28, fixed_price: 0.3 })).toBe(0.28);
   });
 
-  it('shows 0 kW while idle and fills the ring on a sqrt scale', () => {
+  it('shows 0 kW while idle', () => {
     const h = hass([]);
     expect(kw(h, 4)).toBe('0 kW');
     expect(kw(h, 620)).toBe('0,62 kW');
-    expect(ringAngle(0, 3)).toBe(-125);
-    expect(ringAngle(3000, 3)).toBe(125);
-    expect(ringAngle(750, 3)).toBeCloseTo(0);
   });
 });
 
@@ -259,14 +254,7 @@ describe('energy: kWh from the energy dashboard', () => {
   });
 });
 
-describe('energy: ring maximum and signs', () => {
-  it('derives the ring maximum from the peaks', () => {
-    const peaks = Array.from({ length: 100 }, (_, i) => (i < 99 ? 2000 : 9000));
-    expect(autoMaxKw(peaks)).toBe(2.5);
-    expect(autoMaxKw(Array(30).fill(300))).toBe(1);
-    expect(autoMaxKw([5000])).toBeNull();
-  });
-
+describe('energy: signs', () => {
   it('inverts battery and grid power when asked', () => {
     const h = hass([e('sensor.bat', '600', W), e('sensor.grid', '200', W)]);
     const n = readNow(h, {

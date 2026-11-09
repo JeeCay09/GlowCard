@@ -274,18 +274,17 @@ subtitle: 6 rooms
 
 ### Energy
 
-A load ring for every home, with or without solar: how much the house draws right now, and whether that is usual for this time of day. The ring is coloured by device. Behind it, a band shows the usual range for this hour (the middle 60 % of the last 14 days at this hour) and a mark shows the base load. Both come from Home Assistant's long-term statistics, so the sensor needs a `state_class` (all power sensors of common integrations have one). Status: "normal", "high" or "low".
+For every home, with or without solar: how much the house draws right now, and whether that is usual for this time of day. The card shows the current consumption as a big number with the usual range for this hour below it (the middle 60 % of the last 14 days at this hour). Above that range the number turns orange. Usual range and base load come from Home Assistant's long-term statistics, so the sensor needs a `state_class` (all power sensors of common integrations have one). Status: "normal", "high" or "low".
 
 One sensor is enough: the house consumption (`home`) or the grid power (`grid`, positive = import). Everything else is optional and extends the same card:
 
 - `devices`: up to 5 power sensors. The card lists them by power; the rest of the house is shown as "Not measured".
-- `solar`, `battery` (state of charge) and `battery_power` (positive = charging): the card grows by one row, shows where the power comes from in an outer ring and tiles for solar, battery and grid. Without a house sensor the house is calculated from grid, solar and battery.
+- `solar`, `battery` (state of charge) and `battery_power` (positive = charging): the card grows by one row and shows tiles for solar, battery and grid. Without a house sensor the house is calculated from grid, solar and battery.
 - `invert_grid` / `invert_battery`: for sensors with the opposite sign (export or discharging positive).
-- `max_power`: kW at which the ring is full. Default: automatic from the peaks of the last 14 days.
 
 **Energy dashboard:** kWh today (usage, solar, import, export), the comparison with yesterday and the costs come from Home Assistant's energy dashboard without any setting. Costs use HA's cost statistics, so dynamic prices (e.g. Tibber or Nordpool) are billed correctly per hour. In "Advanced" you can override this with daily meters (`energy_today`, `solar_energy`, `grid_import_energy`, `grid_export_energy`), a `price` (sensor or number), a `fixed_price` or a `cost_today` sensor.
 
-Tap opens the popup (ring, usual range, base load with cost per day, devices with share, today's curve against yesterday and the usual band, comparison tiles). Hold opens more info of the house sensor.
+Tap opens the popup (consumption now, usual range, source, base load with cost per day, devices with share, today's curve against yesterday and the usual band, comparison tiles). Hold opens more info of the house sensor.
 
 ```yaml
 type: custom:glowcard-energy
