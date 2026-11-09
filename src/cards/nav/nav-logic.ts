@@ -39,7 +39,9 @@ const trimSlash = (p: string) => (p.length > 1 ? p.replace(/\/+$/, '') : p);
 /**
  * Index of the button for the current location, or -1. A popup hash (`#kitchen`) wins
  * while it is open; otherwise the view path must match (query and trailing slash ignored).
- * Relative paths (`kitchen`) match the last part of the current path.
+ * Relative paths (`kitchen`) match the last part of the current path. Without an exact
+ * match, the longest path that is a parent of the current one wins, so a button for the
+ * dashboard itself (`/my-dashboard`) marks its first view (`/my-dashboard/0`).
  */
 export function currentIndex(
   buttons: NavButtonConfig[],
@@ -51,12 +53,21 @@ export function currentIndex(
     if (i >= 0) return i;
   }
   const path = trimSlash(loc.pathname);
-  return targets.findIndex((t) => {
-    if (!t || t.startsWith('#')) return false;
-    const bare = trimSlash(t.split(/[?#]/)[0]);
+  const paths = targets.map((t) =>
+    !t || t.startsWith('#') ? undefined : trimSlash(t.split(/[?#]/)[0]),
+  );
+  const exact = paths.findIndex((bare) => {
+    if (!bare) return false;
     if (bare.startsWith('/')) return bare === path;
     return path === bare || path.endsWith(`/${bare}`);
   });
+  if (exact >= 0) return exact;
+  let best = -1;
+  paths.forEach((bare, i) => {
+    if (!bare || !bare.startsWith('/') || bare === '/') return;
+    if (path.startsWith(`${bare}/`) && (best < 0 || bare.length > paths[best]!.length)) best = i;
+  });
+  return best;
 }
 
 /** True while the dot entity is on (on, open, home, playing, heating, cleaning). */
@@ -93,4 +104,50 @@ export function dotColor(e: HassEntity | undefined, own: Rgb | undefined, dark: 
   if (e?.entity_id.startsWith('light.'))
     return lightColor(e) ?? resolveAccent('warm', dark, 'warm');
   return own ?? resolveAccent('green', dark, 'green');
+}
+
+/** Where the marker of a bar was last placed, shared by all bars on the page. */
+export interface NavHandoff {
+  /** Identifies the bar by its buttons, so only an identical bar continues the glide. */
+  sig: string;
+  /** Button the marker was on before `index` (-1: none). */
+  prev: number;
+  index: number;
+  /** Time of the last move (ms). */
+  at: number;
+}
+
+/** How long after a tap a new bar still continues the glide from the old button. */
+export const HANDOFF_MS = 1500;
+
+/** Signature of a bar: its button targets and icons. */
+export function navSignature(buttons: NavButtonConfig[]): string {
+  return JSON.stringify(buttons.map((b) => [targetOf(b) ?? '', b.icon ?? '']));
+}
+
+/** New handoff after the marker of a bar was placed on `index`. */
+export function nextHandoff(
+  h: NavHandoff | undefined,
+  sig: string,
+  index: number,
+  now: number,
+): NavHandoff {
+  if (h && h.sig === sig && h.index === index) return h;
+  return { sig, prev: h && h.sig === sig ? h.index : -1, index, at: now };
+}
+
+/**
+ * Button a freshly shown bar should start its marker on, so it glides on to `target`;
+ * -1 to place it right away. After a tap in the old bar the marker continues from the
+ * button before it; if the old bar never saw the change, it starts where that bar left it.
+ */
+export function glideStart(
+  h: NavHandoff | undefined,
+  sig: string,
+  target: number,
+  now: number,
+): number {
+  if (!h || h.sig !== sig || target < 0) return -1;
+  if (h.index !== target) return h.index;
+  return now - h.at < HANDOFF_MS && h.prev !== target ? h.prev : -1;
 }
