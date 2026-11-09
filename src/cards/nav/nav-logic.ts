@@ -39,7 +39,9 @@ const trimSlash = (p: string) => (p.length > 1 ? p.replace(/\/+$/, '') : p);
 /**
  * Index of the button for the current location, or -1. A popup hash (`#kitchen`) wins
  * while it is open; otherwise the view path must match (query and trailing slash ignored).
- * Relative paths (`kitchen`) match the last part of the current path.
+ * Relative paths (`kitchen`) match the last part of the current path. Without an exact
+ * match, the longest path that is a parent of the current one wins, so a button for the
+ * dashboard itself (`/my-dashboard`) marks its first view (`/my-dashboard/0`).
  */
 export function currentIndex(
   buttons: NavButtonConfig[],
@@ -51,12 +53,21 @@ export function currentIndex(
     if (i >= 0) return i;
   }
   const path = trimSlash(loc.pathname);
-  return targets.findIndex((t) => {
-    if (!t || t.startsWith('#')) return false;
-    const bare = trimSlash(t.split(/[?#]/)[0]);
+  const paths = targets.map((t) =>
+    !t || t.startsWith('#') ? undefined : trimSlash(t.split(/[?#]/)[0]),
+  );
+  const exact = paths.findIndex((bare) => {
+    if (!bare) return false;
     if (bare.startsWith('/')) return bare === path;
     return path === bare || path.endsWith(`/${bare}`);
   });
+  if (exact >= 0) return exact;
+  let best = -1;
+  paths.forEach((bare, i) => {
+    if (!bare || !bare.startsWith('/') || bare === '/') return;
+    if (path.startsWith(`${bare}/`) && (best < 0 || bare.length > paths[best]!.length)) best = i;
+  });
+  return best;
 }
 
 /** True while the dot entity is on (on, open, home, playing, heating, cleaning). */
