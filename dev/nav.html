@@ -1,0 +1,122 @@
+<!doctype html>
+<html lang="de">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <title>GlowCard Navigation</title>
+    <style>
+      /* Phone-sized preview of glowcard-nav: ?dark=1, ?pos=card, ?w=<px> for the section width. */
+      body {
+        margin: 0;
+        min-height: 100vh;
+        padding: 16px 16px 120px;
+        box-sizing: border-box;
+        background: #e7e9ef;
+        font-family: system-ui, sans-serif;
+        position: relative;
+        overflow-x: hidden;
+      }
+      body[data-dark] {
+        background: #07080b;
+      }
+      body::before,
+      body::after {
+        content: '';
+        position: fixed;
+        width: 520px;
+        height: 520px;
+        border-radius: 50%;
+        z-index: -1;
+      }
+      body::before {
+        left: -220px;
+        top: 60px;
+        background: radial-gradient(circle, rgba(245, 165, 36, 0.25) 0%, rgba(245, 165, 36, 0) 65%);
+      }
+      body::after {
+        right: -260px;
+        top: 420px;
+        background: radial-gradient(circle, rgba(99, 102, 241, 0.25) 0%, rgba(99, 102, 241, 0) 65%);
+      }
+      .section {
+        max-width: var(--w, 100%);
+        display: grid;
+        grid-template-columns: repeat(12, minmax(0, 1fr));
+        gap: 8px;
+      }
+      .section > * {
+        grid-column: span 6;
+      }
+      .section > .full {
+        grid-column: 1 / -1;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="section"></div>
+    <script type="module">
+      import '../dist/glowcard.js';
+      import { mount } from './build/demo.js';
+      const params = new URLSearchParams(location.search);
+      if (params.get('dark')) document.body.setAttribute('data-dark', '');
+      if (params.get('w')) document.body.style.setProperty('--w', `${params.get('w')}px`);
+      if (!location.hash) history.replaceState(null, '', `${location.search}#wohnzimmer`);
+      const nav = [
+        'glowcard-nav',
+        {
+          position: params.get('pos') ?? 'float',
+          color: params.get('color') ?? undefined,
+          buttons: [
+            {
+              icon: 'mdi:sofa-outline',
+              name: 'Wohnzimmer',
+              navigation_path: '#wohnzimmer',
+              entity: 'light.living',
+            },
+            {
+              icon: 'mdi:countertop-outline',
+              name: 'Küche',
+              navigation_path: '#kitchen',
+              entity: 'light.kitchen',
+            },
+            { icon: 'mdi:solar-power-variant', name: 'Solar', navigation_path: '#solar' },
+            {
+              icon: 'mdi:robot-vacuum',
+              name: 'Vesta',
+              navigation_path: '#vesta',
+              entity: 'switch.home_office',
+            },
+            { icon: 'mdi:heart-pulse', name: 'HAGHS', navigation_path: '#haghs' },
+          ],
+        },
+        'full',
+      ];
+      const cards = [
+        ['glowcard-heading', { heading: 'Wohnzimmer', icon: 'mdi:sofa-outline' }, 'full'],
+        ['glowcard-light', { entity: 'light.living', size: 'compact' }],
+        ['glowcard-light', { entity: 'light.kitchen', size: 'compact' }],
+        ['glowcard-switch', { entity: 'switch.sprinkler', size: 'compact' }],
+        ['glowcard-switch', { entity: 'switch.night_light', size: 'compact' }],
+        ['glowcard-light', { entity: 'light.hall', size: 'mini' }, 'full'],
+        ['glowcard-switch', { entity: 'switch.dnd', size: 'mini' }, 'full'],
+        [
+          'glowcard-light',
+          { entity: 'light.led_strip', size: 'compact', icon: 'mdi:led-strip-variant' },
+        ],
+        ['glowcard-switch', { entity: 'switch.home_office', size: 'compact' }],
+      ];
+      if (params.get('pos') === 'card') cards.splice(1, 0, nav);
+      else cards.push(nav);
+      const section = document.querySelector('.section');
+      for (const [tag, config, cls] of cards) {
+        const el = document.createElement(tag);
+        el.dataset.card = '';
+        if (cls) el.className = cls;
+        el.setConfig({ type: `custom:${tag}`, ...config });
+        section.appendChild(el);
+      }
+      if (params.get('dark')) section.setAttribute('data-dark', '');
+      mount(document);
+    </script>
+  </body>
+</html>
