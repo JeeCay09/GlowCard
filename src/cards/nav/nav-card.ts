@@ -59,13 +59,15 @@ export class GlowNavCard extends GlowCardBase<NavCardConfig> {
         --nav-pad: 4px;
         --nav-ease: cubic-bezier(0.4, 0, 0.2, 1);
         --nav-dur: 0.32s;
-        --nav-glow: 0 0 20px rgba(var(--nav-a), 0.55);
+        --nav-glow-r: 20px;
+        --nav-glow-a: 0.55;
       }
       :host([dark]) {
         --nav-float-glass: rgba(26, 28, 35, 0.62);
         --nav-float-shadow:
           0 18px 40px -10px rgba(0, 0, 0, 0.7), 0 1px 0 rgba(255, 255, 255, 0.05) inset;
-        --nav-glow: 0 0 28px rgba(var(--nav-a), 0.8);
+        --nav-glow-r: 28px;
+        --nav-glow-a: 0.8;
       }
       :host([floating]) {
         height: 0;
@@ -82,7 +84,8 @@ export class GlowNavCard extends GlowCardBase<NavCardConfig> {
         gap: 2px;
         width: 100%;
         padding: var(--nav-pad);
-        border-radius: 999px;
+        /* As a card it has the card radius of the mockup; floating it is a round capsule. */
+        border-radius: var(--glow-radius);
         font-family: var(--glow-font);
         background: var(--nav-glass);
         border: 1px solid var(--glow-glass-border);
@@ -92,11 +95,13 @@ export class GlowNavCard extends GlowCardBase<NavCardConfig> {
       }
       :host([floating]) .dock {
         position: fixed;
+        border-radius: 999px;
         z-index: 5;
         left: 50%;
         bottom: calc(16px + env(safe-area-inset-bottom, 0px));
         transform: translateX(-50%);
-        width: auto;
+        /* A fixed box at left: 50% would shrink to half the screen and squeeze the buttons. */
+        width: max-content;
         max-width: calc(100vw - 32px);
         justify-content: center;
         background: var(--nav-float-glass);
@@ -131,7 +136,8 @@ export class GlowNavCard extends GlowCardBase<NavCardConfig> {
         position: relative;
         z-index: 1;
         box-sizing: border-box;
-        flex: 0 1 var(--nav-btn-w);
+        flex: 0 1 auto;
+        width: var(--nav-btn-w);
         min-width: 40px;
         height: var(--nav-btn-h);
         border-radius: 999px;
@@ -185,7 +191,8 @@ export class GlowNavCard extends GlowCardBase<NavCardConfig> {
       /* The new orb lights up only once the marker has (nearly) arrived. */
       .cur .orb {
         color: #ffffff;
-        box-shadow: var(--nav-glow);
+        /* Written out here: --nav-a is set on the dock, so a shorthand on :host would not see it. */
+        box-shadow: 0 0 var(--nav-glow-r) rgba(var(--nav-a), var(--nav-glow-a));
         transition:
           box-shadow 0.3s calc(var(--nav-dur) * 0.8),
           color 0.2s calc(var(--nav-dur) * 0.8);
@@ -393,7 +400,8 @@ export class GlowNavCard extends GlowCardBase<NavCardConfig> {
   private renderButton(b: NavButtonConfig, i: number, accent: Rgb) {
     const isCur = i === this.current;
     const e = b.entity ? this.hass?.states[b.entity] : undefined;
-    const dot = dotActive(e) ? dotColor(e, this.color(b), this.dark) : undefined;
+    const own = b.color ? this.color(b) : undefined;
+    const dot = dotActive(e) ? dotColor(e, own, this.dark) : undefined;
     const bright =
       isCur && (0.2126 * accent[0] + 0.7152 * accent[1] + 0.0722 * accent[2]) / 255 > 0.6;
     return html`<button
