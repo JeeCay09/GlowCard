@@ -56,6 +56,18 @@ const ICON_PATHS: Record<string, string> = {
   'mdi:smoke-detector-variant':
     'M4 12a8 8 0 1 0 16 0a8 8 0 1 0-16 0M10 12a2 2 0 1 0 4 0a2 2 0 1 0-4 0',
   'mdi:bell': 'M6 16v-5a6 6 0 0 1 12 0v5l1.5 2h-15L6 16zM10 20a2 2 0 0 0 4 0',
+  // GlowNav (dev/nav.html)
+  'mdi:countertop-outline': 'M3 10h18v3H3zM5 13v7M19 13v7M8 6h3v4M14 7a2 2 0 0 1 4 0v3',
+  'mdi:solar-power-variant':
+    'M4 14h16l-2 6H6zM9 14l-1 6M15 14l1 6M5 17h14M12 3v2M6.5 5.5l1 1M17.5 5.5l-1 1M9 11a3 3 0 0 1 6 0',
+  'mdi:robot-vacuum':
+    'M12 3a9 9 0 1 0 0 18a9 9 0 1 0 0-18M12 7a2 2 0 1 0 0 4a2 2 0 1 0 0-4M6 15h12',
+  'mdi:heart-pulse':
+    'M12 20s-7-4.5-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.5-7 10-7 10zM5 12h4l1.5-3 3 6 1.5-3h4',
+  'mdi:home-outline': 'M4 11l8-6 8 6v9H4zM10 20v-5h4v5',
+  'mdi:floor-plan': 'M4 4h16v16H4zM4 11h7v9M11 4v4M15 11h5',
+  'mdi:lightning-bolt-outline': 'M13 2L4 14h7l-1 8 9-12h-7z',
+  'mdi:menu': 'M4 7h16M4 12h16M4 17h16',
 };
 
 /** Stand-in for Home Assistant's <ha-icon>, drawing stroke icons like the mockups. */
