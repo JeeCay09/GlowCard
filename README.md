@@ -21,7 +21,7 @@
 - Works with **standard Home Assistant entities only**. No helpers, template sensors or automations required.
 
 > [!NOTE]
-> GlowCard is in beta. v0.8.0 contains the switch, light, header, status bar, chip, heading and energy cards, all with a visual editor; more cards follow (see the roadmap). Options may still change before v1.0.
+> GlowCard is in beta. v0.9.0 contains the switch, light, header, status bar, chip, heading, energy and navigation cards, all with a visual editor; more cards follow (see the roadmap). Options may still change before v1.0.
 
 ## Cards
 
@@ -34,6 +34,7 @@
 | Chip       | `custom:glowcard-chip`    | like the status bar, plus people and battery   | beta (v0.3) |
 | Heading    | `custom:glowcard-heading` | any entities as badges                         | beta (v0.4) |
 | Energy     | `custom:glowcard-energy`  | house or grid power `sensor.*`; solar optional | beta (v0.7) |
+| Navigation | `custom:glowcard-nav`     | views, popups (`#hash`); status dots optional  | beta (v0.9) |
 
 All cards have a visual editor (Home Assistant 2025.1 or newer). In a sections dashboard, the cards fit Home Assistant's grid exactly (rows of 56 px): tile 2 rows on phones or 3 on desktop, switch group and power card 3, mini, status bar and chip 1 row. Width: tile, light, mini and switch group = 1/2 (tile and mini can shrink to 1/4), switch with power/usage, header, status bar, heading, energy and chip rows = full width (the energy card cannot be made narrower), single chip = 1/2, icon-only chip = 1/4. You can still change the width in the dashboard editor. New cards start without an entity; when you add a card "by entity", it uses the entity you picked.
 
@@ -69,7 +70,7 @@ lovelace:
    - Type: **JavaScript module**
 4. Reload your browser.
 
-After an update, change the URL to e.g. `/local/glowcard/glowcard.js?v=0.8.0` so browsers load the new file.
+After an update, change the URL to e.g. `/local/glowcard/glowcard.js?v=0.9.0` so browsers load the new file.
 
 ## Configuration
 
@@ -303,13 +304,47 @@ battery_power: sensor.battery_power # positive = charging
 # price: 0.32
 ```
 
+### Navigation
+
+A bar of round icon buttons to switch views or open popups (e.g. Bubble Card popups via `#hash`), as one frosted glass capsule. The button of the current view is a lit orb in a soft marker. On a change the buttons stay in place: the marker glides to the new button and only then its orb lights up.
+
+- `position: float` (default): the bar floats at the bottom of the screen, cards scroll underneath. While you edit the dashboard (and in the editor preview) it sits inline so you can still select it. Put it at the end of a view.
+- `position: card`: a normal full-width card in the grid that scrolls with the page, e.g. for tablets.
+- The current button is found from the address: a view path (`/dashboard/view`, or just `view`) or an open popup `#hash`.
+- `entity` (optional, per button): a small dot shows while it is on (light on, vacuum cleaning, media playing …); lights use their own colour.
+- `color`: glow colour of the current button (accent name or hex, default indigo); a button's own `color` wins, so each button can have its own.
+- Per button `tap_action` / `hold_action` (YAML) run any Home Assistant action instead of navigating.
+
+```yaml
+type: custom:glowcard-nav
+position: float # or card
+buttons:
+  - icon: mdi:home-outline
+    name: Start
+    navigation_path: /dashboard-home/start
+  - icon: mdi:sofa-outline
+    name: Living room
+    navigation_path: '#living' # opens a popup
+    entity: light.living_room # optional status dot
+  - icon: mdi:robot-vacuum
+    name: Vacuum
+    navigation_path: '#vacuum'
+    entity: vacuum.vesta
+    color: green # optional, per button
+  - icon: mdi:heart-pulse
+    name: System
+    tap_action:
+      action: more-info
+      entity: sensor.system_health
+```
+
 ## Roadmap
 
 1. Core: glass, orb, drag bar, popups, light/dark mode
 2. Switch and plug cards → v0.1.0 (beta)
 3. Light card and popup → v0.2.0 (beta)
 4. Header, status bar and chips, visual editor and default widths → **v0.3.0 (beta)**
-5. Heading card (section titles with badges, added to the plan) → v0.4.0; Energy card "load ring" with popup → v0.7.0; energy card without ring (big current value), editor and phone layout → v0.8.0
+5. Heading card (section titles with badges, added to the plan) → v0.4.0; Energy card "load ring" with popup → v0.7.0; energy card without ring (big current value), editor and phone layout → v0.8.0; navigation bar (floating or as a card) → v0.9.0
 6. Visual editors for all cards, full docs, submission to the HACS default list → v1.0.0
 
 Later: room card, binary sensor, irrigation/plant, media, cover and vacuum popups.
