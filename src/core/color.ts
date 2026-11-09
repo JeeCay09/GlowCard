@@ -16,6 +16,10 @@ export const ACCENTS: Record<string, { dark: string; light: string }> = {
   indigo: { dark: '#6366F1', light: '#6366F1' },
   teal: { dark: '#2DD4BF', light: '#14B8A6' },
   warm: { dark: '#FFC872', light: '#FFC872' },
+  red: { dark: '#EF4444', light: '#EF4444' },
+  pink: { dark: '#EC4899', light: '#EC4899' },
+  yellow: { dark: '#EAB308', light: '#EAB308' },
+  purple: { dark: '#8B5CF6', light: '#8B5CF6' },
 };
 
 export type Rgb = [number, number, number];

@@ -66,6 +66,19 @@ describe('current button', () => {
     expect(currentIndex(buttons, { pathname: '/zuhause-handy/energie', hash: '' })).toBe(4);
   });
 
+  it('marks the dashboard button on its first view (/dash/0)', () => {
+    const nav = [
+      { navigation_path: '/glowcard-test' },
+      { navigation_path: '/glowcard-test/wohnzimmerglowcard' },
+      { navigation_path: '/energy' },
+    ];
+    expect(currentIndex(nav, { pathname: '/glowcard-test/0', hash: '' })).toBe(0);
+    expect(currentIndex(nav, { pathname: '/glowcard-test', hash: '' })).toBe(0);
+    expect(currentIndex(nav, { pathname: '/glowcard-test/wohnzimmerglowcard', hash: '' })).toBe(1);
+    expect(currentIndex(nav, { pathname: '/energy', hash: '' })).toBe(2);
+    expect(currentIndex(nav, { pathname: '/glowcard-testx/0', hash: '' })).toBe(-1);
+  });
+
   it('returns -1 when nothing matches', () => {
     expect(currentIndex(buttons, { pathname: '/lovelace/0', hash: '' })).toBe(-1);
     expect(currentIndex([], { pathname: '/', hash: '' })).toBe(-1);
@@ -97,6 +110,7 @@ describe('colours', () => {
     expect(configColor('green', false)).toEqual([16, 185, 129]);
     expect(configColor('#ff0000', false)).toEqual([255, 0, 0]);
     expect(configColor([1, 2, 3], false)).toEqual([1, 2, 3]);
+    expect(configColor('Red', false)).toEqual([239, 68, 68]);
     expect(configColor('nonsense', false)).toBeNull();
     expect(configColor(undefined, false)).toBeNull();
   });
