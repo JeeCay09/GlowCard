@@ -26,8 +26,6 @@ export interface EnergyEntities {
   solar_energy?: string;
   grid_import_energy?: string;
   grid_export_energy?: string;
-  /** Upper end of the ring in kW (default: automatic from the last 14 days). */
-  max_power?: number;
   /** The battery power sensor reports + for discharging. */
   invert_battery?: boolean;
   /** The grid power sensor reports + for export. */
@@ -164,13 +162,6 @@ export function dayEnergy(changes: Record<string, number>, m?: Meters): DayKwh {
     out.home = Math.max(0, home);
   }
   return out;
-}
-
-/** Ring maximum in kW from hourly peaks (W): P99 + 10 %, rounded up to 0.5 kW, at least 1. */
-export function autoMaxKw(peaks: number[]): number | null {
-  const p = quantile(peaks, 0.99);
-  if (p === null || peaks.length < 24) return null;
-  return Math.max(1, Math.ceil(((p * 1.1) / 1000) * 2) / 2);
 }
 
 /**
@@ -334,28 +325,6 @@ export function verdict(home: number, usual: Usual | null): Verdict | null {
   if (home > usual.hi) return 'high';
   if (home < usual.lo) return 'low';
   return 'normal';
-}
-
-// ---------- ring geometry (Lastring mockup) ----------
-
-export const RING = { a0: -125, a1: 125 } as const;
-
-/** Angle (deg from top) on the ring for a power in W, sqrt scale up to `maxKw`. */
-export function ringAngle(watts: number, maxKw: number): number {
-  const v = Math.max(0, Math.min(watts / 1000, maxKw));
-  return RING.a0 + (RING.a1 - RING.a0) * Math.sqrt(v / maxKw);
-}
-
-export function ringPoint(cx: number, cy: number, r: number, deg: number): [number, number] {
-  const a = (deg * Math.PI) / 180;
-  return [cx + r * Math.sin(a), cy - r * Math.cos(a)];
-}
-
-export function ringArc(cx: number, cy: number, r: number, a: number, b: number): string {
-  if (b - a < 0.01) b = a + 0.01;
-  const [x0, y0] = ringPoint(cx, cy, r, a);
-  const [x1, y1] = ringPoint(cx, cy, r, b);
-  return `M${x0.toFixed(2)} ${y0.toFixed(2)}A${r} ${r} 0 ${b - a > 180 ? 1 : 0} 1 ${x1.toFixed(2)} ${y1.toFixed(2)}`;
 }
 
 /** Fraction of the local day that has passed (0–1). */
