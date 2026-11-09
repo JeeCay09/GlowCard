@@ -105,3 +105,49 @@ export function dotColor(e: HassEntity | undefined, own: Rgb | undefined, dark: 
     return lightColor(e) ?? resolveAccent('warm', dark, 'warm');
   return own ?? resolveAccent('green', dark, 'green');
 }
+
+/** Where the marker of a bar was last placed, shared by all bars on the page. */
+export interface NavHandoff {
+  /** Identifies the bar by its buttons, so only an identical bar continues the glide. */
+  sig: string;
+  /** Button the marker was on before `index` (-1: none). */
+  prev: number;
+  index: number;
+  /** Time of the last move (ms). */
+  at: number;
+}
+
+/** How long after a tap a new bar still continues the glide from the old button. */
+export const HANDOFF_MS = 1500;
+
+/** Signature of a bar: its button targets and icons. */
+export function navSignature(buttons: NavButtonConfig[]): string {
+  return JSON.stringify(buttons.map((b) => [targetOf(b) ?? '', b.icon ?? '']));
+}
+
+/** New handoff after the marker of a bar was placed on `index`. */
+export function nextHandoff(
+  h: NavHandoff | undefined,
+  sig: string,
+  index: number,
+  now: number,
+): NavHandoff {
+  if (h && h.sig === sig && h.index === index) return h;
+  return { sig, prev: h && h.sig === sig ? h.index : -1, index, at: now };
+}
+
+/**
+ * Button a freshly shown bar should start its marker on, so it glides on to `target`;
+ * -1 to place it right away. After a tap in the old bar the marker continues from the
+ * button before it; if the old bar never saw the change, it starts where that bar left it.
+ */
+export function glideStart(
+  h: NavHandoff | undefined,
+  sig: string,
+  target: number,
+  now: number,
+): number {
+  if (!h || h.sig !== sig || target < 0) return -1;
+  if (h.index !== target) return h.index;
+  return now - h.at < HANDOFF_MS && h.prev !== target ? h.prev : -1;
+}

@@ -5,6 +5,9 @@ import {
   currentIndex,
   dotActive,
   dotColor,
+  glideStart,
+  navSignature,
+  nextHandoff,
   tapActionOf,
   targetOf,
 } from '../src/cards/nav/nav-logic';
@@ -154,5 +157,33 @@ describe('glowcard-nav card', () => {
     expect(() =>
       el.setConfig({ type: 'custom:glowcard-nav', position: 'top' as 'card' }),
     ).toThrow();
+  });
+});
+
+describe('marker across views', () => {
+  const sig = navSignature(buttons);
+
+  it('continues from the old button right after a tap', () => {
+    let h = nextHandoff(undefined, sig, 0, 1000);
+    expect(h).toEqual({ sig, prev: -1, index: 0, at: 1000 });
+    h = nextHandoff(h, sig, 1, 5000);
+    expect(h).toEqual({ sig, prev: 0, index: 1, at: 5000 });
+    expect(nextHandoff(h, sig, 1, 6000)).toBe(h);
+    expect(glideStart(h, sig, 1, 5300)).toBe(0);
+    expect(glideStart(h, sig, 1, 9000)).toBe(-1);
+  });
+
+  it('starts where the old bar was if it missed the change', () => {
+    const h = nextHandoff(undefined, sig, 0, 1000);
+    expect(glideStart(h, sig, 4, 99999)).toBe(0);
+  });
+
+  it('only glides between identical bars', () => {
+    const h = nextHandoff(nextHandoff(undefined, sig, 0, 0), sig, 1, 10);
+    const other = navSignature(buttons.slice(0, 3));
+    expect(glideStart(h, other, 1, 20)).toBe(-1);
+    expect(nextHandoff(h, other, 2, 30).prev).toBe(-1);
+    expect(glideStart(undefined, sig, 1, 20)).toBe(-1);
+    expect(glideStart(h, sig, -1, 20)).toBe(-1);
   });
 });
