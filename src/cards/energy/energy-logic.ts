@@ -26,8 +26,10 @@ export interface EnergyEntities {
   solar_energy?: string;
   grid_import_energy?: string;
   grid_export_energy?: string;
-  /** Upper end of the ring in kW (default 3). */
-  max_power?: number;
+  /** The battery power sensor reports + for discharging. */
+  invert_battery?: boolean;
+  /** The grid power sensor reports + for export. */
+  invert_grid?: boolean;
 }
 
 /** Below this (W) a flow counts as idle. */
@@ -46,8 +48,9 @@ export interface EnergyNow {
 
 export function readNow(hass: HomeAssistant, c: EnergyEntities): EnergyNow {
   const solar = powerW(hass, c.solar);
-  const battery = powerW(hass, c.battery_power);
-  const grid = powerW(hass, c.grid);
+  const flip = (v: number | null, on?: boolean) => (v !== null && on ? -v : v);
+  const battery = flip(powerW(hass, c.battery_power), c.invert_battery);
+  const grid = flip(powerW(hass, c.grid), c.invert_grid);
   let home = powerW(hass, c.home);
   if (home === null && grid !== null) {
     home = Math.max(0, grid + (solar ?? 0) - (battery ?? 0));
@@ -91,13 +94,18 @@ export function currency(hass: HomeAssistant, price?: string | number): string {
 
 interface GridFlow {
   stat_energy_from?: string;
+  stat_energy_to?: string | null;
   stat_cost?: string | null;
   entity_energy_price?: string | null;
   number_energy_price?: number | null;
 }
 
 export interface EnergyPrefs {
-  energy_sources?: (GridFlow & { type: string; flow_from?: GridFlow[] })[];
+  energy_sources?: (GridFlow & {
+    type: string;
+    flow_from?: GridFlow[];
+    flow_to?: { stat_energy_to?: string }[];
+  })[];
 }
 
 export interface EnergyInfo {
@@ -110,6 +118,50 @@ export interface Tariff {
   costIds: string[];
   /** Price sensor or fixed price from the dashboard (first grid import). */
   price?: string | number;
+  /** Energy meters (kWh statistics) set up in the dashboard. */
+  meters?: Meters;
+}
+
+export interface Meters {
+  import: string[];
+  export: string[];
+  solar: string[];
+  charge: string[];
+  discharge: string[];
+}
+
+export type DayKind = 'home' | 'solar' | 'import' | 'export';
+export type DayKwh = Partial<Record<DayKind, number>>;
+
+const allIds = (m?: Meters): string[] =>
+  m ? [...m.import, ...m.export, ...m.solar, ...m.charge, ...m.discharge] : [];
+
+export function meterIds(t?: Tariff | null): string[] {
+  return allIds(t?.meters ?? undefined);
+}
+
+/**
+ * kWh per kind from the changes of the dashboard meters in a period. The house is
+ * import + solar + battery discharge − export − battery charge (like HA's energy dashboard).
+ */
+export function dayEnergy(changes: Record<string, number>, m?: Meters): DayKwh {
+  if (!m) return {};
+  const sum = (ids: string[]) => {
+    const v = ids.filter((id) => id in changes).map((id) => changes[id]);
+    return v.length ? v.reduce((a, b) => a + b, 0) : undefined;
+  };
+  const out: DayKwh = {};
+  const imp = sum(m.import);
+  const exp = sum(m.export);
+  const solar = sum(m.solar);
+  if (imp !== undefined) out.import = imp;
+  if (exp !== undefined) out.export = exp;
+  if (solar !== undefined) out.solar = solar;
+  if (imp !== undefined) {
+    const home = imp + (solar ?? 0) + (sum(m.discharge) ?? 0) - (exp ?? 0) - (sum(m.charge) ?? 0);
+    out.home = Math.max(0, home);
+  }
+  return out;
 }
 
 /**
@@ -128,7 +180,22 @@ export function dashboardTariff(prefs?: EnergyPrefs | null, info?: EnergyInfo | 
     if (cost && !costIds.includes(cost)) costIds.push(cost);
     price ??= f.entity_energy_price || (f.number_energy_price ?? undefined);
   }
-  return { costIds, price };
+  const meters: Meters = { import: [], export: [], solar: [], charge: [], discharge: [] };
+  const add = (list: string[], id?: string | null) => {
+    if (id && !list.includes(id)) list.push(id);
+  };
+  for (const f of flows) add(meters.import, f.stat_energy_from);
+  for (const s of prefs?.energy_sources ?? []) {
+    if (s.type === 'grid') {
+      if (s.flow_to?.length) s.flow_to.forEach((t) => add(meters.export, t.stat_energy_to));
+      else add(meters.export, s.stat_energy_to);
+    } else if (s.type === 'solar') add(meters.solar, s.stat_energy_from);
+    else if (s.type === 'battery') {
+      add(meters.discharge, s.stat_energy_from);
+      add(meters.charge, s.stat_energy_to);
+    }
+  }
+  return { costIds, price, meters };
 }
 
 // ---------- devices ----------
@@ -260,28 +327,6 @@ export function verdict(home: number, usual: Usual | null): Verdict | null {
   return 'normal';
 }
 
-// ---------- ring geometry (Lastring mockup) ----------
-
-export const RING = { a0: -125, a1: 125 } as const;
-
-/** Angle (deg from top) on the ring for a power in W, sqrt scale up to `maxKw`. */
-export function ringAngle(watts: number, maxKw: number): number {
-  const v = Math.max(0, Math.min(watts / 1000, maxKw));
-  return RING.a0 + (RING.a1 - RING.a0) * Math.sqrt(v / maxKw);
-}
-
-export function ringPoint(cx: number, cy: number, r: number, deg: number): [number, number] {
-  const a = (deg * Math.PI) / 180;
-  return [cx + r * Math.sin(a), cy - r * Math.cos(a)];
-}
-
-export function ringArc(cx: number, cy: number, r: number, a: number, b: number): string {
-  if (b - a < 0.01) b = a + 0.01;
-  const [x0, y0] = ringPoint(cx, cy, r, a);
-  const [x1, y1] = ringPoint(cx, cy, r, b);
-  return `M${x0.toFixed(2)} ${y0.toFixed(2)}A${r} ${r} 0 ${b - a > 180 ? 1 : 0} 1 ${x1.toFixed(2)} ${y1.toFixed(2)}`;
-}
-
 /** Fraction of the local day that has passed (0–1). */
 export function dayFraction(now: Date): number {
   const start = new Date(now);
@@ -345,6 +390,7 @@ const de = {
   battery_home: 'Akku versorgt das Haus',
   grid_idle: 'Netz ruht',
   house_consumption: 'Hausverbrauch',
+  pick_source: 'Hausverbrauch oder Netzleistung wählen',
   who_draws: 'Verbraucher',
   devices: 'Geräte',
   rest: 'Nicht erfasst',
@@ -399,6 +445,7 @@ const en: typeof de = {
   battery_home: 'Battery powers the home',
   grid_idle: 'grid idle',
   house_consumption: 'Home consumption',
+  pick_source: 'Choose house consumption or grid power',
   who_draws: 'Consumers',
   devices: 'devices',
   rest: 'Not measured',

@@ -21,7 +21,7 @@
 - Funktioniert **nur mit Standard-Entitäten von Home Assistant**. Keine Helfer, Template-Sensoren oder Automationen nötig.
 
 > [!NOTE]
-> GlowCard ist in der Beta. v0.7.0 enthält Schalter, Licht, Kopfzeile, Status-Leiste, Chips, Überschrift und Energie, alle mit visuellem Editor; weitere Karten folgen (siehe Roadmap). Optionen können sich bis v1.0 noch ändern.
+> GlowCard ist in der Beta. v0.8.0 enthält Schalter, Licht, Kopfzeile, Status-Leiste, Chips, Überschrift und Energie, alle mit visuellem Editor; weitere Karten folgen (siehe Roadmap). Optionen können sich bis v1.0 noch ändern.
 
 ## Karten
 
@@ -35,7 +35,7 @@
 | Überschrift   | `custom:glowcard-heading` | beliebige Entitäten als Badges                          | Beta (v0.4) |
 | Energie       | `custom:glowcard-energy`  | Leistungs-`sensor.*` für Haus oder Netz; Solar optional | Beta (v0.7) |
 
-Alle Karten haben einen visuellen Editor (ab Home Assistant 2025.1). In einem Sections-Dashboard passen die Karten genau ins Raster von Home Assistant (Zeilen zu 56 px): Kachel 2 Zeilen am Handy bzw. 3 am PC, Schalter-Gruppe und Leistungs-Karte 3, Mini, Status-Leiste und Chip 1 Zeile. Breite: Kachel, Licht, Mini und Schalter-Gruppe = 1/2 (Kachel und Mini lassen sich auf 1/4 verkleinern), Schalter mit Leistung/Verbrauch, Kopfzeile, Status-Leiste, Überschrift und Chip-Reihen = ganze Breite, einzelner Chip = 1/2, Symbol-Chip = 1/4. Die Breite kannst du im Dashboard-Editor weiterhin ändern. Neue Karten starten ohne Entität; fügst du eine Karte „nach Entität“ hinzu, nimmt sie die gewählte Entität.
+Alle Karten haben einen visuellen Editor (ab Home Assistant 2025.1). In einem Sections-Dashboard passen die Karten genau ins Raster von Home Assistant (Zeilen zu 56 px): Kachel 2 Zeilen am Handy bzw. 3 am PC, Schalter-Gruppe und Leistungs-Karte 3, Mini, Status-Leiste und Chip 1 Zeile. Breite: Kachel, Licht, Mini und Schalter-Gruppe = 1/2 (Kachel und Mini lassen sich auf 1/4 verkleinern), Schalter mit Leistung/Verbrauch, Kopfzeile, Status-Leiste, Überschrift, Energie und Chip-Reihen = ganze Breite (die Energie-Karte lässt sich nicht schmaler machen), einzelner Chip = 1/2, Symbol-Chip = 1/4. Die Breite kannst du im Dashboard-Editor weiterhin ändern. Neue Karten starten ohne Entität; fügst du eine Karte „nach Entität“ hinzu, nimmt sie die gewählte Entität.
 
 Im Editor bietet „Tippverhalten“ für Antippen und Gedrückthalten: Ein/Aus, GlowCard-Popup, Detailansicht, Navigieren, URL öffnen, Aktion ausführen oder Nichts, alles in einer Liste.
 
@@ -69,7 +69,7 @@ lovelace:
    - Typ: **JavaScript-Modul**
 4. Browser neu laden.
 
-Nach einem Update die URL z. B. auf `/local/glowcard/glowcard.js?v=0.7.0` ändern, damit Browser die neue Datei laden.
+Nach einem Update die URL z. B. auf `/local/glowcard/glowcard.js?v=0.8.0` ändern, damit Browser die neue Datei laden.
 
 ## Konfiguration
 
@@ -274,16 +274,17 @@ subtitle: 6 Räume
 
 ### Energie
 
-Ein Lastring für jedes Zuhause, mit oder ohne Solaranlage: wie viel das Haus gerade verbraucht und ob das für diese Uhrzeit üblich ist. Der Ring ist nach Geräten eingefärbt. Dahinter zeigt ein Band den üblichen Bereich für diese Stunde (die mittleren 60 % der letzten 14 Tage zu dieser Stunde) und eine Marke die Grundlast. Beides kommt aus den Langzeitstatistiken von Home Assistant, der Sensor braucht also eine `state_class` (bei Leistungssensoren gängiger Integrationen vorhanden). Status: „normal“, „erhöht“ oder „niedrig“.
+Für jedes Zuhause, mit oder ohne Solaranlage: wie viel das Haus gerade verbraucht und ob das für diese Uhrzeit üblich ist. Die Karte zeigt den aktuellen Verbrauch als große Zahl und darunter den üblichen Bereich für diese Stunde (die mittleren 60 % der letzten 14 Tage zu dieser Stunde). Liegt der Verbrauch darüber, wird die Zahl orange. Üblicher Bereich und Grundlast kommen aus den Langzeitstatistiken von Home Assistant, der Sensor braucht also eine `state_class` (bei Leistungssensoren gängiger Integrationen vorhanden). Status: „normal“, „erhöht“ oder „niedrig“.
 
 Ein Sensor genügt: der Hausverbrauch (`home`) oder die Netzleistung (`grid`, positiv = Bezug). Alles andere ist optional und erweitert dieselbe Karte:
 
 - `devices`: bis zu 5 Leistungssensoren. Die Karte listet sie nach Leistung; der Rest des Hauses erscheint als „Nicht erfasst“.
-- `energy_today`: Verbrauch heute und Vergleich mit dem Vortag zur gleichen Uhrzeit.
-- Die Kosten kommen ohne Einstellung aus dem Energie-Dashboard von Home Assistant: Ist dort ein Preis hinterlegt (fest oder als Sensor, z. B. Tibber oder Nordpool), zeigt die Karte die Kosten von heute und gestern aus den Kosten-Statistiken von HA, dynamische Preise werden also stundengenau abgerechnet. `price` (Sensor oder Zahl), `fixed_price` oder `cost_today` übersteuern das; dann sind die Kosten kWh heute × aktueller Preis.
-- `solar`, `battery` (Ladestand) und `battery_power` (positiv = Laden): Die Karte wird eine Reihe höher, zeigt in einem äußeren Ring, woher der Strom kommt, und Kacheln für Solar, Akku und Netz. Ohne Haussensor wird der Verbrauch aus Netz, Solar und Akku berechnet.
+- `solar`, `battery` (Ladestand) und `battery_power` (positiv = Laden): Die Karte wird eine Reihe höher und zeigt Kacheln für Solar, Akku und Netz. Ohne Haussensor wird der Verbrauch aus Netz, Solar und Akku berechnet.
+- `invert_grid` / `invert_battery`: für Sensoren mit umgekehrtem Vorzeichen (Einspeisung bzw. Entladen positiv).
 
-Antippen öffnet das Popup (Ring, üblicher Bereich, Grundlast mit Kosten pro Tag, Geräte mit Anteil, Verlauf heute gegen Vortag und üblichen Bereich, Vergleichskacheln). Gedrückt halten öffnet die Detailansicht des Haussensors.
+**Energie-Dashboard:** kWh heute (Verbrauch, Solar, Bezug, Einspeisung), der Vergleich mit dem Vortag und die Kosten kommen ohne Einstellung aus dem Energie-Dashboard von Home Assistant. Die Kosten stammen aus den Kosten-Statistiken von HA, dynamische Preise (z. B. Tibber oder Nordpool) werden also stundengenau abgerechnet. Unter „Erweitert“ lässt sich das mit Tageszählern (`energy_today`, `solar_energy`, `grid_import_energy`, `grid_export_energy`), einem `price` (Sensor oder Zahl), einem `fixed_price` oder einem `cost_today`-Sensor übersteuern.
+
+Antippen öffnet das Popup (Verbrauch jetzt, üblicher Bereich, Herkunft, Grundlast mit Kosten pro Tag, Geräte mit Anteil, Verlauf heute gegen Vortag und üblichen Bereich, Vergleichskacheln). Gedrückt halten öffnet die Detailansicht des Haussensors.
 
 ```yaml
 type: custom:glowcard-energy
@@ -292,16 +293,14 @@ devices: # optional
   - sensor.heat_pump_power
   - entity: sensor.tv_plug_power
     name: Fernseher
-energy_today: sensor.house_energy_today # optional, Tageszähler
-# price: 0.32 # optional, übersteuert den Preis aus dem Energie-Dashboard
 # optional, mit Solar / Akku:
 solar: sensor.pv_power
 battery: sensor.battery_state_of_charge
 battery_power: sensor.battery_power # positiv = Laden
-solar_energy: sensor.pv_energy_today
-grid_import_energy: sensor.grid_import_today
-grid_export_energy: sensor.grid_export_today
-max_power: 3 # kW, bei denen der Ring voll ist (Standard 3)
+# invert_battery: true # falls der Sensor Entladen positiv meldet
+# optionale Übersteuerung (sonst aus dem Energie-Dashboard):
+# energy_today: sensor.house_energy_today
+# price: 0.32
 ```
 
 ## Roadmap
@@ -310,7 +309,7 @@ max_power: 3 # kW, bei denen der Ring voll ist (Standard 3)
 2. Schalter- und Steckdosen-Karte → v0.1.0 (Beta)
 3. Licht-Karte und Popup → v0.2.0 (Beta)
 4. Kopfzeile, Status-Leiste und Chips, visueller Editor und Standard-Breiten → **v0.3.0 (Beta)**
-5. Überschrift-Karte (Abschnittstitel mit Badges, zusätzlich zum Plan) → v0.4.0; Energie-Karte „Lastring“ mit Popup → v0.7.0
+5. Überschrift-Karte (Abschnittstitel mit Badges, zusätzlich zum Plan) → v0.4.0; Energie-Karte „Lastring“ mit Popup → v0.7.0; Energie-Karte ohne Ring (große Zahl), Editor und Handy-Layout → v0.8.0
 6. Visuelle Editoren für alle Karten, vollständige Doku, Antrag auf HACS-Standardliste → v1.0.0
 
 Später: Raum-Karte, Binärsensor, Bewässerung/Pflanze, Popups für Medien, Rollos und Saugroboter.

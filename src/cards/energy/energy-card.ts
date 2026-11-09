@@ -25,6 +25,8 @@ import {
   IDLE_W,
   baseLoad,
   currency,
+  dayEnergy,
+  meterIds,
   dashboardTariff,
   dayFraction,
   deviceId,
@@ -40,11 +42,10 @@ import {
   range,
   readDevices,
   readNow,
-  ringAngle,
-  ringArc,
-  ringPoint,
   usualByHour,
   verdict,
+  type DayKind,
+  type DayKwh,
   type DeviceNow,
   type EnergyInfo,
   type EnergyPrefs,
@@ -84,7 +85,6 @@ interface Gauge {
   verdict: Verdict | null;
   devices: DeviceNow[];
   flows: Flows;
-  maxKw: number;
 }
 
 /**
@@ -108,6 +108,11 @@ export class GlowEnergyCard extends GlowCardBase<EnergyCardConfig> {
   private dashCostToday?: number;
   private dashCostYesterday?: number;
   private costLoadedAt = 0;
+  /** kWh from the dashboard meters: today, yesterday until now, yesterday in total. */
+  private day: DayKwh = {};
+  private dayYesterdayAt: DayKwh = {};
+  private dayYesterday: DayKwh = {};
+  /** Ring maximum from the last 14 days (kW). */
   private loadedAt = 0;
   private loading = false;
 
@@ -128,58 +133,65 @@ export class GlowEnergyCard extends GlowCardBase<EnergyCardConfig> {
       [
         grid({ name: 'home', selector: power }, { name: 'grid', selector: power }),
         {
+          name: 'invert_grid',
+          selector: { boolean: {} },
+          visible: (data) => !!data.grid,
+        },
+        {
           name: 'devices',
           selector: { entity: { domain: ['sensor'], device_class: 'power', multiple: true } },
         },
         section(
-          'costs_section',
-          'mdi:currency-eur',
+          'solar_section',
+          'mdi:solar-power-variant-outline',
+          grid(
+            { name: 'solar', selector: power },
+            {
+              name: 'battery',
+              selector: { entity: { domain: ['sensor'], device_class: 'battery' } },
+            },
+            { name: 'battery_power', selector: power },
+            {
+              name: 'invert_battery',
+              selector: { boolean: {} },
+              visible: (data) => !!data.battery_power,
+            },
+          ),
+        ),
+        lookSection(nameIconFields, fontField),
+        actionsField,
+        section(
+          'advanced_section',
+          'mdi:tune-variant',
           grid(
             { name: 'energy_today', selector: energy },
-            { name: 'cost_today', selector: { entity: { domain: ['sensor'] } } },
+            { name: 'solar_energy', selector: energy },
+            { name: 'grid_import_energy', selector: energy },
+            { name: 'grid_export_energy', selector: energy },
             { name: 'price', selector: { entity: { domain: ['sensor', 'input_number'] } } },
             {
               name: 'fixed_price',
               selector: { number: { min: 0, step: 0.01, mode: 'box' } },
               visible: (data) => !data.price,
             },
+            { name: 'cost_today', selector: { entity: { domain: ['sensor'] } } },
           ),
         ),
-        section(
-          'solar_section',
-          'mdi:solar-power-variant-outline',
-          grid(
-            { name: 'solar', selector: power },
-            { name: 'solar_energy', selector: energy },
-            {
-              name: 'battery',
-              selector: { entity: { domain: ['sensor'], device_class: 'battery' } },
-            },
-            { name: 'battery_power', selector: power },
-            { name: 'grid_import_energy', selector: energy },
-            { name: 'grid_export_energy', selector: energy },
-          ),
-        ),
-        lookSection(
-          nameIconFields,
-          grid(fontField, {
-            name: 'max_power',
-            default: 3,
-            selector: { number: { min: 0.5, max: 50, step: 0.5, mode: 'box' } },
-          }),
-        ),
-        actionsField,
       ],
       {
         home: 'home_helper',
         grid: 'grid_energy_helper',
         devices: 'devices_helper',
-        energy_today: 'energy_today_helper',
-        cost_today: 'cost_today_helper',
-        price: 'fixed_price_helper',
-        fixed_price: 'fixed_price_helper',
         solar: 'solar_helper',
-        max_power: 'max_power_helper',
+        invert_grid: 'invert_grid_helper',
+        invert_battery: 'invert_battery_helper',
+        energy_today: 'dashboard_helper',
+        solar_energy: 'dashboard_helper',
+        grid_import_energy: 'dashboard_helper',
+        grid_export_energy: 'dashboard_helper',
+        price: 'dashboard_helper',
+        fixed_price: 'fixed_price_helper',
+        cost_today: 'cost_today_helper',
       },
       (config) => {
         const list = config.devices;
@@ -221,7 +233,8 @@ export class GlowEnergyCard extends GlowCardBase<EnergyCardConfig> {
   }
 
   getGridOptions() {
-    return this.gridOptions(12, this.hasSources ? 5 : 4, 6);
+    // Full width only: ring, list and source tiles need at least ~320 px.
+    return this.gridOptions(12, this.hasSources ? 5 : 4, 12);
   }
 
   protected watchedEntities(): string[] {
@@ -275,7 +288,7 @@ export class GlowEnergyCard extends GlowCardBase<EnergyCardConfig> {
   protected updated(changed: PropertyValues): void {
     super.updated(changed);
     if (this.hass && this.config && Date.now() - this.loadedAt > 30 * 60_000) void this.load();
-    else if (this.tariff?.costIds.length && Date.now() - this.costLoadedAt > 5 * 60_000)
+    else if (this.dashboardIds.length && Date.now() - this.costLoadedAt > 5 * 60_000)
       void this.loadCost();
   }
 
@@ -305,6 +318,7 @@ export class GlowEnergyCard extends GlowCardBase<EnergyCardConfig> {
           ...r,
           mean: r.mean === null ? null : Math.max(0, r.mean * k),
           min: r.min === null ? null : Math.max(0, r.min * k),
+          max: r.max === null ? null : Math.max(0, r.max * k),
         }));
         this.usual = usualByHour(this.stats.filter((r) => r.start < startOfDay(now)));
         this.base = baseLoad(this.stats);
@@ -339,23 +353,58 @@ export class GlowEnergyCard extends GlowCardBase<EnergyCardConfig> {
     }
   }
 
-  /** Today's and yesterday's cost from the dashboard's cost statistics. */
+  /** Cost and energy statistics of the energy dashboard the card reads. */
+  private get dashboardIds(): string[] {
+    return [...(this.tariff?.costIds ?? []), ...meterIds(this.tariff)];
+  }
+
+  /**
+   * Today's and yesterday's cost and kWh from the dashboard's statistics (5-minute
+   * statistics, so "today" is at most 5 minutes behind).
+   */
   private async loadCost(): Promise<void> {
     const h = this.hass;
-    const ids = this.tariff?.costIds ?? [];
+    const ids = this.dashboardIds;
     this.costLoadedAt = Date.now();
     if (!h || !ids.length) return;
     const now = new Date();
     const midnight = new Date(startOfDay(now));
-    const [today, yesterday] = await Promise.all([
-      fetchStatChange(h, ids, midnight, now),
-      fetchStatChange(h, ids, new Date(midnight.getTime() - DAY), midnight),
+    const yMidnight = new Date(midnight.getTime() - DAY);
+    const [today, yAt, yesterday] = await Promise.all([
+      fetchStatChange(h, ids, midnight, now, '5minute'),
+      fetchStatChange(h, ids, yMidnight, new Date(now.getTime() - DAY), '5minute'),
+      fetchStatChange(h, ids, yMidnight, midnight),
     ]);
-    const sum = (r: Record<string, number>) =>
-      Object.keys(r).length ? Object.values(r).reduce((a, b) => a + b, 0) : undefined;
-    this.dashCostToday = sum(today);
-    this.dashCostYesterday = sum(yesterday);
+    const cost = (r: Record<string, number>) => {
+      const v = (this.tariff?.costIds ?? []).filter((id) => id in r).map((id) => r[id]);
+      return v.length ? v.reduce((a, b) => a + b, 0) : undefined;
+    };
+    this.dashCostToday = cost(today);
+    this.dashCostYesterday = cost(yesterday);
+    const meters = this.tariff?.meters;
+    this.day = dayEnergy(today, meters);
+    this.dayYesterdayAt = dayEnergy(yAt, meters);
+    this.dayYesterday = dayEnergy(yesterday, meters);
+    if (!this.config?.energy_today) {
+      this.yesterdayAtNow = this.dayYesterdayAt.home;
+      this.yesterdayTotal = this.dayYesterday.home;
+    }
     this.requestUpdate();
+  }
+
+  /** kWh today: the configured daily meter, else the energy dashboard. */
+  private todayKwh(kind: DayKind): number | null {
+    const h = this.hass;
+    const c = this.config;
+    if (!h || !c) return null;
+    const sensor = {
+      home: c.energy_today,
+      solar: c.solar_energy,
+      import: c.grid_import_energy,
+      export: c.grid_export_energy,
+    }[kind];
+    if (sensor) return energyKwh(h, sensor);
+    return this.day[kind] ?? null;
   }
 
   /** Price per kWh: config, else the energy dashboard. */
@@ -378,7 +427,6 @@ export class GlowEnergyCard extends GlowCardBase<EnergyCardConfig> {
         ? readDevices(this.hass, this.config?.devices, n.home, et(this.hass, 'rest'))
         : [],
       flows: flows(n),
-      maxKw: this.config?.max_power ?? 3,
     };
   }
 
@@ -390,8 +438,14 @@ export class GlowEnergyCard extends GlowCardBase<EnergyCardConfig> {
   }
 
   /** Factual status line: supply shares, plus surplus; grid only: position vs usual range. */
+  /** Neither house consumption nor grid power is set (new card). */
+  private get unconfigured(): boolean {
+    return !this.config?.home && !this.config?.grid;
+  }
+
   private subtitle(g: Gauge): string {
     const h = this.hass;
+    if (this.unconfigured) return et(h, 'pick_source');
     const f = g.flows;
     const shares =
       g.home > IDLE_W
@@ -412,119 +466,19 @@ export class GlowEnergyCard extends GlowCardBase<EnergyCardConfig> {
 
   // ---------- ring ----------
 
-  private ring(g: Gauge, W: number, big = false): TemplateResult {
+  /** Card: consumption now as a big number, with the usual range below. */
+  private nowBlock(g: Gauge): TemplateResult {
     const h = this.hass;
-    const H = W * 0.86;
-    const cx = W / 2;
-    const cy = W * 0.5;
-    const rIn = W * 0.33;
-    const wIn = W * 0.09;
-    const rOut = W * 0.435;
-    const wOut = W * 0.03;
-    const ang = (w: number) => ringAngle(w, g.maxKw);
-    const parts: TemplateResult[] = [];
-    parts.push(
-      svg`<path class="trk" d=${ringArc(cx, cy, rIn, -125, 125)} stroke-width=${wIn}></path>`,
-    );
-    parts.push(
-      svg`<path class="trk2" d=${ringArc(cx, cy, rOut, -125, 125)} stroke-width=${wOut}></path>`,
-    );
-    if (g.usual) {
-      parts.push(
-        svg`<path class="band" d=${ringArc(cx, cy, rIn, ang(g.usual.lo), ang(g.usual.hi))} stroke-width=${wIn + W * 0.05}></path>`,
-      );
-    }
-    for (const t of [500, 1000, 2000]) {
-      if (t / 1000 >= g.maxKw) continue;
-      const a = ang(t);
-      const [x0, y0] = ringPoint(cx, cy, rIn - wIn * 0.5 - 3, a);
-      const [x1, y1] = ringPoint(cx, cy, rIn - wIn * 0.5 - (big ? 8 : 6), a);
-      parts.push(svg`<line class="tick" x1=${x0} y1=${y0} x2=${x1} y2=${y1}></line>`);
-    }
-    // consumption, stacked by device (or one segment in the house colour)
-    const segs = g.devices.length
-      ? g.devices.map((d) => ({ w: d.watts, cls: `seg c${d.slot}` }))
-      : [{ w: g.home, cls: 'seg home' }];
-    let acc = 0;
-    segs.forEach((s, i) => {
-      if (s.w <= 0) return;
-      const a = ang(acc);
-      const b = ang(acc + s.w);
-      parts.push(
-        svg`<path class=${s.cls} d=${ringArc(cx, cy, rIn, a + (i ? 0.9 : 0), b)} stroke-width=${wIn} stroke-linecap=${i === 0 ? 'round' : 'butt'}></path>`,
-      );
-      acc += s.w;
-    });
-    if (g.base !== null) {
-      const a = ang(g.base);
-      const [x0, y0] = ringPoint(cx, cy, rIn - wIn * 0.5 - 1, a);
-      const [x1, y1] = ringPoint(cx, cy, rIn + wIn * 0.5 + 1, a);
-      parts.push(svg`<line class="basemk" x1=${x0} y1=${y0} x2=${x1} y2=${y1}></line>`);
-    }
-    {
-      const [x, y] = ringPoint(cx, cy, rIn, ang(g.home));
-      parts.push(svg`<circle class="ecap" cx=${x} cy=${y} r=${wIn * 0.5}></circle>`);
-    }
-    // outer ring: sources of the consumption, then the solar surplus by destination
-    let a2 = 0;
-    for (const s of ['solar', 'bat', 'grid'] as Source[]) {
-      const w = g.flows.toHome[s];
-      if (w <= IDLE_W) continue;
-      parts.push(
-        svg`<path class="src ${s}" d=${ringArc(cx, cy, rOut, ang(a2), ang(a2 + w) - 0.6)} stroke-width=${wOut}></path>`,
-      );
-      a2 += w;
-    }
-    const surplus: [string, number][] = [
-      ['bat', g.flows.toBattery],
-      ['grid', g.flows.toGrid],
-    ];
-    let hasSurplus = false;
-    for (const [k, w] of surplus) {
-      if (w <= IDLE_W) continue;
-      parts.push(
-        svg`<path class="sur ${k}" d=${ringArc(cx, cy, rOut, ang(a2) + 0.6, ang(a2 + w))} stroke-width=${wOut}></path>`,
-      );
-      a2 += w;
-      hasSurplus = true;
-    }
-    if (hasSurplus) {
-      const [x, y] = ringPoint(cx, cy, rOut, ang(a2));
-      parts.push(svg`<circle class="surcap" cx=${x} cy=${y} r=${wOut * 0.9}></circle>`);
-    }
-    // centre text + verdict pill
-    const fs1 = big ? 12 : 9.5;
-    const fs2 = big ? 19 : 13.5;
-    if (g.usual) {
-      parts.push(
-        svg`<text class="cl" x=${cx} y=${cy - fs2 * 0.55} text-anchor="middle" font-size=${fs1}>${et(h, 'usual_now')}</text>`,
-        svg`<text class="cv" x=${cx} y=${cy + fs2 * 0.5} text-anchor="middle" font-size=${fs2}>${range(h, g.usual)}</text>`,
-        svg`<text class="cl" x=${cx} y=${cy + fs2 * 0.5 + fs1 * 1.35} text-anchor="middle" font-size=${fs1}>kW</text>`,
-      );
-    } else if (g.base !== null) {
-      parts.push(
-        svg`<text class="cl" x=${cx} y=${cy - fs2 * 0.55} text-anchor="middle" font-size=${fs1}>${et(h, 'base_load')}</text>`,
-        svg`<text class="cv" x=${cx} y=${cy + fs2 * 0.5} text-anchor="middle" font-size=${fs2}>${kwValue(h, g.base)}</text>`,
-        svg`<text class="cl" x=${cx} y=${cy + fs2 * 0.5 + fs1 * 1.35} text-anchor="middle" font-size=${fs1}>kW</text>`,
-      );
-    }
-    if (g.verdict) {
-      const pw = big ? 92 : 70;
-      const ph = big ? 24 : 18;
-      const py = H - ph - (big ? 4 : 1);
-      parts.push(
-        svg`<rect class="pill ${g.verdict}" x=${cx - pw / 2} y=${py} width=${pw} height=${ph} rx=${ph / 2}></rect>`,
-        svg`<text class="pillt ${g.verdict}" x=${cx} y=${py + ph * 0.68} text-anchor="middle" font-size=${big ? 12 : 10}>${et(h, g.verdict)}</text>`,
-      );
-    }
-    return html`<svg
-      class="gauge"
-      viewBox="0 0 ${W} ${H.toFixed(1)}"
-      style="width:${W}px;height:${H.toFixed(1)}px"
-      aria-hidden="true"
-    >
-      ${parts}
-    </svg>`;
+    const v = this.unconfigured ? '–' : kwValue(h, g.home);
+    return html`<div class="now ${g.verdict ?? ''}">
+      <span class="nl">${et(h, 'consumption_now')}</span>
+      <b class="nv">${v}<small>kW</small></b>
+      ${
+        g.usual
+          ? html`<span class="nu">${et(h, 'usual_now')} ${range(h, g.usual)} kW</span>`
+          : nothing
+      }
+    </div>`;
   }
 
   // ---------- card parts ----------
@@ -533,8 +487,7 @@ export class GlowEnergyCard extends GlowCardBase<EnergyCardConfig> {
     const h = this.hass;
     if (!g.devices.length) {
       const rows: [string, string][] = [];
-      const today =
-        this.hass && this.config ? energyKwh(this.hass, this.config.energy_today) : null;
+      const today = this.todayKwh('home');
       if (today !== null) rows.push([et(h, 'today'), kwh(h, today)]);
       if (this.yesterdayAtNow !== undefined)
         rows.push([et(h, 'yesterday_so_far'), kwh(h, this.yesterdayAtNow)]);
@@ -578,7 +531,7 @@ export class GlowEnergyCard extends GlowCardBase<EnergyCardConfig> {
           'solar',
           on,
           on ? 'mdi:white-balance-sunny' : 'mdi:weather-night',
-          kw(h, n.solar ?? 0),
+          kw(h, n.solar ?? 0, 1),
           et(h, 'solar_produced'),
         ),
       );
@@ -597,7 +550,7 @@ export class GlowEnergyCard extends GlowCardBase<EnergyCardConfig> {
           'bat',
           on,
           'mdi:battery-high',
-          n.soc !== null ? formatPct(h, n.soc) : kw(h, bat),
+          n.soc !== null ? formatPct(h, n.soc) : kw(h, bat, 1),
           sub,
         ),
       );
@@ -610,7 +563,7 @@ export class GlowEnergyCard extends GlowCardBase<EnergyCardConfig> {
           'grid',
           on,
           'mdi:transmission-tower',
-          g < -IDLE_W ? `↑ ${kw(h, g)}` : g > IDLE_W ? `↓ ${kw(h, g)}` : '0 kW',
+          Math.abs(g) > IDLE_W ? kw(h, Math.abs(g), 1) : '0 kW',
           g < -IDLE_W ? et(h, 'export') : g > IDLE_W ? et(h, 'import') : et(h, 'grid_short'),
         ),
       );
@@ -635,9 +588,7 @@ export class GlowEnergyCard extends GlowCardBase<EnergyCardConfig> {
     if (c.price === undefined && c.fixed_price === undefined && this.dashCostToday !== undefined)
       return this.dashCostToday;
     const price = priceValue(h, this.priceSrc);
-    const kwhToday = this.hasSources
-      ? energyKwh(h, c.grid_import_energy)
-      : energyKwh(h, c.energy_today);
+    const kwhToday = this.hasSources ? this.todayKwh('import') : this.todayKwh('home');
     return price !== null && kwhToday !== null ? price * kwhToday : null;
   }
 
@@ -661,14 +612,14 @@ export class GlowEnergyCard extends GlowCardBase<EnergyCardConfig> {
     const c = this.config;
     if (!h || !c) return nothing;
     const items: [string, string, string?][] = [];
-    const today = energyKwh(h, c.energy_today);
+    const today = this.todayKwh('home');
     if (this.hasSources) {
       if (today !== null) items.push([et(h, 'consumed'), kwh(h, today)]);
-      const s = energyKwh(h, c.solar_energy);
+      const s = this.todayKwh('solar');
       if (s !== null) items.push([et(h, 'solar'), kwh(h, s)]);
-      const imp = energyKwh(h, c.grid_import_energy);
+      const imp = this.todayKwh('import');
       if (imp !== null) items.push([et(h, 'import'), kwh(h, imp)]);
-      const exp = energyKwh(h, c.grid_export_energy);
+      const exp = this.todayKwh('export');
       if (exp !== null) items.push([et(h, 'export'), kwh(h, exp)]);
     } else {
       if (today !== null) items.push([et(h, 'today'), kwh(h, today)]);
@@ -735,13 +686,9 @@ export class GlowEnergyCard extends GlowCardBase<EnergyCardConfig> {
           <span class="title">${this.config.name ?? et(h, 'energy')}</span>
           <span class="subt">${this.subtitle(g)}</span>
         </div>
-        <div class="hero">
-          <span class="hv">${kwValue(h, g.home)}<small> kW</small></span>
-          <span class="hl">${et(h, 'consumption_caps')}</span>
-        </div>
       </div>
       <div class="body">
-        ${this.ring(g, compact ? 116 : 128)}
+        ${this.nowBlock(g)}
         <div class="right">${this.consList(g)}</div>
       </div>
       ${this.sources()} ${this.foot()}
@@ -766,6 +713,7 @@ export class GlowEnergyCard extends GlowCardBase<EnergyCardConfig> {
         flex-direction: column;
         gap: 7px;
         overflow: hidden;
+        container-type: inline-size;
         cursor: pointer;
         user-select: none;
         -webkit-tap-highlight-color: transparent;
@@ -841,16 +789,62 @@ export class GlowEnergyCard extends GlowCardBase<EnergyCardConfig> {
         display: flex;
         gap: 16px;
         align-items: center;
-        height: 110px;
+        flex: 1 1 110px;
+        min-height: 0;
       }
-      .gauge {
-        display: block;
-        flex-shrink: 0;
-        overflow: visible;
+      .now {
+        flex: 0 0 auto;
+        width: 118px;
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+        min-width: 0;
+      }
+      .nl {
+        font-size: 10.5px;
+        font-weight: 700;
+        color: var(--glow-muted);
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+        white-space: nowrap;
+      }
+      .nv {
+        font-size: 38px;
+        font-weight: 800;
+        letter-spacing: -0.04em;
+        line-height: 1.05;
+        color: var(--glow-text);
+        white-space: nowrap;
+      }
+      .nv small {
+        font-size: 14px;
+        font-weight: 700;
+        letter-spacing: 0;
+        margin-left: 4px;
+        color: var(--glow-muted);
+      }
+      .now.high .nv {
+        color: var(--e-hi);
+      }
+      .nu {
+        font-size: 11.5px;
+        font-weight: 700;
+        color: var(--e-band-t);
+        white-space: nowrap;
+      }
+      @container (max-width: 300px) {
+        .now {
+          width: 96px;
+        }
+        .nv {
+          font-size: 30px;
+        }
       }
       .right {
         flex: 1;
         min-width: 0;
+        max-height: 100%;
+        overflow: hidden;
         display: flex;
         flex-direction: column;
         gap: 5px;
@@ -967,6 +961,8 @@ export class GlowEnergyCard extends GlowCardBase<EnergyCardConfig> {
         font-size: 14.5px;
         font-weight: 800;
         white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
         letter-spacing: -0.01em;
       }
       .srcs.n3 .st b {
@@ -979,6 +975,44 @@ export class GlowEnergyCard extends GlowCardBase<EnergyCardConfig> {
         white-space: nowrap;
         overflow: hidden;
         text-overflow: ellipsis;
+      }
+      /* Narrow cards (phones): value next to the icon, label below over the full tile. */
+      @container (max-width: 440px) {
+        .srcs .sc,
+        .srcs.n3 .sc {
+          display: grid;
+          grid-template-columns: auto minmax(0, 1fr);
+          grid-template-rows: auto auto;
+          align-content: center;
+          column-gap: 6px;
+          row-gap: 1px;
+          padding: 0 9px;
+        }
+        .srcs .st {
+          display: contents;
+        }
+        .srcs .st b,
+        .srcs.n3 .st b {
+          font-size: 13.5px;
+          align-self: center;
+        }
+        .srcs .st small {
+          grid-column: 1 / 3;
+        }
+        .srcs .mini {
+          width: 18px;
+          height: 18px;
+        }
+        .srcs .mini,
+        .srcs .mini ha-icon {
+          --mdc-icon-size: 12px;
+        }
+      }
+      /* Smallest phones (card under ~336 px): the tile colour carries the source, the icon makes room for text. */
+      @container (max-width: 300px) {
+        .srcs .mini {
+          display: none;
+        }
       }
       .sc:not(.on) b {
         color: var(--glow-muted);
@@ -1302,7 +1336,7 @@ export class GlowEnergyCard extends GlowCardBase<EnergyCardConfig> {
           </ul>
         </div>`
       : nothing;
-    const today = energyKwh(h, c.energy_today);
+    const today = this.todayKwh('home');
     const cmp: TemplateResult[] = [];
     const ref = this.yesterdayTotal ?? Math.max(today ?? 0, this.yesterdayAtNow ?? 0, 1);
     if (today !== null) {
@@ -1359,7 +1393,7 @@ export class GlowEnergyCard extends GlowCardBase<EnergyCardConfig> {
       heading: c.name ?? et(h, 'energy'),
       subtitle: `${et(h, 'house_consumption')} · ${this.timeNow()}`,
       content: html`<div class="epop acc-${g.flows.main}">
-        <div class="phero">${this.ring(g, 168, true)} ${stats}</div>
+        <div class="phero">${stats}</div>
         ${rows} ${this.chart(g)}
         ${cmp.length ? html`<div class="cmp n${cmp.length}">${cmp}</div>` : nothing}
       </div>`,
@@ -1385,17 +1419,15 @@ export class GlowEnergyCard extends GlowCardBase<EnergyCardConfig> {
           gap: 14px;
           align-items: center;
         }
-        .gauge {
-          display: block;
-          flex-shrink: 0;
-          overflow: visible;
-        }
         .pstats {
           flex: 1;
           min-width: 0;
-          display: flex;
-          flex-direction: column;
-          gap: 7px;
+          display: grid;
+          grid-template-columns: repeat(auto-fit, minmax(110px, 1fr));
+          gap: 10px 14px;
+        }
+        .pstats .srcline {
+          grid-column: 1 / -1;
         }
         .pstats div {
           display: flex;
@@ -1421,13 +1453,15 @@ export class GlowEnergyCard extends GlowCardBase<EnergyCardConfig> {
           color: var(--glow-muted);
         }
         .pstats .hvp {
-          font-size: 24px;
-          letter-spacing: -0.03em;
+          white-space: nowrap;
+          font-size: 30px;
+          letter-spacing: -0.04em;
           color: var(--e-acc-t);
         }
         .srcline {
           flex-direction: row !important;
           align-items: center;
+          white-space: nowrap;
           gap: 6px;
           font-size: 12px;
           font-weight: 700;
@@ -1474,9 +1508,10 @@ export class GlowEnergyCard extends GlowCardBase<EnergyCardConfig> {
         }
         .sech {
           display: flex;
+          flex-wrap: wrap;
           justify-content: space-between;
           align-items: baseline;
-          gap: 8px;
+          gap: 4px 8px;
           font-size: 13px;
           font-weight: 800;
         }
@@ -1495,7 +1530,7 @@ export class GlowEnergyCard extends GlowCardBase<EnergyCardConfig> {
         }
         .pcons li {
           display: grid;
-          grid-template-columns: 10px minmax(0, 1.4fr) minmax(0, 1fr) 58px 36px;
+          grid-template-columns: 10px minmax(0, 1.4fr) minmax(0, 1fr) 58px 40px;
           gap: 8px;
           align-items: center;
           font-size: 13px;
@@ -1530,6 +1565,7 @@ export class GlowEnergyCard extends GlowCardBase<EnergyCardConfig> {
         }
         .pcons .pct {
           text-align: right;
+          white-space: nowrap;
           color: var(--glow-muted);
           font-weight: 600;
           font-size: 12px;
@@ -1654,12 +1690,15 @@ export class GlowEnergyCard extends GlowCardBase<EnergyCardConfig> {
           font-weight: 700;
           color: var(--glow-muted);
           white-space: nowrap;
+          overflow: hidden;
+          text-overflow: ellipsis;
         }
         .cmp b {
           font-size: 15px;
           font-weight: 800;
           display: flex;
-          gap: 4px;
+          flex-wrap: wrap;
+          column-gap: 4px;
           align-items: baseline;
           white-space: nowrap;
         }
@@ -1696,9 +1735,15 @@ export class GlowEnergyCard extends GlowCardBase<EnergyCardConfig> {
           color: var(--glow-muted);
           line-height: 1.25;
         }
+        .sech > span:first-child {
+          white-space: nowrap;
+        }
         @media (max-width: 480px) {
+          .pstats .hvp {
+            font-size: 22px;
+          }
           .pcons li {
-            grid-template-columns: 10px 1fr 60px 58px 32px;
+            grid-template-columns: 10px minmax(0, 1fr) 48px 58px 40px;
           }
           .phero {
             gap: 8px;
@@ -1753,7 +1798,8 @@ function tokens() {
       --e-ok-bg: rgba(16, 185, 129, 0.14);
       --e-hi: #c2410c;
       --e-hi-bg: rgba(234, 88, 12, 0.14);
-      --e-band: rgba(245, 158, 11, 0.16);
+      --e-band: rgba(245, 158, 11, 0.3);
+      --e-band-t: #b45309;
       --e-acc-t: var(--e-home-t);
     }
     :host([dark]) {
@@ -1783,7 +1829,8 @@ function tokens() {
       --e-ok-bg: rgba(52, 211, 153, 0.16);
       --e-hi: #fdba74;
       --e-hi-bg: rgba(251, 146, 60, 0.18);
-      --e-band: rgba(255, 231, 176, 0.14);
+      --e-band: rgba(255, 231, 176, 0.28);
+      --e-band-t: rgba(255, 231, 176, 0.9);
     }
     .acc-solar {
       --e-acc-t: var(--e-solar-t);
@@ -1800,128 +1847,6 @@ function tokens() {
 /** Ring and device colours shared by card and popup. */
 function gaugeStyles() {
   return css`
-    .gauge path,
-    .gauge line {
-      fill: none;
-    }
-    .trk {
-      stroke: var(--glow-track);
-      stroke-linecap: round;
-    }
-    .trk2 {
-      stroke: var(--glow-track);
-      stroke-linecap: round;
-      opacity: 0.7;
-    }
-    .band {
-      stroke: var(--e-band);
-    }
-    .tick {
-      stroke: var(--e-faint);
-      stroke-width: 1.5;
-      stroke-linecap: round;
-    }
-    .seg.c1 {
-      stroke: var(--e-c1);
-    }
-    .seg.c2 {
-      stroke: var(--e-c2);
-    }
-    .seg.c3 {
-      stroke: var(--e-c3);
-    }
-    .seg.c4 {
-      stroke: var(--e-c4);
-    }
-    .seg.c5 {
-      stroke: var(--e-c5);
-    }
-    .seg.c0 {
-      stroke: var(--e-c0);
-    }
-    .seg.home {
-      stroke: var(--e-home);
-    }
-    :host([dark]) .seg {
-      filter: drop-shadow(0 0 4px rgba(251, 146, 60, 0.55));
-    }
-    .basemk {
-      stroke: var(--glow-text);
-      stroke-width: 2;
-      stroke-linecap: round;
-      opacity: 0.55;
-    }
-    .ecap {
-      fill: #fff;
-      stroke: rgb(var(--e-home-rgb));
-      stroke-width: 2.5;
-      filter: drop-shadow(0 0 6px rgba(var(--e-home-rgb), 0.9));
-      animation: breathe 2.6s ease-in-out infinite;
-    }
-    :host(:not([dark])) .ecap {
-      filter: drop-shadow(0 1px 3px rgba(0, 0, 0, 0.25));
-    }
-    .src {
-      stroke-linecap: round;
-    }
-    .src.grid {
-      stroke: var(--e-grid);
-    }
-    .src.solar {
-      stroke: var(--e-solar);
-    }
-    .src.bat {
-      stroke: var(--e-bat);
-    }
-    :host([dark]) .src.grid {
-      filter: drop-shadow(0 0 4px var(--e-grid));
-    }
-    :host([dark]) .src.solar {
-      filter: drop-shadow(0 0 4px var(--e-solar));
-    }
-    :host([dark]) .src.bat {
-      filter: drop-shadow(0 0 4px var(--e-bat));
-    }
-    .sur {
-      stroke-dasharray: 2 5;
-      stroke-linecap: round;
-      animation: flow 1.6s linear infinite;
-    }
-    .sur.grid {
-      stroke: var(--e-grid);
-    }
-    .sur.bat {
-      stroke: var(--e-bat);
-    }
-    .surcap {
-      fill: var(--e-solar);
-    }
-    .cl {
-      font-weight: 700;
-      fill: var(--glow-muted);
-    }
-    .cv {
-      font-weight: 800;
-      fill: var(--glow-text);
-      letter-spacing: -0.02em;
-    }
-    .pill.normal,
-    .pill.low {
-      fill: var(--e-ok-bg);
-    }
-    .pill.high {
-      fill: var(--e-hi-bg);
-    }
-    .pillt {
-      font-weight: 800;
-    }
-    .pillt.normal,
-    .pillt.low {
-      fill: var(--e-ok);
-    }
-    .pillt.high {
-      fill: var(--e-hi);
-    }
     .dot {
       width: 9px;
       height: 9px;
