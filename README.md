@@ -279,9 +279,11 @@ A load ring for every home, with or without solar: how much the house draws righ
 One sensor is enough: the house consumption (`home`) or the grid power (`grid`, positive = import). Everything else is optional and extends the same card:
 
 - `devices`: up to 5 power sensors. The card lists them by power; the rest of the house is shown as "Not measured".
-- `energy_today`: today's usage and the comparison with yesterday at the same time.
-- Costs come from Home Assistant's energy dashboard without any setting: if a price is set there (fixed or a sensor, e.g. Tibber or Nordpool), the card shows today's and yesterday's cost from HA's cost statistics, so dynamic prices are billed correctly per hour. `price` (sensor or number), `fixed_price` or `cost_today` override this; then the cost is today's kWh × the current price.
 - `solar`, `battery` (state of charge) and `battery_power` (positive = charging): the card grows by one row, shows where the power comes from in an outer ring and tiles for solar, battery and grid. Without a house sensor the house is calculated from grid, solar and battery.
+- `invert_grid` / `invert_battery`: for sensors with the opposite sign (export or discharging positive).
+- `max_power`: kW at which the ring is full. Default: automatic from the peaks of the last 14 days.
+
+**Energy dashboard:** kWh today (usage, solar, import, export), the comparison with yesterday and the costs come from Home Assistant's energy dashboard without any setting. Costs use HA's cost statistics, so dynamic prices (e.g. Tibber or Nordpool) are billed correctly per hour. In "Advanced" you can override this with daily meters (`energy_today`, `solar_energy`, `grid_import_energy`, `grid_export_energy`), a `price` (sensor or number), a `fixed_price` or a `cost_today` sensor.
 
 Tap opens the popup (ring, usual range, base load with cost per day, devices with share, today's curve against yesterday and the usual band, comparison tiles). Hold opens more info of the house sensor.
 
@@ -292,16 +294,14 @@ devices: # optional
   - sensor.heat_pump_power
   - entity: sensor.tv_plug_power
     name: TV
-energy_today: sensor.house_energy_today # optional, daily meter
-# price: 0.32 # optional, overrides the energy dashboard price
 # optional, with solar / battery:
 solar: sensor.pv_power
 battery: sensor.battery_state_of_charge
 battery_power: sensor.battery_power # positive = charging
-solar_energy: sensor.pv_energy_today
-grid_import_energy: sensor.grid_import_today
-grid_export_energy: sensor.grid_export_today
-max_power: 3 # kW at which the ring is full (default 3)
+# invert_battery: true # if the sensor reports discharging as positive
+# optional overrides (otherwise from the energy dashboard):
+# energy_today: sensor.house_energy_today
+# price: 0.32
 ```
 
 ## Roadmap

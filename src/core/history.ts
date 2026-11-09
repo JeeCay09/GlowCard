@@ -186,6 +186,7 @@ export async function fetchStatChange(
   ids: string[],
   start: Date,
   end = new Date(),
+  period: '5minute' | 'hour' = 'hour',
 ): Promise<Record<string, number>> {
   const out: Record<string, number> = {};
   if (!hass.callWS || ids.length === 0) return out;
@@ -195,7 +196,7 @@ export async function fetchStatChange(
       start_time: start.toISOString(),
       end_time: end.toISOString(),
       statistic_ids: ids,
-      period: 'hour',
+      period,
       types: ['change'],
     });
     for (const id of ids) {

@@ -279,9 +279,11 @@ Ein Lastring für jedes Zuhause, mit oder ohne Solaranlage: wie viel das Haus ge
 Ein Sensor genügt: der Hausverbrauch (`home`) oder die Netzleistung (`grid`, positiv = Bezug). Alles andere ist optional und erweitert dieselbe Karte:
 
 - `devices`: bis zu 5 Leistungssensoren. Die Karte listet sie nach Leistung; der Rest des Hauses erscheint als „Nicht erfasst“.
-- `energy_today`: Verbrauch heute und Vergleich mit dem Vortag zur gleichen Uhrzeit.
-- Die Kosten kommen ohne Einstellung aus dem Energie-Dashboard von Home Assistant: Ist dort ein Preis hinterlegt (fest oder als Sensor, z. B. Tibber oder Nordpool), zeigt die Karte die Kosten von heute und gestern aus den Kosten-Statistiken von HA, dynamische Preise werden also stundengenau abgerechnet. `price` (Sensor oder Zahl), `fixed_price` oder `cost_today` übersteuern das; dann sind die Kosten kWh heute × aktueller Preis.
 - `solar`, `battery` (Ladestand) und `battery_power` (positiv = Laden): Die Karte wird eine Reihe höher, zeigt in einem äußeren Ring, woher der Strom kommt, und Kacheln für Solar, Akku und Netz. Ohne Haussensor wird der Verbrauch aus Netz, Solar und Akku berechnet.
+- `invert_grid` / `invert_battery`: für Sensoren mit umgekehrtem Vorzeichen (Einspeisung bzw. Entladen positiv).
+- `max_power`: kW, bei denen der Ring voll ist. Standard: automatisch aus den Spitzen der letzten 14 Tage.
+
+**Energie-Dashboard:** kWh heute (Verbrauch, Solar, Bezug, Einspeisung), der Vergleich mit dem Vortag und die Kosten kommen ohne Einstellung aus dem Energie-Dashboard von Home Assistant. Die Kosten stammen aus den Kosten-Statistiken von HA, dynamische Preise (z. B. Tibber oder Nordpool) werden also stundengenau abgerechnet. Unter „Erweitert“ lässt sich das mit Tageszählern (`energy_today`, `solar_energy`, `grid_import_energy`, `grid_export_energy`), einem `price` (Sensor oder Zahl), einem `fixed_price` oder einem `cost_today`-Sensor übersteuern.
 
 Antippen öffnet das Popup (Ring, üblicher Bereich, Grundlast mit Kosten pro Tag, Geräte mit Anteil, Verlauf heute gegen Vortag und üblichen Bereich, Vergleichskacheln). Gedrückt halten öffnet die Detailansicht des Haussensors.
 
@@ -292,16 +294,14 @@ devices: # optional
   - sensor.heat_pump_power
   - entity: sensor.tv_plug_power
     name: Fernseher
-energy_today: sensor.house_energy_today # optional, Tageszähler
-# price: 0.32 # optional, übersteuert den Preis aus dem Energie-Dashboard
 # optional, mit Solar / Akku:
 solar: sensor.pv_power
 battery: sensor.battery_state_of_charge
 battery_power: sensor.battery_power # positiv = Laden
-solar_energy: sensor.pv_energy_today
-grid_import_energy: sensor.grid_import_today
-grid_export_energy: sensor.grid_export_today
-max_power: 3 # kW, bei denen der Ring voll ist (Standard 3)
+# invert_battery: true # falls der Sensor Entladen positiv meldet
+# optionale Übersteuerung (sonst aus dem Energie-Dashboard):
+# energy_today: sensor.house_energy_today
+# price: 0.32
 ```
 
 ## Roadmap
