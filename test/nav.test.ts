@@ -81,13 +81,14 @@ describe('status dot', () => {
     expect(dotActive(undefined)).toBe(false);
   });
 
-  it('uses the light colour for lights, else the button colour', () => {
+  it('uses the light colour for lights, else the button colour, else green', () => {
     const fallback: [number, number, number] = [1, 2, 3];
     expect(dotColor(e('light.a', 'on', { rgb_color: [255, 100, 50] }), fallback, false)).toEqual([
       255, 100, 50,
     ]);
     expect(dotColor(e('light.a', 'on'), fallback, false)).toEqual([255, 200, 114]);
     expect(dotColor(e('vacuum.vesta', 'cleaning'), fallback, false)).toBe(fallback);
+    expect(dotColor(e('vacuum.vesta', 'cleaning'), undefined, false)).toEqual([16, 185, 129]);
   });
 });
 

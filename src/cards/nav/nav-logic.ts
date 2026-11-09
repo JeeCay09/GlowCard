@@ -85,9 +85,12 @@ export function buttonColor(b: NavButtonConfig, cardColor: unknown, dark: boolea
   );
 }
 
-/** Dot colour: a light's current colour, else the warm Glow tone for lights, else the button colour. */
-export function dotColor(e: HassEntity | undefined, fallback: Rgb, dark: boolean): Rgb {
+/**
+ * Dot colour as in the mockup: a light's current colour (warm Glow tone without one),
+ * else the button's own colour, else green ("running").
+ */
+export function dotColor(e: HassEntity | undefined, own: Rgb | undefined, dark: boolean): Rgb {
   if (e?.entity_id.startsWith('light.'))
     return lightColor(e) ?? resolveAccent('warm', dark, 'warm');
-  return fallback;
+  return own ?? resolveAccent('green', dark, 'green');
 }
