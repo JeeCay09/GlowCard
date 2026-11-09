@@ -11,9 +11,19 @@ import {
   currentIndex,
   dotActive,
   dotColor,
+  glideStart,
+  navSignature,
+  nextHandoff,
   tapActionOf,
   type NavButtonConfig,
+  type NavHandoff,
 } from './nav-logic';
+
+/**
+ * Where the marker was last, shared by all bars on the page. A view change shows a new
+ * (or re-attached) bar; it reads this to let the marker glide on from the old button.
+ */
+let handoff: NavHandoff | undefined;
 
 export interface NavCardConfig extends GlowCardConfig {
   /** `float` (default): fixed at the bottom of the screen. `card`: a normal card in the grid. */
@@ -35,6 +45,8 @@ export class GlowNavCard extends GlowCardBase<NavCardConfig> {
   preview = false;
 
   private placed = false;
+  /** Button the marker starts on when a bar appears after a view change (-1: none). */
+  @state() private glideFrom = -1;
   private pressed = -1;
   private resize?: ResizeObserver;
   private buttonPress = new PressController(
@@ -342,8 +354,16 @@ export class GlowNavCard extends GlowCardBase<NavCardConfig> {
 
   private onLocation = (): void => {
     this.current = currentIndex(this.buttons, location);
+    if (!this.placed && !this.preview) {
+      this.glideFrom = glideStart(handoff, navSignature(this.buttons), this.current, Date.now());
+    }
     this.requestUpdate();
   };
+
+  /** Button shown as current: the old one for a moment while the marker takes over. */
+  private get shown(): number {
+    return this.glideFrom >= 0 ? this.glideFrom : this.current;
+  }
 
   connectedCallback(): void {
     super.connectedCallback();
@@ -361,6 +381,7 @@ export class GlowNavCard extends GlowCardBase<NavCardConfig> {
     this.resize?.disconnect();
     this.resize = undefined;
     this.placed = false;
+    this.glideFrom = -1;
   }
 
   protected willUpdate(changed: PropertyValues): void {
@@ -385,7 +406,7 @@ export class GlowNavCard extends GlowCardBase<NavCardConfig> {
     if (!buttons.length) {
       return html`<div class="dock"><span class="empty">${editorLabel('nav_empty')}</span></div>`;
     }
-    const cur = buttons[this.current];
+    const cur = buttons[this.shown];
     const accent = this.color(cur ?? buttons[0]);
     return html`<nav
       class="dock"
@@ -398,7 +419,7 @@ export class GlowNavCard extends GlowCardBase<NavCardConfig> {
   }
 
   private renderButton(b: NavButtonConfig, i: number, accent: Rgb) {
-    const isCur = i === this.current;
+    const isCur = i === this.shown;
     const e = b.entity ? this.hass?.states[b.entity] : undefined;
     const own = b.color ? this.color(b) : undefined;
     const dot = dotActive(e) ? dotColor(e, own, this.dark) : undefined;
@@ -430,6 +451,15 @@ export class GlowNavCard extends GlowCardBase<NavCardConfig> {
     super.updated(changed);
     this.toggleAttribute('floating', this.floating);
     this.placePill();
+    if (this.glideFrom >= 0) {
+      // The marker sits on the old button now. Two frames later (after the first resize
+      // callback, which places it without animation) it glides to the current one.
+      requestAnimationFrame(() =>
+        requestAnimationFrame(() => {
+          this.glideFrom = -1;
+        }),
+      );
+    }
     if (!this.resize && typeof ResizeObserver !== 'undefined') {
       const dock = this.renderRoot.querySelector('.dock');
       if (dock) {
@@ -442,8 +472,11 @@ export class GlowNavCard extends GlowCardBase<NavCardConfig> {
   /** Moves the marker under the current button; without animation the first time. */
   private placePill(still = false): void {
     const pill = this.renderRoot.querySelector<HTMLElement>('.pill');
-    const btn = this.renderRoot.querySelectorAll<HTMLElement>('button')[this.current];
+    const btn = this.renderRoot.querySelectorAll<HTMLElement>('button')[this.shown];
     if (!pill || !btn) return;
+    if (this.glideFrom < 0 && !this.preview) {
+      handoff = nextHandoff(handoff, navSignature(this.buttons), this.current, Date.now());
+    }
     const jump = still || !this.placed;
     pill.classList.toggle('still', jump);
     pill.style.left = `${btn.offsetLeft}px`;
@@ -460,7 +493,10 @@ export class GlowNavCard extends GlowCardBase<NavCardConfig> {
     if (!b || !this.hass) return;
     const action: ActionConfig = kind === 'hold' && b.hold_action ? b.hold_action : tapActionOf(b);
     // Navigation: the marker starts moving at once, the location event confirms it.
-    if (action.action === 'navigate' && action.navigation_path) this.current = i;
+    if (action.action === 'navigate' && action.navigation_path) {
+      this.glideFrom = -1;
+      this.current = i;
+    }
     await handleAction({ element: this, hass: this.hass, entity: b.entity }, action);
   }
 }
