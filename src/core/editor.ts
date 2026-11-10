@@ -139,7 +139,7 @@ const LABELS = {
     glow_entity_helper: 'Leer = Symbol leuchtet nie. Z. B. eine Lichtgruppe',
     glow_color: 'Farbe',
     glow_color_helper:
-      'Färbt das Symbol, auch ohne Leuchten. Leer = neutral, beim Leuchten Farbe des Lichts',
+      'Färbt das Symbol, auch ohne Leuchten. Standard = neutral, beim Leuchten Farbe des Lichts',
     heading_tap_helper: 'Standardaktion = keine. Mit Aktion erscheint ein Pfeil',
     devices: 'Verbraucher (Leistungssensoren)',
     devices_helper: 'Bis zu 5 Geräte. Der Rest erscheint als „Nicht erfasst“',
@@ -279,7 +279,7 @@ const LABELS = {
     glow_entity_helper: 'Empty = the icon never glows. E.g. a light group',
     glow_color: 'Colour',
     glow_color_helper:
-      'Tints the icon, also without glow. Empty = neutral, glow in the light’s colour',
+      'Tints the icon, also without glow. Default = neutral, glow in the light’s colour',
     heading_tap_helper: 'Default action = none. With an action an arrow is shown',
     devices: 'Consumers (power sensors)',
     devices_helper: 'Up to 5 devices. The rest is shown as “Not measured”',
