@@ -44,9 +44,9 @@ export function mix(a: Rgb, b: Rgb, f: number): Rgb {
 }
 
 /**
- * True when a colour is so pale (almost white, e.g. neutral or cool white light) that a
- * white icon on it would not be readable. Saturated light colours such as orange, amber
- * or yellow keep the white icon like every other active orb (#139).
+ * True when a colour is so pale (almost white, e.g. neutral or cool white light) that
+ * white text on it would not be readable. Saturated light colours such as orange, amber
+ * or yellow keep white text (#139). Orb icons do not use this: they are always white.
  */
 export function isBright([r, g, b]: Rgb): boolean {
   const luminance = (0.2126 * r + 0.7152 * g + 0.0722 * b) / 255;

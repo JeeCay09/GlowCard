@@ -676,12 +676,7 @@ export class GlowEnergyCard extends GlowCardBase<EnergyCardConfig> {
       @contextmenu=${(e: Event) => e.preventDefault()}
     >
       <div class="head">
-        <glowcard-orb
-          .icon=${this.icon}
-          active
-          ?dark-icon=${this.darkIcon}
-          .size=${compact ? 36 : 46}
-        ></glowcard-orb>
+        <glowcard-orb .icon=${this.icon} active .size=${compact ? 36 : 46}></glowcard-orb>
         <div class="titles">
           <span class="title">${this.config.name ?? et(h, 'energy')}</span>
           <span class="subt">${this.subtitle(g)}</span>

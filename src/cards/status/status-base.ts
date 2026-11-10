@@ -212,7 +212,7 @@ export abstract class GlowStatusBase<C extends GlowCardConfig> extends GlowCardB
     return this.popupView?.rgb ?? paletteColor('warm', this.dark);
   }
 
-  protected get darkIcon(): boolean {
+  protected get darkText(): boolean {
     return false;
   }
 
