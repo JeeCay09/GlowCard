@@ -199,7 +199,6 @@ export class GlowLightCard extends GlowCardBase<LightCardConfig> {
       .icon=${this.icon}
       .size=${size ?? 52}
       ?active=${this.isActive}
-      ?dark-icon=${this.darkIcon}
       label=${this.displayName}
     ></glowcard-orb>`;
   }
@@ -279,7 +278,7 @@ export class GlowLightCard extends GlowCardBase<LightCardConfig> {
   private switchColumn() {
     const on = this.isActive;
     return html`<button
-      class="onoff ${on ? 'on' : ''} ${this.darkIcon ? 'dark-text' : ''}"
+      class="onoff ${on ? 'on' : ''} ${this.darkText ? 'dark-text' : ''}"
       aria-pressed=${on ? 'true' : 'false'}
       ?disabled=${this.isUnavailable}
       @click=${this.toggle}
@@ -340,7 +339,7 @@ export class GlowLightCard extends GlowCardBase<LightCardConfig> {
       vertical
       .value=${this.bright}
       caption=${v > 0 ? `${v}%` : localize(this.hass, 'off')}
-      ?dark-text=${this.darkIcon}
+      ?dark-text=${this.darkText}
       label=${localize(this.hass, 'brightness')}
       live
       @value-changing=${this.dragColumn}

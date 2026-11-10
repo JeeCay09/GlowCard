@@ -1,4 +1,5 @@
 import { css, html, nothing, type PropertyValues } from 'lit';
+import { ORB_ICON_COLOR, orbIconShadow, orbLitBackground } from '../../core/orb-style';
 import { state } from 'lit/decorators.js';
 import { handleAction, type ActionConfig } from '../../core/action';
 import { GlowCardBase, type GlowCardConfig } from '../../core/base-card';
@@ -190,11 +191,7 @@ export class GlowNavCard extends GlowCardBase<NavCardConfig> {
         border-radius: inherit;
         opacity: 0;
         transition: opacity 0.18s;
-        background: radial-gradient(
-          circle at 35% 30%,
-          color-mix(in srgb, #ffffff 60%, rgb(var(--nav-a))),
-          rgb(var(--nav-a)) 62%
-        );
+        background: ${orbLitBackground('rgb(var(--nav-a))')};
       }
       ha-icon {
         position: relative;
@@ -203,7 +200,7 @@ export class GlowNavCard extends GlowCardBase<NavCardConfig> {
       }
       /* The new orb lights up only once the marker has (nearly) arrived. */
       .cur .orb {
-        color: #ffffff;
+        color: ${ORB_ICON_COLOR};
         /* Written out here: --nav-a is set on the dock, so a shorthand on :host would not see it. */
         box-shadow: 0 0 var(--nav-glow-r) rgba(var(--nav-a), var(--nav-glow-a));
         transition:
@@ -214,8 +211,8 @@ export class GlowNavCard extends GlowCardBase<NavCardConfig> {
         opacity: 1;
         transition: opacity 0.24s calc(var(--nav-dur) * 0.8);
       }
-      .cur.dark-icon .orb {
-        color: #3a2504;
+      .cur ha-icon {
+        filter: ${orbIconShadow('rgb(var(--nav-a))')};
       }
       .dot {
         position: absolute;
@@ -415,19 +412,17 @@ export class GlowNavCard extends GlowCardBase<NavCardConfig> {
       aria-label=${editorLabel('nav_label', this.hass?.language)}
     >
       <span class="pill ${cur ? '' : 'off'}"></span>
-      ${buttons.map((b, i) => this.renderButton(b, i, accent))}
+      ${buttons.map((b, i) => this.renderButton(b, i))}
     </nav>`;
   }
 
-  private renderButton(b: NavButtonConfig, i: number, accent: Rgb) {
+  private renderButton(b: NavButtonConfig, i: number) {
     const isCur = i === this.shown;
     const e = b.entity ? this.hass?.states[b.entity] : undefined;
     const own = b.color ? this.color(b) : undefined;
     const dot = dotActive(e) ? dotColor(e, own, this.dark) : undefined;
-    const bright =
-      isCur && (0.2126 * accent[0] + 0.7152 * accent[1] + 0.0722 * accent[2]) / 255 > 0.6;
     return html`<button
-      class="${isCur ? 'cur' : ''} ${bright ? 'dark-icon' : ''}"
+      class="${isCur ? 'cur' : ''}"
       title=${b.name ?? nothing}
       aria-label=${b.name ?? b.icon ?? `${i + 1}`}
       aria-current=${isCur ? 'page' : 'false'}
