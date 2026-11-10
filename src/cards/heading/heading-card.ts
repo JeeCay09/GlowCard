@@ -1,14 +1,21 @@
 import { css, html, nothing, type TemplateResult } from 'lit';
 import type { GlowCardConfig } from '../../core/base-card';
 import { handleAction, type ActionConfig } from '../../core/action';
-import { rgbTriplet } from '../../core/color';
+import { rgbTriplet, rgbToHex } from '../../core/color';
 import { registerCard } from '../../core/register';
 import { configForm, editorLabel, fontField, sizeField } from '../../core/editor';
 import type { HomeAssistant } from '../../types/hass';
 import { GlowStatusBase, dot, toneDot } from '../status/status-base';
 import type { SegmentConfig, SegmentView } from '../status/status-logic';
 import { dotStyles, statusPopupStyles, statusTokens } from '../status/status-styles';
-import { badgeSegment, badgeView, glowColor, iconLook, type BadgeConfig } from './heading-logic';
+import {
+  badgeSegment,
+  badgeView,
+  glowColor,
+  iconLook,
+  parseColor,
+  type BadgeConfig,
+} from './heading-logic';
 
 export interface HeadingCardConfig extends GlowCardConfig {
   /** The heading text. */
@@ -22,7 +29,7 @@ export interface HeadingCardConfig extends GlowCardConfig {
   /** Optional: the icon glows while this entity is on. Default: the icon stays neutral. */
   glow_entity?: string;
   /**
-   * Icon colour (name, hex or [r, g, b]). Shown as a tint without glow, and as the glow
+   * Icon colour (GlowCard or HA colour name, hex, or [r, g, b] from older configs). Shown as a tint without glow, and as the glow
    * colour while `glow_entity` is on. Default: neutral icon; glow in the light's colour.
    */
   glow_color?: string | number[];
@@ -69,7 +76,7 @@ export class GlowHeadingCard extends GlowStatusBase<HeadingCardConfig> {
           icon: 'mdi:shimmer',
           schema: [
             { name: 'glow_entity', selector: { entity: {} } },
-            { name: 'glow_color', selector: { color_rgb: {} } },
+            { name: 'glow_color', selector: { ui_color: {} } },
           ],
         },
         {
@@ -107,6 +114,13 @@ export class GlowHeadingCard extends GlowStatusBase<HeadingCardConfig> {
         if (Array.isArray(badges) && badges.some((b) => typeof b !== 'string')) {
           throw new Error(editorLabel('badges_yaml_only'));
         }
+      },
+      // Older configs store [r, g, b] from the RGB picker; HA's colour list shows hex.
+      (config) => {
+        const rgb = parseColor(config.glow_color, false);
+        return Array.isArray(config.glow_color) && rgb
+          ? { ...config, glow_color: rgbToHex(rgb) }
+          : config;
       },
     );
   }
@@ -215,8 +229,8 @@ export class GlowHeadingCard extends GlowStatusBase<HeadingCardConfig> {
     if (!this.config || !this.hass) return nothing;
     const c = this.config;
     const glowEntity = c.glow_entity ? this.hass.states[c.glow_entity] : undefined;
-    const look = iconLook(glowEntity, c.glow_color, this.dark);
-    const rgb = rgbTriplet(glowColor(glowEntity, c.glow_color, this.dark));
+    const look = iconLook(glowEntity, c.glow_color, this.dark, this);
+    const rgb = rgbTriplet(glowColor(glowEntity, c.glow_color, this.dark, this));
     const clickable = this.titleAction.action !== 'none';
     const heading = c.heading ?? '';
     const titleAttrs = clickable
