@@ -1,5 +1,12 @@
 import type { HassEntity, HomeAssistant } from '../../types/hass';
-import { hexToRgb, lightColor, resolveAccent, ACCENTS, type Rgb } from '../../core/color';
+import {
+  hexToRgb,
+  lightColor,
+  resolveAccent,
+  themeColor,
+  ACCENTS,
+  type Rgb,
+} from '../../core/color';
 import { language } from '../../core/localize';
 import {
   entityName,
@@ -141,13 +148,18 @@ export function badgeView(hass: HomeAssistant, cfg: SegmentConfig, dark: boolean
   return { ...base, icon, value, chipSub: value, tone: active ? 'active' : 'neutral', rgb };
 }
 
-/** Glow colour from the config: accent name, hex string or [r, g, b] from the colour picker. */
-export function parseColor(color: unknown, dark: boolean): Rgb | null {
+/**
+ * Glow colour from the config: a GlowCard accent name or hex string, an HA theme colour
+ * name from HA's colour list (`light-blue`, `lime` …, resolved against `el`'s theme), or
+ * [r, g, b] (older configs from the RGB picker). Shared names keep the Glow tone.
+ */
+export function parseColor(color: unknown, dark: boolean, el?: Element): Rgb | null {
   if (Array.isArray(color) && color.length === 3 && color.every((c) => typeof c === 'number')) {
     return [color[0], color[1], color[2]];
   }
   if (typeof color === 'string' && color) {
     if (ACCENTS[color.toLowerCase()] || hexToRgb(color)) return resolveAccent(color, dark, 'amber');
+    return themeColor(color, el);
   }
   return null;
 }
@@ -161,8 +173,13 @@ export function glowActive(e: HassEntity | undefined): boolean {
  * Glow colour of the icon: the chosen colour wins; without one a light uses its current
  * colour, everything else the warm Glow tone.
  */
-export function glowColor(e: HassEntity | undefined, color: unknown, dark: boolean): Rgb {
-  return parseColor(color, dark) ?? lightColor(e) ?? paletteColor('warm', dark);
+export function glowColor(
+  e: HassEntity | undefined,
+  color: unknown,
+  dark: boolean,
+  el?: Element,
+): Rgb {
+  return parseColor(color, dark, el) ?? lightColor(e) ?? paletteColor('warm', dark);
 }
 
 /**
@@ -173,7 +190,8 @@ export function iconLook(
   e: HassEntity | undefined,
   color: unknown,
   dark: boolean,
+  el?: Element,
 ): 'on' | 'tint' | 'off' {
   if (glowActive(e)) return 'on';
-  return parseColor(color, dark) ? 'tint' : 'off';
+  return parseColor(color, dark, el) ? 'tint' : 'off';
 }
