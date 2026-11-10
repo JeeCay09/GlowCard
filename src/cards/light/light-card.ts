@@ -140,6 +140,18 @@ export class GlowLightCard extends GlowCardBase<LightCardConfig> {
     else this.call({ hs_color: [ev.detail.value, 100] });
   };
 
+  /** While dragging: the light follows the finger. Turning off waits for the release. */
+  private liveBrightness = (ev: CustomEvent<{ value: number }>) => {
+    ev.stopPropagation();
+    if (ev.detail.value > 0) this.call({ brightness_pct: ev.detail.value });
+  };
+
+  private liveColumn = (ev: CustomEvent<{ value: number }>) => {
+    if (this.tab === 'brightness') return this.liveBrightness(ev);
+    if (this.tab === 'color_temp') this.call({ color_temp_kelvin: ev.detail.value });
+    else this.call({ hs_color: [ev.detail.value, 100] });
+  };
+
   private dragBar = (ev: CustomEvent<{ value: number }>) => {
     ev.stopPropagation();
     this.cardDrag = ev.detail.value;
@@ -198,7 +210,9 @@ export class GlowLightCard extends GlowCardBase<LightCardConfig> {
       label=${localize(this.hass, 'brightness')}
       @pointerdown=${(e: Event) => e.stopPropagation()}
       @pointerup=${(e: Event) => e.stopPropagation()}
+      live
       @value-changing=${this.dragBar}
+      @value-live=${this.liveBrightness}
       @value-changed=${this.setBrightness}
     ></glowcard-slider>`;
   }
@@ -297,7 +311,9 @@ export class GlowLightCard extends GlowCardBase<LightCardConfig> {
         dark-text
         label=${localize(this.hass, 'color_temp')}
         style=${`--glow-fill-v:${kelvinGradient([min, max])} bottom / 100% 300px no-repeat`}
+        live
         @value-changing=${this.dragColumn}
+        @value-live=${this.liveColumn}
         @value-changed=${this.setColumn}
       ></glowcard-slider>`;
     }
@@ -313,7 +329,9 @@ export class GlowLightCard extends GlowCardBase<LightCardConfig> {
         caption=${v === undefined ? '–' : `${Math.round(v)}°`}
         label=${localize(this.hass, 'color')}
         style=${`--glow-fill-v:${HUE_GRADIENT} bottom / 100% 300px no-repeat`}
+        live
         @value-changing=${this.dragColumn}
+        @value-live=${this.liveColumn}
         @value-changed=${this.setColumn}
       ></glowcard-slider>`;
     }
@@ -324,7 +342,9 @@ export class GlowLightCard extends GlowCardBase<LightCardConfig> {
       caption=${v > 0 ? `${v}%` : localize(this.hass, 'off')}
       ?dark-text=${this.darkIcon}
       label=${localize(this.hass, 'brightness')}
+      live
       @value-changing=${this.dragColumn}
+      @value-live=${this.liveColumn}
       @value-changed=${this.setColumn}
     ></glowcard-slider>`;
   }

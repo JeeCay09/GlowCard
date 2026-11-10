@@ -13,6 +13,13 @@ import { fillPercent, valueFromPosition } from '../core/slider-math';
  *   handle line on the fill edge and a soft glow behind the fill.
  *
  * Fires `value-changing` while dragging and `value-changed` on release, both `{ value }`.
+ * With `live`, it also fires `value-live` while dragging (at most every LIVE_MS), so the
+ * light follows the finger instead of changing only on release.
+ *
+ * On touch, the horizontal bar lets the page scroll: a drag only starts once the finger
+ * moves sideways more than it moves up or down. A vertical swipe over the bar scrolls the
+ * dashboard and never changes the value.
+ *
  * Colours come from --glow-accent; `--glow-fill` / `--glow-knob` can override them.
  */
 export class GlowSlider extends LitElement {
@@ -30,7 +37,15 @@ export class GlowSlider extends LitElement {
   /** Vertical only: text at the top of the column, e.g. "72%". */
   @property() caption = '';
 
+  /** Fire `value-live` while dragging (throttled). */
+  @property({ type: Boolean }) live = false;
+
   @state() private dragValue?: number;
+  /** Touch on the horizontal bar: where it started, until it is clearly a sideways drag. */
+  private pending?: { id: number; x: number; y: number; target: HTMLElement };
+  private liveSent?: number;
+  private liveAt = 0;
+  private liveTimer?: number;
 
   static styles = css`
     :host {
@@ -58,6 +73,8 @@ export class GlowSlider extends LitElement {
 
     /* horizontal (card) */
     :host(:not([vertical])) .hit {
+      /* Vertical swipes scroll the page; see onDown. */
+      touch-action: pan-y;
       height: 36px;
       display: flex;
       align-items: center;
@@ -176,8 +193,8 @@ export class GlowSlider extends LitElement {
     return this.dragValue ?? this.value;
   }
 
-  private fromEvent(ev: PointerEvent): number {
-    const r = (ev.currentTarget as HTMLElement).getBoundingClientRect();
+  private fromPoint(ev: PointerEvent, target: HTMLElement): number {
+    const r = target.getBoundingClientRect();
     return this.vertical
       ? valueFromPosition(r.bottom - ev.clientY, 0, r.height, this.min, this.max, this.step)
       : valueFromPosition(ev.clientX, r.left, r.width, this.min, this.max, this.step);
@@ -186,25 +203,95 @@ export class GlowSlider extends LitElement {
   private onDown = (ev: PointerEvent) => {
     if (this.disabled) return;
     ev.stopPropagation();
-    (ev.currentTarget as HTMLElement).setPointerCapture?.(ev.pointerId);
-    this.dragValue = this.fromEvent(ev);
-    fireEvent(this, 'value-changing', { value: this.dragValue });
+    const target = ev.currentTarget as HTMLElement;
+    if (!this.vertical && ev.pointerType === 'touch') {
+      // Wait: this may be the start of a scroll. See onMove.
+      this.pending = { id: ev.pointerId, x: ev.clientX, y: ev.clientY, target };
+      return;
+    }
+    this.start(ev, target);
   };
 
-  private onMove = (ev: PointerEvent) => {
-    if (this.dragValue === undefined) return;
-    this.dragValue = this.fromEvent(ev);
+  private start(ev: PointerEvent, target: HTMLElement) {
+    this.pending = undefined;
+    target.setPointerCapture?.(ev.pointerId);
+    this.dragValue = this.fromPoint(ev, target);
     fireEvent(this, 'value-changing', { value: this.dragValue });
+    this.sendLive(this.dragValue);
+  }
+
+  private onMove = (ev: PointerEvent) => {
+    const p = this.pending;
+    if (p && ev.pointerId === p.id) {
+      const dx = Math.abs(ev.clientX - p.x);
+      const dy = Math.abs(ev.clientY - p.y);
+      if (dy > SLOP && dy >= dx) {
+        this.pending = undefined; // a scroll: the browser takes over (pointercancel)
+      } else if (dx > SLOP && dx > dy) {
+        this.start(ev, p.target);
+      }
+      return;
+    }
+    if (this.dragValue === undefined) return;
+    this.dragValue = this.fromPoint(ev, ev.currentTarget as HTMLElement);
+    fireEvent(this, 'value-changing', { value: this.dragValue });
+    this.sendLive(this.dragValue);
   };
 
   private onUp = (ev: PointerEvent) => {
+    const p = this.pending;
+    if (p && ev.pointerId === p.id) {
+      // A tap without moving sets the value where the finger is.
+      this.pending = undefined;
+      ev.stopPropagation();
+      this.finish(this.fromPoint(ev, p.target));
+      return;
+    }
     if (this.dragValue === undefined) return;
     ev.stopPropagation();
-    const value = this.fromEvent(ev);
+    this.finish(this.fromPoint(ev, ev.currentTarget as HTMLElement));
+  };
+
+  private onCancel = () => {
+    // The browser took the gesture (page scroll) or lost it: keep the old value.
+    this.pending = undefined;
+    if (this.dragValue === undefined) return;
     this.dragValue = undefined;
+    this.stopLive();
+    fireEvent(this, 'value-changed', { value: this.value });
+  };
+
+  private finish(value: number) {
+    this.dragValue = undefined;
+    this.stopLive();
     this.value = value;
     fireEvent(this, 'value-changed', { value });
-  };
+  }
+
+  /** Throttled `value-live`: right away, then at most every LIVE_MS, plus the latest value. */
+  private sendLive(value: number) {
+    if (!this.live) return;
+    const wait = this.liveAt + LIVE_MS - Date.now();
+    window.clearTimeout(this.liveTimer);
+    if (wait <= 0) {
+      this.emitLive(value);
+    } else {
+      this.liveTimer = window.setTimeout(() => this.emitLive(value), wait);
+    }
+  }
+
+  private emitLive(value: number) {
+    if (value === this.liveSent || this.dragValue === undefined) return;
+    this.liveSent = value;
+    this.liveAt = Date.now();
+    fireEvent(this, 'value-live', { value });
+  }
+
+  private stopLive() {
+    window.clearTimeout(this.liveTimer);
+    this.liveSent = undefined;
+    this.liveAt = 0;
+  }
 
   private onKey = (ev: KeyboardEvent) => {
     if (this.disabled) return;
@@ -241,7 +328,7 @@ export class GlowSlider extends LitElement {
       @pointerdown=${this.onDown}
       @pointermove=${this.onMove}
       @pointerup=${this.onUp}
-      @pointercancel=${this.onUp}
+      @pointercancel=${this.onCancel}
       @click=${(e: Event) => e.stopPropagation()}
       @keydown=${this.onKey}
     >
@@ -276,5 +363,10 @@ export class GlowSlider extends LitElement {
     </div>`;
   }
 }
+
+/** Finger movement (px) before a touch counts as a drag or a scroll. */
+const SLOP = 8;
+/** Minimum time between two live updates while dragging. */
+const LIVE_MS = 250;
 
 defineOnce('glowcard-slider', GlowSlider);
