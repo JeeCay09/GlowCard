@@ -82,11 +82,11 @@
             { icon: 'mdi:solar-power-variant', name: 'Solar', navigation_path: '#solar' },
             {
               icon: 'mdi:robot-vacuum',
-              name: 'Vesta',
-              navigation_path: '#vesta',
-              entity: 'switch.home_office',
+              name: 'Saugroboter',
+              navigation_path: '#vacuum',
+              entity: 'switch.desk_plug',
             },
-            { icon: 'mdi:heart-pulse', name: 'HAGHS', navigation_path: '#haghs' },
+            { icon: 'mdi:heart-pulse', name: 'System', navigation_path: '#system' },
           ],
         },
         'full',
@@ -103,7 +103,7 @@
           'glowcard-light',
           { entity: 'light.led_strip', size: 'compact', icon: 'mdi:led-strip-variant' },
         ],
-        ['glowcard-switch', { entity: 'switch.home_office', size: 'compact' }],
+        ['glowcard-switch', { entity: 'switch.desk_plug', size: 'compact' }],
       ];
       if (params.get('pos') === 'card') cards.splice(1, 0, nav);
       else cards.push(nav);
