@@ -128,7 +128,7 @@ export function entityName(hass: HomeAssistant, id: string): string {
   return hass.states[id]?.attributes.friendly_name ?? id;
 }
 
-/** Name of the device an entity belongs to, e.g. "Vesta" for binary_sensor.vesta_problem. */
+/** Name of the device an entity belongs to, e.g. "Robot" for binary_sensor.robot_problem. */
 export function deviceName(hass: HomeAssistant, id: string): string | undefined {
   const dev = hass.entities?.[id]?.device_id;
   const name = dev ? hass.devices?.[dev]?.name : undefined;

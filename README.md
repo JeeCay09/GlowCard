@@ -330,7 +330,7 @@ buttons:
   - icon: mdi:robot-vacuum
     name: Vacuum
     navigation_path: '#vacuum'
-    entity: vacuum.vesta
+    entity: vacuum.robot
     color: green # optional, per button
   - icon: mdi:heart-pulse
     name: System

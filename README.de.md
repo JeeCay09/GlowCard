@@ -260,7 +260,7 @@ badges:
   - sensor.wohnzimmer_luftfeuchtigkeit
   - sensor.wohnzimmer_sensor_batterie # ab 15 % und weniger rot und pulsierend
   - type: lights # YAML: dieselben Einträge wie bei der Status-Leiste, öffnet das Licht-Popup
-    entities: [light.tv_wand]
+    entities: [light.tv_strips]
 glow_entity: light.wohnzimmer # optional
 glow_color: [255, 165, 110] # optional
 tap_action: # optional, zeigt einen Pfeil neben dem Titel
@@ -328,9 +328,9 @@ buttons:
     navigation_path: '#wohnzimmer' # öffnet ein Popup
     entity: light.wohnzimmer # optionaler Status-Punkt
   - icon: mdi:robot-vacuum
-    name: Vesta
-    navigation_path: '#vesta'
-    entity: vacuum.vesta
+    name: Saugroboter
+    navigation_path: '#vacuum'
+    entity: vacuum.robot
     color: green # optional, je Button
   - icon: mdi:heart-pulse
     name: System
