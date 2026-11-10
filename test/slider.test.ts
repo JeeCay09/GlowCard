@@ -93,7 +93,7 @@ describe('slider gestures', () => {
     ]);
     fire('pointerup', 160, 10);
     vi.advanceTimersByTime(300);
-    expect(events.at(-1)).toBe('value-changed:80');
+    expect(events[events.length - 1]).toBe('value-changed:80');
     expect(events.filter((e) => e.startsWith('value-live'))).toHaveLength(2);
     vi.useRealTimers();
     el.remove();
