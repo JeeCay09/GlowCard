@@ -36,6 +36,9 @@ export function targetOf(b: NavButtonConfig): string | undefined {
 
 const trimSlash = (p: string) => (p.length > 1 ? p.replace(/\/+$/, '') : p);
 
+/** HA shows a dashboard's first view at `/dash/0` and `/dash` alike; treat them as one. */
+const viewPath = (p: string) => trimSlash(p).replace(/^(\/[^/]+)\/0$/, '$1');
+
 /**
  * Index of the button for the current location, or -1. A popup hash (`#kitchen`) wins
  * while it is open; otherwise the view path must match (query and trailing slash ignored).
@@ -52,9 +55,9 @@ export function currentIndex(
     const i = targets.findIndex((t) => t === loc.hash);
     if (i >= 0) return i;
   }
-  const path = trimSlash(loc.pathname);
+  const path = viewPath(loc.pathname);
   const paths = targets.map((t) =>
-    !t || t.startsWith('#') ? undefined : trimSlash(t.split(/[?#]/)[0]),
+    !t || t.startsWith('#') ? undefined : viewPath(t.split(/[?#]/)[0]),
   );
   const exact = paths.findIndex((bare) => {
     if (!bare) return false;
@@ -108,7 +111,7 @@ export function dotColor(e: HassEntity | undefined, own: Rgb | undefined, dark: 
 
 /** Where the marker of a bar was last placed, shared by all bars on the page. */
 export interface NavHandoff {
-  /** Identifies the bar by its buttons, so only an identical bar continues the glide. */
+  /** Identifies the bar by its buttons, so only the same bar continues the glide. */
   sig: string;
   /** Button the marker was on before `index` (-1: none). */
   prev: number;
@@ -120,9 +123,12 @@ export interface NavHandoff {
 /** How long after a tap a new bar still continues the glide from the old button. */
 export const HANDOFF_MS = 1500;
 
-/** Signature of a bar: its button targets and icons. */
+/**
+ * Signature of a bar: its button icons. Copies of a bar in other views often differ in
+ * details (`/dash/0` vs `/dash`, a colour), yet they are the same bar to the user.
+ */
 export function navSignature(buttons: NavButtonConfig[]): string {
-  return JSON.stringify(buttons.map((b) => [targetOf(b) ?? '', b.icon ?? '']));
+  return JSON.stringify(buttons.map((b) => b.icon ?? ''));
 }
 
 /** New handoff after the marker of a bar was placed on `index`. */

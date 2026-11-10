@@ -80,6 +80,10 @@ describe('current button', () => {
     expect(currentIndex(nav, { pathname: '/glowcard-test/wohnzimmerglowcard', hash: '' })).toBe(1);
     expect(currentIndex(nav, { pathname: '/energy', hash: '' })).toBe(2);
     expect(currentIndex(nav, { pathname: '/glowcard-testx/0', hash: '' })).toBe(-1);
+    const zero = [{ navigation_path: '/glowcard-test/0' }, { navigation_path: '/glowcard-test/x' }];
+    expect(currentIndex(zero, { pathname: '/glowcard-test', hash: '' })).toBe(0);
+    expect(currentIndex(zero, { pathname: '/glowcard-test/0', hash: '' })).toBe(0);
+    expect(currentIndex(zero, { pathname: '/glowcard-test/x', hash: '' })).toBe(1);
   });
 
   it('returns -1 when nothing matches', () => {
@@ -178,7 +182,20 @@ describe('marker across views', () => {
     expect(glideStart(h, sig, 4, 99999)).toBe(0);
   });
 
-  it('only glides between identical bars', () => {
+  it('treats copies with other targets or colours as the same bar', () => {
+    const a = [
+      { icon: 'm3o:house', navigation_path: '/glowcard-test/0', color: 'Red' },
+      { icon: 'mdi:sofa-outline', navigation_path: '/glowcard-test/wohnzimmer' },
+    ];
+    const b = [
+      { icon: 'm3o:house', navigation_path: '/glowcard-test' },
+      { icon: 'mdi:sofa-outline', navigation_path: '/glowcard-test/wohnzimmer' },
+    ];
+    expect(navSignature(a)).toBe(navSignature(b));
+    expect(navSignature(a)).not.toBe(navSignature([b[1], b[0]]));
+  });
+
+  it('only glides between the same bar', () => {
     const h = nextHandoff(nextHandoff(undefined, sig, 0, 0), sig, 1, 10);
     const other = navSignature(buttons.slice(0, 3));
     expect(glideStart(h, other, 1, 20)).toBe(-1);
