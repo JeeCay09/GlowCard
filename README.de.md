@@ -21,7 +21,7 @@
 - Funktioniert **nur mit Standard-Entitäten von Home Assistant**. Keine Helfer, Template-Sensoren oder Automationen nötig.
 
 > [!NOTE]
-> GlowCard ist in der Beta. v0.9.1 enthält Schalter, Licht, Kopfzeile, Status-Leiste, Chips, Überschrift, Energie und Navigation, alle mit visuellem Editor; weitere Karten folgen (siehe Roadmap). Optionen können sich bis v1.0 noch ändern.
+> GlowCard ist in der Beta. v0.9.2 enthält Schalter, Licht, Kopfzeile, Status-Leiste, Chips, Überschrift, Energie und Navigation, alle mit visuellem Editor; weitere Karten folgen (siehe Roadmap). Optionen können sich bis v1.0 noch ändern.
 
 ## Karten
 
@@ -70,7 +70,7 @@ lovelace:
    - Typ: **JavaScript-Modul**
 4. Browser neu laden.
 
-Nach einem Update die URL z. B. auf `/local/glowcard/glowcard.js?v=0.9.1` ändern, damit Browser die neue Datei laden.
+Nach einem Update die URL z. B. auf `/local/glowcard/glowcard.js?v=0.9.2` ändern, damit Browser die neue Datei laden.
 
 ## Konfiguration
 
@@ -311,7 +311,7 @@ Eine Leiste aus runden Symbol-Buttons, um Ansichten zu wechseln oder Popups zu �
 - `position: float` (Standard): Die Leiste schwebt unten am Bildschirm, die Karten laufen darunter durch. Beim Bearbeiten des Dashboards (und in der Vorschau des Editors) sitzt sie als Karte, damit du sie anklicken kannst. Setze sie ans Ende einer Ansicht.
 - `position: card`: eine normale Karte über die ganze Breite, die mitscrollt, z. B. fürs Tablet.
 - Der aktuelle Button ergibt sich aus der Adresse: Pfad einer Ansicht (`/dashboard/ansicht` oder nur `ansicht`) oder ein offenes Popup `#hash`. Ein Button für das Dashboard selbst (`/dashboard`) ist auf dessen erster Ansicht (`/dashboard/0`) markiert.
-- Setze dieselbe Leiste (gleiche Buttons) in jede Ansicht: Nach einem Ansichtswechsel gleitet die Markierung vom alten Button weiter, als wäre es eine Leiste.
+- Setze dieselbe Leiste (gleiche Symbole in gleicher Reihenfolge) in jede Ansicht: Nach einem Ansichtswechsel gleitet die Markierung vom alten Button weiter, als wäre es eine Leiste.
 - `entity` (optional, je Button): Ein kleiner Punkt erscheint, solange sie an ist (Licht an, Saugroboter saugt, Medien laufen …); Lichter nehmen ihre eigene Farbe.
 - `color`: Leuchtfarbe des aktuellen Buttons (Farbname wie `indigo`, `blue`, `green`, `red`, `pink`, `purple` oder Hex; Standard Indigo); die `color` eines Buttons gewinnt, so kann jeder Button eine eigene Farbe haben.
 - Je Button führen `tap_action` / `hold_action` (YAML) statt der Navigation eine beliebige Home-Assistant-Aktion aus.

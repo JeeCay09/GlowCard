@@ -55,19 +55,19 @@ export const glowTokens = css`
     --glow-lit-border: 0.4;
     --glow-lit-shadow: 0 20px 48px -14px rgba(var(--glow-accent), 0.55);
     --glow-orb-glow: 0 0 20px rgba(var(--glow-accent), 0.55);
-    --glow-pop-glass: rgba(255, 255, 255, 0.7);
+    --glow-pop-glass: rgba(255, 255, 255, 0.94);
     --glow-pop-border: rgba(255, 255, 255, 0.95);
     --glow-pop-shadow: 0 40px 80px -20px rgba(0, 0, 0, 0.25);
-    --glow-pop-lit-base: rgba(255, 255, 255, 0.78);
+    --glow-pop-lit-base: rgba(255, 255, 255, 0.95);
     --glow-pop-lit-tint: 0.18;
     --glow-pop-lit-border: 0.35;
     --glow-pop-lit-shadow:
       0 30px 70px -20px rgba(20, 24, 40, 0.25), 0 0 80px -24px rgba(var(--glow-accent), 0.6);
-    --glow-dim: rgba(231, 233, 239, 0.35);
+    --glow-dim: rgba(231, 233, 239, 0.62);
     --glow-tab-active: #ffffff;
     --glow-knob-ring: #ffffff;
     --glow-halo: 0.6;
-    --glow-pop-plain: rgba(255, 255, 255, 0.8);
+    --glow-pop-plain: rgba(255, 255, 255, 0.95);
     --glow-pop-glow: 0 0 80px -30px rgba(var(--glow-accent), 0.6);
     --glow-line: rgba(20, 22, 26, 0.07);
     --glow-calm: 0.12;
@@ -116,19 +116,19 @@ export const glowTokens = css`
     --glow-lit-border: 0.32;
     --glow-lit-shadow: 0 24px 60px -14px rgba(var(--glow-accent), 0.5);
     --glow-orb-glow: 0 0 28px rgba(var(--glow-accent), 0.8);
-    --glow-pop-glass: rgba(24, 26, 32, 0.8);
+    --glow-pop-glass: rgba(24, 26, 32, 0.95);
     --glow-pop-border: rgba(255, 255, 255, 0.08);
     --glow-pop-shadow: 0 40px 80px -20px rgba(0, 0, 0, 0.8);
-    --glow-pop-lit-base: rgba(24, 26, 32, 0.82);
+    --glow-pop-lit-base: rgba(24, 26, 32, 0.96);
     --glow-pop-lit-tint: 0.22;
     --glow-pop-lit-border: 0.28;
     --glow-pop-lit-shadow:
       0 40px 80px -20px rgba(0, 0, 0, 0.8), 0 0 90px -20px rgba(var(--glow-accent), 0.55);
-    --glow-dim: rgba(0, 0, 0, 0.45);
+    --glow-dim: rgba(0, 0, 0, 0.62);
     --glow-tab-active: rgba(255, 255, 255, 0.14);
     --glow-knob-ring: #16181d;
     --glow-halo: 0.55;
-    --glow-pop-plain: rgba(24, 26, 32, 0.82);
+    --glow-pop-plain: rgba(24, 26, 32, 0.96);
     --glow-pop-glow: 0 0 90px -30px rgba(var(--glow-accent), 0.5);
     --glow-line: rgba(255, 255, 255, 0.07);
     --glow-calm: 0.14;

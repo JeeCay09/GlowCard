@@ -49,17 +49,23 @@ export class GlowPopup extends LitElement {
         font-family: var(--glow-font);
         color: var(--glow-text);
         animation: fade 0.18s ease-out;
+        overscroll-behavior: contain;
       }
+      /* The page behind is dimmed and blurred so nothing shows through the panel. */
       .dim {
         position: absolute;
         inset: 0;
         background: var(--glow-dim);
+        backdrop-filter: blur(14px);
+        -webkit-backdrop-filter: blur(14px);
       }
       .panel {
         position: relative;
         width: min(380px, 100%);
         max-height: calc(100% - 16px);
         overflow: auto;
+        /* Scrolling the panel never scrolls the page behind it. */
+        overscroll-behavior: contain;
         box-sizing: border-box;
         padding: 20px;
         display: flex;
@@ -155,12 +161,27 @@ export class GlowPopup extends LitElement {
   connectedCallback(): void {
     super.connectedCallback();
     document.addEventListener('keydown', this.onKey);
+    this.addEventListener('wheel', this.onScroll, { passive: false });
+    this.addEventListener('touchmove', this.onScroll, { passive: false });
+    lockScroll();
   }
 
   disconnectedCallback(): void {
     super.disconnectedCallback();
     document.removeEventListener('keydown', this.onKey);
+    this.removeEventListener('wheel', this.onScroll);
+    this.removeEventListener('touchmove', this.onScroll);
+    unlockScroll();
   }
+
+  /** Wheel and swipe only scroll the panel (when it has more to show), never the page. */
+  private onScroll = (ev: Event) => {
+    const panel = this.renderRoot.querySelector<HTMLElement>('.panel');
+    const inPanel = !!panel && ev.composedPath().includes(panel);
+    if (!inPanel || panel.scrollHeight <= panel.clientHeight) {
+      if (ev.cancelable) ev.preventDefault();
+    }
+  };
 
   protected updated(changed: Map<string, unknown>): void {
     if (changed.has('contentStyles') && this.shadowRoot) {
@@ -218,6 +239,25 @@ export class GlowPopup extends LitElement {
 }
 
 defineOnce('glowcard-popup', GlowPopup);
+
+/** Open popups; the page scrolls again when the last one closes. */
+let locks = 0;
+let saved: { html: string; body: string } | undefined;
+
+function lockScroll(): void {
+  if (locks++ > 0) return;
+  const html = document.documentElement;
+  saved = { html: html.style.overflow, body: document.body.style.overflow };
+  html.style.overflow = 'hidden';
+  document.body.style.overflow = 'hidden';
+}
+
+function unlockScroll(): void {
+  if (locks === 0 || --locks > 0 || !saved) return;
+  document.documentElement.style.overflow = saved.html;
+  document.body.style.overflow = saved.body;
+  saved = undefined;
+}
 
 export type PopupInit = Partial<
   Pick<

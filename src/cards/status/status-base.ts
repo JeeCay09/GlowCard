@@ -302,6 +302,11 @@ export abstract class GlowStatusBase<C extends GlowCardConfig> extends GlowCardB
       if (v <= 0) this.call('light', 'turn_off', { entity_id: id });
       else this.call('light', 'turn_on', { entity_id: id, brightness_pct: v });
     };
+    const liveBrightness = (ev: CustomEvent<{ value: number }>) => {
+      if (ev.detail.value > 0) {
+        this.call('light', 'turn_on', { entity_id: id, brightness_pct: ev.detail.value });
+      }
+    };
     return html`<div
       class="lrow ${on ? 'lit' : ''}"
       style="--glow-accent:${c};--glow-fill-h:linear-gradient(90deg, rgba(${c},.55), rgb(${c}))"
@@ -323,6 +328,8 @@ export abstract class GlowStatusBase<C extends GlowCardConfig> extends GlowCardB
           .value=${on ? (caps.brightness ? pct : 100) : 0}
           ?disabled=${!caps.brightness || isUnavailable(e)}
           label=${name}
+          live
+          @value-live=${liveBrightness}
           @value-changed=${setBrightness}
         ></glowcard-slider>
         <span class="since">${this.lightSince(e)}</span>

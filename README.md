@@ -21,7 +21,7 @@
 - Works with **standard Home Assistant entities only**. No helpers, template sensors or automations required.
 
 > [!NOTE]
-> GlowCard is in beta. v0.9.1 contains the switch, light, header, status bar, chip, heading, energy and navigation cards, all with a visual editor; more cards follow (see the roadmap). Options may still change before v1.0.
+> GlowCard is in beta. v0.9.2 contains the switch, light, header, status bar, chip, heading, energy and navigation cards, all with a visual editor; more cards follow (see the roadmap). Options may still change before v1.0.
 
 ## Cards
 
@@ -70,7 +70,7 @@ lovelace:
    - Type: **JavaScript module**
 4. Reload your browser.
 
-After an update, change the URL to e.g. `/local/glowcard/glowcard.js?v=0.9.1` so browsers load the new file.
+After an update, change the URL to e.g. `/local/glowcard/glowcard.js?v=0.9.2` so browsers load the new file.
 
 ## Configuration
 
@@ -311,7 +311,7 @@ A bar of round icon buttons to switch views or open popups (e.g. Bubble Card pop
 - `position: float` (default): the bar floats at the bottom of the screen, cards scroll underneath. While you edit the dashboard (and in the editor preview) it sits inline so you can still select it. Put it at the end of a view.
 - `position: card`: a normal full-width card in the grid that scrolls with the page, e.g. for tablets.
 - The current button is found from the address: a view path (`/dashboard/view`, or just `view`) or an open popup `#hash`. A button for the dashboard itself (`/dashboard`) is marked on its first view (`/dashboard/0`).
-- Put the same bar (same buttons) into every view: after a view change the marker glides on from the old button, as if it were one bar.
+- Put the same bar (same icons in the same order) into every view: after a view change the marker glides on from the old button, as if it were one bar.
 - `entity` (optional, per button): a small dot shows while it is on (light on, vacuum cleaning, media playing …); lights use their own colour.
 - `color`: glow colour of the current button (accent name such as `indigo`, `blue`, `green`, `red`, `pink`, `purple`, or hex; default indigo); a button's own `color` wins, so each button can have its own.
 - Per button `tap_action` / `hold_action` (YAML) run any Home Assistant action instead of navigating.
