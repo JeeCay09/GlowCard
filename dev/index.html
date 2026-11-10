@@ -73,26 +73,26 @@
     <script type="module">
       import '../dist/glowcard.js';
       import { mount } from './build/demo.js';
-      const lights = [1, 2, 3].map((n) => `light.tv_wand_streifen_${n}`);
+      const lights = [1, 2, 3].map((n) => `light.tv_strip_${n}`);
       const energy = {
-        solar: 'sensor.sigen_plant_pv_power',
-        battery: 'sensor.sigen_battery_soc',
-        battery_power: 'sensor.sigen_battery_power',
-        grid: 'sensor.sigen_grid_power',
-        home: 'sensor.sigen_home_power',
+        solar: 'sensor.pv_power',
+        battery: 'sensor.battery_level',
+        battery_power: 'sensor.battery_power',
+        grid: 'sensor.grid_power',
+        home: 'sensor.home_power',
       };
       const security = [
-        { entity: 'binary_sensor.fenster_bad', name: 'Fenster Bad' },
-        { entity: 'binary_sensor.rauchmelder_alle', name: 'Rauchmelder' },
+        { entity: 'binary_sensor.bathroom_window', name: 'Fenster Bad' },
+        { entity: 'binary_sensor.smoke_detectors', name: 'Rauchmelder' },
         { entity: 'binary_sensor.basisstation_alarm', name: 'Basisstation' },
       ];
       const weather = {
         type: 'weather',
-        entity: 'weather.wetter_schuttorf',
+        entity: 'weather.home',
         tap_action: { action: 'none' },
       };
       const statusCards = [
-        ['glowcard-header', { persons: ['person.gilbert', 'person.maureen'] }, 'span4'],
+        ['glowcard-header', { persons: ['person.alex', 'person.sam'] }, 'span4'],
         [
           'glowcard-status',
           {
@@ -101,7 +101,7 @@
               { type: 'lights', entities: lights },
               { type: 'energy', ...energy },
               { type: 'security', entities: security },
-              { type: 'alert', entity: 'binary_sensor.vesta_problem' },
+              { type: 'alert', entity: 'binary_sensor.vacuum_problem' },
             ],
           },
           'span4',
@@ -112,10 +112,10 @@
             chips: [
               weather,
               { type: 'lights', entities: lights },
-              { type: 'person', entity: 'person.gilbert', tap_action: { action: 'none' } },
+              { type: 'person', entity: 'person.alex', tap_action: { action: 'none' } },
               { type: 'battery', ...energy },
               { type: 'security', entities: security },
-              { type: 'alert', entity: 'binary_sensor.vesta_problem' },
+              { type: 'alert', entity: 'binary_sensor.vacuum_problem' },
               {
                 type: 'entity',
                 entity: 'switch.terrace',
@@ -135,7 +135,7 @@
               { type: 'lights', entities: lights },
               { type: 'energy', ...energy },
               { type: 'security', entities: security },
-              { type: 'alert', entity: 'binary_sensor.vesta_problem' },
+              { type: 'alert', entity: 'binary_sensor.vacuum_problem' },
             ],
           },
           'span4',
@@ -164,7 +164,7 @@
             heading: 'Wohnzimmer',
             subtitle: 'Optional: Symbol leuchtet bei TV Wand',
             icon: 'mdi:sofa-outline',
-            glow_entity: 'light.tv_wand',
+            glow_entity: 'light.tv_strips',
             badges: [`${living}_temperature`, { type: 'lights', entities: lights }],
           },
           'span4',
@@ -175,7 +175,7 @@
             heading_style: 'subtitle',
             heading: 'Erdgeschoss',
             subtitle: '6 Räume · 3 Lichter an',
-            glow_entity: 'light.tv_wand',
+            glow_entity: 'light.tv_strips',
           },
           'span4',
         ],
@@ -184,7 +184,7 @@
           {
             heading_style: 'subtitle',
             heading: '1. Etage',
-            badges: ['sensor.temperatursensor_bad_temperature'],
+            badges: ['sensor.bathroom_temperature'],
           },
           'span4',
         ],
@@ -192,12 +192,12 @@
           'glowcard-heading',
           {
             heading: 'Garten',
-            subtitle: 'Draußen · Vorbeet · Schuppen',
+            subtitle: 'Draußen · Garten · Schuppen',
             icon: 'mdi:flower-outline',
-            glow_entity: 'light.tv_wand',
+            glow_entity: 'light.tv_strips',
             glow_color: 'green',
             tap_action: { action: 'navigate', navigation_path: '#garten' },
-            badges: [weather, 'sensor.bodenfeuchte_vorbeet_temperature'],
+            badges: [weather, 'sensor.garden_soil_temperature'],
           },
           'span4',
         ],
@@ -217,7 +217,7 @@
         ],
         [
           'glowcard-switch',
-          { entity: 'input_boolean.f1_live', icon: 'mdi:flag-checkered', color: 'heat' },
+          { entity: 'input_boolean.movie_night', icon: 'mdi:flag-checkered', color: 'heat' },
           '',
         ],
         [
@@ -248,7 +248,7 @@
             color: 'green',
             entities: [0, 1, 2, 3, 4, 5].map((i) => ({
               entity: `switch.led_${i}`,
-              name: ['Esszimmer', 'Flur oben', 'Dachboden', 'Juna', 'Luke', 'Schlafzimmer'][i],
+              name: ['Wohnzimmer', 'Flur', 'Küche', 'Kinderzimmer', 'Büro', 'Schlafzimmer'][i],
             })),
           },
           'span2',
@@ -263,11 +263,11 @@
           { entity: 'switch.dishwasher', icon: 'mdi:dishwasher', color: 'indigo', size: 'mini' },
           'span2',
         ],
-        ['glowcard-switch', { entity: 'switch.home_office' }, ''],
+        ['glowcard-switch', { entity: 'switch.desk_plug' }, ''],
         ['glowcard-switch', { entity: 'switch.dryer', show_power: true, size: 'mini' }, 'span2'],
         ['glowcard-switch', { entity: 'switch.bedroom_plug' }, ''],
         ['glowcard-switch', { entity: 'switch.fairy_lights' }, ''],
-        ['glowcard-switch', { entity: 'switch.home_office', show_power: true }, 'span4'],
+        ['glowcard-switch', { entity: 'switch.desk_plug', show_power: true }, 'span4'],
       ];
       const devices = [
         { entity: 'sensor.heat_pump_power', name: 'Wärmepumpe' },

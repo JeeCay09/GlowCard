@@ -133,46 +133,46 @@ describe('status segments', () => {
   it('finds the error text and vacuum on the alert device', () => {
     const h = hass(
       [
-        e('binary_sensor.vesta_problem', 'on', { device_class: 'problem' }),
-        e('sensor.vesta_error', 'water_tank_dry'),
-        e('vacuum.vesta', 'paused'),
+        e('binary_sensor.vacuum_problem', 'on', { device_class: 'problem' }),
+        e('sensor.vacuum_error', 'water_tank_dry'),
+        e('vacuum.robot', 'paused'),
       ],
       {
         entities: {
-          'binary_sensor.vesta_problem': {
-            entity_id: 'binary_sensor.vesta_problem',
+          'binary_sensor.vacuum_problem': {
+            entity_id: 'binary_sensor.vacuum_problem',
             device_id: 'v',
           },
-          'sensor.vesta_error': { entity_id: 'sensor.vesta_error', device_id: 'v' },
-          'vacuum.vesta': { entity_id: 'vacuum.vesta', device_id: 'v' },
+          'sensor.vacuum_error': { entity_id: 'sensor.vacuum_error', device_id: 'v' },
+          'vacuum.robot': { entity_id: 'vacuum.robot', device_id: 'v' },
         },
-        devices: { v: { id: 'v', name: 'Vesta' } },
+        devices: { v: { id: 'v', name: 'Saugroboter' } },
         formatEntityState: (s: HassEntity) =>
           s.state === 'water_tank_dry' ? 'Wassertank leer' : s.state,
       },
     );
-    const cfg: SegmentConfig = { type: 'alert', entity: 'binary_sensor.vesta_problem' };
+    const cfg: SegmentConfig = { type: 'alert', entity: 'binary_sensor.vacuum_problem' };
     expect(findAlertParts(h, cfg)).toEqual({
-      detail: 'sensor.vesta_error',
-      vacuum: 'vacuum.vesta',
+      detail: 'sensor.vacuum_error',
+      vacuum: 'vacuum.robot',
     });
     const v = view(h, cfg);
     expect([v.value, v.label, v.tone, v.pulse, v.hidden]).toEqual([
-      'Vesta',
+      'Saugroboter',
       'Wassertank leer',
       'warning',
       true,
       false,
     ]);
-    h.states['binary_sensor.vesta_problem'] = e('binary_sensor.vesta_problem', 'off');
+    h.states['binary_sensor.vacuum_problem'] = e('binary_sensor.vacuum_problem', 'off');
     expect(view(h, cfg).hidden).toBe(true);
     expect(view(h, { ...cfg, hide_when_ok: false }).hidden).toBe(false);
   });
 
   it('shows people at home with a ring', () => {
-    const h = hass([e('person.gilbert', 'home', { friendly_name: 'Gilbert' })]);
-    const v = view(h, { type: 'person', entity: 'person.gilbert' });
-    expect(v.avatar).toEqual({ initial: 'G', picture: undefined, home: true });
+    const h = hass([e('person.alex', 'home', { friendly_name: 'Alex' })]);
+    const v = view(h, { type: 'person', entity: 'person.alex' });
+    expect(v.avatar).toEqual({ initial: 'A', picture: undefined, home: true });
     expect(v.chipSub).toBe('zu Hause');
   });
 
@@ -200,15 +200,15 @@ describe('header', () => {
   });
 
   it('describes who is at home', () => {
-    const ids = ['person.g', 'person.m'];
-    const names = ['Gilbert', 'Maureen'];
-    expect(presenceText(hass([e('person.g', 'home'), e('person.m', 'home')]), ids, names)).toBe(
+    const ids = ['person.a', 'person.s'];
+    const names = ['Alex', 'Sam'];
+    expect(presenceText(hass([e('person.a', 'home'), e('person.s', 'home')]), ids, names)).toBe(
       'Beide zu Hause',
     );
-    expect(presenceText(hass([e('person.g', 'home'), e('person.m', 'work')]), ids, names)).toBe(
-      'Gilbert zu Hause',
+    expect(presenceText(hass([e('person.a', 'home'), e('person.s', 'work')]), ids, names)).toBe(
+      'Alex zu Hause',
     );
-    expect(presenceText(hass([e('person.g', 'x'), e('person.m', 'y')]), ids, names)).toBe(
+    expect(presenceText(hass([e('person.a', 'x'), e('person.s', 'y')]), ids, names)).toBe(
       'Niemand zu Hause',
     );
   });
@@ -222,7 +222,7 @@ describe('card configs', () => {
       all_lights: true,
       solar: 'sensor.pv',
       security: ['binary_sensor.window'],
-      alerts: ['binary_sensor.vesta_problem'],
+      alerts: ['binary_sensor.vacuum_problem'],
     });
     expect(segs.map((s) => s.type)).toEqual(['weather', 'lights', 'energy', 'security', 'alert']);
   });
@@ -241,7 +241,7 @@ describe('card configs', () => {
     expect(chipSegment({ type: 'custom:glowcard-chip', entity: 'weather.home' }).type).toBe(
       'weather',
     );
-    expect(chipSegment({ type: 'custom:glowcard-chip', entity: 'person.g' }).type).toBe('person');
+    expect(chipSegment({ type: 'custom:glowcard-chip', entity: 'person.a' }).type).toBe('person');
     expect(chipSegment({ type: 'custom:glowcard-chip', entity: 'switch.x' }).type).toBe('entity');
     expect(chipSegment({ type: 'custom:glowcard-chip', chip: 'lights' })).toEqual({
       type: 'lights',
