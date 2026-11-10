@@ -197,6 +197,9 @@ export class GlowNavCard extends GlowCardBase<NavCardConfig> {
         position: relative;
         display: flex;
         --mdc-icon-size: var(--nav-icon);
+        /* Same shape as the lit shadow, so it can fade instead of popping in (#147). */
+        filter: drop-shadow(0 1px 2px transparent);
+        transition: filter 0.18s;
       }
       /* The new orb lights up only once the marker has (nearly) arrived. */
       .cur .orb {
@@ -211,8 +214,10 @@ export class GlowNavCard extends GlowCardBase<NavCardConfig> {
         opacity: 1;
         transition: opacity 0.24s calc(var(--nav-dur) * 0.8);
       }
+      /* Like the orb itself: the shadow waits until the marker has (nearly) arrived. */
       .cur ha-icon {
         filter: ${orbIconShadow('rgb(var(--nav-a))')};
+        transition: filter 0.24s calc(var(--nav-dur) * 0.8);
       }
       .dot {
         position: absolute;
