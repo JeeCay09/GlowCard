@@ -95,7 +95,7 @@ export class GlowSwitchCard extends GlowCardBase<SwitchCardConfig> {
   private powerFor?: string;
 
   protected popupStyle = 'glow' as const;
-  /** All switches (plugs too) default to teal (Gilbert). */
+  /** All switches (plugs too) default to teal. */
   protected defaultColor = 'teal';
 
   static getConfigForm() {
