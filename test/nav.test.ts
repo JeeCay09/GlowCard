@@ -71,19 +71,19 @@ describe('current button', () => {
 
   it('marks the dashboard button on its first view (/dash/0)', () => {
     const nav = [
-      { navigation_path: '/glowcard-test' },
-      { navigation_path: '/glowcard-test/wohnzimmerglowcard' },
+      { navigation_path: '/my-dashboard' },
+      { navigation_path: '/my-dashboard/living-room' },
       { navigation_path: '/energy' },
     ];
-    expect(currentIndex(nav, { pathname: '/glowcard-test/0', hash: '' })).toBe(0);
-    expect(currentIndex(nav, { pathname: '/glowcard-test', hash: '' })).toBe(0);
-    expect(currentIndex(nav, { pathname: '/glowcard-test/wohnzimmerglowcard', hash: '' })).toBe(1);
+    expect(currentIndex(nav, { pathname: '/my-dashboard/0', hash: '' })).toBe(0);
+    expect(currentIndex(nav, { pathname: '/my-dashboard', hash: '' })).toBe(0);
+    expect(currentIndex(nav, { pathname: '/my-dashboard/living-room', hash: '' })).toBe(1);
     expect(currentIndex(nav, { pathname: '/energy', hash: '' })).toBe(2);
-    expect(currentIndex(nav, { pathname: '/glowcard-testx/0', hash: '' })).toBe(-1);
-    const zero = [{ navigation_path: '/glowcard-test/0' }, { navigation_path: '/glowcard-test/x' }];
-    expect(currentIndex(zero, { pathname: '/glowcard-test', hash: '' })).toBe(0);
-    expect(currentIndex(zero, { pathname: '/glowcard-test/0', hash: '' })).toBe(0);
-    expect(currentIndex(zero, { pathname: '/glowcard-test/x', hash: '' })).toBe(1);
+    expect(currentIndex(nav, { pathname: '/my-dashboardx/0', hash: '' })).toBe(-1);
+    const zero = [{ navigation_path: '/my-dashboard/0' }, { navigation_path: '/my-dashboard/x' }];
+    expect(currentIndex(zero, { pathname: '/my-dashboard', hash: '' })).toBe(0);
+    expect(currentIndex(zero, { pathname: '/my-dashboard/0', hash: '' })).toBe(0);
+    expect(currentIndex(zero, { pathname: '/my-dashboard/x', hash: '' })).toBe(1);
   });
 
   it('returns -1 when nothing matches', () => {
@@ -94,10 +94,10 @@ describe('current button', () => {
 
 describe('status dot', () => {
   it('shows for on, cleaning, playing …', () => {
-    expect(dotActive(e('vacuum.vesta', 'cleaning'))).toBe(true);
-    expect(dotActive(e('light.kueche', 'on'))).toBe(true);
-    expect(dotActive(e('light.kueche', 'off'))).toBe(false);
-    expect(dotActive(e('light.kueche', 'unavailable'))).toBe(false);
+    expect(dotActive(e('vacuum.robot', 'cleaning'))).toBe(true);
+    expect(dotActive(e('light.kitchen', 'on'))).toBe(true);
+    expect(dotActive(e('light.kitchen', 'off'))).toBe(false);
+    expect(dotActive(e('light.kitchen', 'unavailable'))).toBe(false);
     expect(dotActive(undefined)).toBe(false);
   });
 
@@ -107,8 +107,8 @@ describe('status dot', () => {
       255, 100, 50,
     ]);
     expect(dotColor(e('light.a', 'on'), fallback, false)).toEqual([255, 200, 114]);
-    expect(dotColor(e('vacuum.vesta', 'cleaning'), fallback, false)).toBe(fallback);
-    expect(dotColor(e('vacuum.vesta', 'cleaning'), undefined, false)).toEqual([16, 185, 129]);
+    expect(dotColor(e('vacuum.robot', 'cleaning'), fallback, false)).toBe(fallback);
+    expect(dotColor(e('vacuum.robot', 'cleaning'), undefined, false)).toEqual([16, 185, 129]);
   });
 });
 
@@ -184,12 +184,12 @@ describe('marker across views', () => {
 
   it('treats copies with other targets or colours as the same bar', () => {
     const a = [
-      { icon: 'm3o:house', navigation_path: '/glowcard-test/0', color: 'Red' },
-      { icon: 'mdi:sofa-outline', navigation_path: '/glowcard-test/wohnzimmer' },
+      { icon: 'm3o:house', navigation_path: '/my-dashboard/0', color: 'Red' },
+      { icon: 'mdi:sofa-outline', navigation_path: '/my-dashboard/wohnzimmer' },
     ];
     const b = [
-      { icon: 'm3o:house', navigation_path: '/glowcard-test' },
-      { icon: 'mdi:sofa-outline', navigation_path: '/glowcard-test/wohnzimmer' },
+      { icon: 'm3o:house', navigation_path: '/my-dashboard' },
+      { icon: 'mdi:sofa-outline', navigation_path: '/my-dashboard/wohnzimmer' },
     ];
     expect(navSignature(a)).toBe(navSignature(b));
     expect(navSignature(a)).not.toBe(navSignature([b[1], b[0]]));

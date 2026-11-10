@@ -28,7 +28,7 @@ export function greetingFor(hass: HomeAssistant | undefined, date: Date): string
   return st(hass, 'good_night');
 }
 
-/** "Beide zu Hause", "Alle zu Hause", "Gilbert zu Hause", "2 von 3 zu Hause" … */
+/** "Beide zu Hause", "Alle zu Hause", "Alex zu Hause", "2 von 3 zu Hause" … */
 export function presenceText(hass: HomeAssistant, ids: string[], names: string[]): string {
   const home = ids.map((id) => hass.states[id]?.state === 'home');
   const k = home.filter(Boolean).length;

@@ -106,7 +106,7 @@ const states: Record<string, HassEntity> = {
     max_color_temp_kelvin: 6500,
   }),
   'light.kitchen': entity('light.kitchen', 'on', {
-    friendly_name: 'Küche Arbeitsfläche',
+    friendly_name: 'Küchenlicht',
     brightness: 120,
     color_mode: 'color_temp',
     color_temp_kelvin: 4000,
@@ -124,29 +124,29 @@ const states: Record<string, HassEntity> = {
     supported_color_modes: ['hs'],
   }),
   'switch.sprinkler': entity('switch.sprinkler', 'off', { friendly_name: 'Rasensprenger' }, 63),
-  'input_boolean.f1_live': entity('input_boolean.f1_live', 'on', { friendly_name: 'F1 Live' }, 133),
-  'switch.night_light': entity(
-    'switch.night_light',
-    'off',
-    { friendly_name: 'TV Schrank Nachtlicht' },
-    49,
+  'input_boolean.movie_night': entity(
+    'input_boolean.movie_night',
+    'on',
+    { friendly_name: 'Filmabend' },
+    133,
   ),
-  'switch.dnd': entity('switch.dnd', 'on', { friendly_name: 'Minerva Bitte nicht stören' }, 63),
+  'switch.night_light': entity('switch.night_light', 'off', { friendly_name: 'Nachtlicht' }, 49),
+  'switch.dnd': entity('switch.dnd', 'on', { friendly_name: 'Bitte nicht stören' }, 63),
   'input_boolean.tv_warm': entity(
     'input_boolean.tv_warm',
     'on',
-    { friendly_name: 'TV Wand Warmweiß' },
+    { friendly_name: 'Stehlampe Warmweiß' },
     45,
   ),
   'switch.carpet_boost': entity(
     'switch.carpet_boost',
     'on',
-    { friendly_name: 'Vesta Teppich-Boost' },
+    { friendly_name: 'Saugroboter Teppich-Boost' },
     20,
   ),
   'switch.dishwasher': entity('switch.dishwasher', 'off', { friendly_name: 'Geschirrspüler' }, 5),
   'light.tv_wall': entity('light.tv_wall', 'off', {
-    friendly_name: 'TV Wand',
+    friendly_name: 'Lichtleisten',
     supported_color_modes: ['brightness'],
   }),
   'light.led_strip': entity('light.led_strip', 'on', {
@@ -154,36 +154,36 @@ const states: Record<string, HassEntity> = {
     color_mode: 'onoff',
     supported_color_modes: ['onoff'],
   }),
-  'switch.office_plug': entity('switch.office_plug', 'off', { friendly_name: 'Home Office' }),
+  'switch.office_plug': entity('switch.office_plug', 'off', { friendly_name: 'Schreibtisch' }),
   'switch.terrace': entity('switch.terrace', 'unavailable', { friendly_name: 'Terrasse' }),
 };
 // Smart plugs (GlowPlugs board)
 Object.assign(states, {
-  'switch.home_office': entity('switch.home_office', 'on', { friendly_name: 'Home Office' }, 3),
-  'sensor.home_office_power': entity(
-    'sensor.home_office_power',
+  'switch.desk_plug': entity('switch.desk_plug', 'on', { friendly_name: 'Schreibtisch' }, 3),
+  'sensor.desk_plug_power': entity(
+    'sensor.desk_plug_power',
     '186',
     { device_class: 'power', unit_of_measurement: 'W' },
     0.01,
   ),
-  'sensor.home_office_energy': entity(
-    'sensor.home_office_energy',
+  'sensor.desk_plug_energy': entity(
+    'sensor.desk_plug_energy',
     '11.76',
     { device_class: 'energy', unit_of_measurement: 'kWh' },
     0.1,
   ),
-  'number.home_office_countdown': entity('number.home_office_countdown', '0', {
+  'number.desk_plug_countdown': entity('number.desk_plug_countdown', '0', {
     unit_of_measurement: 's',
     min: 0,
     max: 43200,
   }),
-  'switch.home_office_child_lock': entity('switch.home_office_child_lock', 'off'),
-  'select.home_office_power_outage_memory': entity(
-    'select.home_office_power_outage_memory',
+  'switch.desk_plug_child_lock': entity('switch.desk_plug_child_lock', 'off'),
+  'select.desk_plug_power_outage_memory': entity(
+    'select.desk_plug_power_outage_memory',
     'restore',
     { options: ['on', 'off', 'restore'] },
   ),
-  'select.home_office_indicator_mode': entity('select.home_office_indicator_mode', 'off', {
+  'select.desk_plug_indicator_mode': entity('select.desk_plug_indicator_mode', 'off', {
     options: ['off', 'off/on', 'on/off', 'on'],
   }),
   'switch.dryer': entity('switch.dryer', 'on', { friendly_name: 'Wäschetrockner' }),
@@ -218,68 +218,68 @@ const fixed = (e: HassEntity, iso: string): HassEntity => ({
   last_changed: iso,
   last_updated: iso,
 });
-// Header, status bar and chips (GlowChips board, Gilbert's real entities)
+// Header, status bar and chips (GlowChips board)
 Object.assign(states, {
-  'weather.wetter_home': entity('weather.wetter_home', 'cloudy', {
+  'weather.home': entity('weather.home', 'cloudy', {
     friendly_name: 'Wetter',
     temperature: 7.8,
     humidity: 81,
   }),
-  'person.gilbert': entity('person.gilbert', 'home', { friendly_name: 'Gilbert' }),
+  'person.alex': entity('person.alex', 'home', { friendly_name: 'Alex' }),
   'person.sam': entity('person.sam', 'home', { friendly_name: 'Sam' }),
-  'sensor.sigen_plant_pv_power': entity('sensor.sigen_plant_pv_power', '2.35', {
+  'sensor.pv_power': entity('sensor.pv_power', '2.35', {
     device_class: 'power',
     unit_of_measurement: 'kW',
   }),
-  'sensor.sigen_battery_soc': entity('sensor.sigen_battery_soc', '60', {
+  'sensor.battery_level': entity('sensor.battery_level', '60', {
     device_class: 'battery',
     unit_of_measurement: '%',
   }),
-  'sensor.sigen_battery_power': entity('sensor.sigen_battery_power', '2050', {
+  'sensor.battery_power': entity('sensor.battery_power', '2050', {
     device_class: 'power',
     unit_of_measurement: 'W',
   }),
-  'sensor.sigen_grid_power': entity('sensor.sigen_grid_power', '0', {
+  'sensor.grid_power': entity('sensor.grid_power', '0', {
     device_class: 'power',
     unit_of_measurement: 'W',
   }),
-  'sensor.sigen_home_power': entity('sensor.sigen_home_power', '320', {
+  'sensor.home_power': entity('sensor.home_power', '320', {
     device_class: 'power',
     unit_of_measurement: 'W',
   }),
-  'binary_sensor.fenster_bad': fixed(
-    entity('binary_sensor.fenster_bad', 'off', { device_class: 'window' }),
+  'binary_sensor.bathroom_window': fixed(
+    entity('binary_sensor.bathroom_window', 'off', { device_class: 'window' }),
     at(0, '06:31'),
   ),
-  'binary_sensor.rauchmelder_alle': entity('binary_sensor.rauchmelder_alle', 'off', {
+  'binary_sensor.smoke_detectors': entity('binary_sensor.smoke_detectors', 'off', {
     device_class: 'smoke',
     friendly_name: 'Rauchmelder alle',
-    entity_id: ['a', 'b', 'c', 'd', 'e', 'f'].map((x) => `binary_sensor.rauchmelder_${x}`),
+    entity_id: ['a', 'b', 'c', 'd', 'e', 'f'].map((x) => `binary_sensor.smoke_detector_${x}`),
   }),
   'binary_sensor.basisstation_alarm': fixed(
     entity('binary_sensor.basisstation_alarm', 'off', { icon: 'mdi:bell' }),
     at(1, '13:48'),
   ),
-  'binary_sensor.vesta_problem': fixed(
-    entity('binary_sensor.vesta_problem', 'on', {
+  'binary_sensor.vacuum_problem': fixed(
+    entity('binary_sensor.vacuum_problem', 'on', {
       device_class: 'problem',
-      friendly_name: 'Vesta Problem',
+      friendly_name: 'Saugroboter Problem',
     }),
     at(0, '08:31'),
   ),
-  'sensor.vesta_error': entity('sensor.vesta_error', 'water_tank_dry', {
-    friendly_name: 'Vesta Fehler',
+  'sensor.vacuum_error': entity('sensor.vacuum_error', 'water_tank_dry', {
+    friendly_name: 'Saugroboter Fehler',
   }),
-  'vacuum.vesta': fixed(
-    entity('vacuum.vesta', 'paused', { friendly_name: 'Vesta' }),
+  'vacuum.robot': fixed(
+    entity('vacuum.robot', 'paused', { friendly_name: 'Saugroboter' }),
     at(0, '08:31'),
   ),
 });
 ['1', '2', '3'].forEach((n, i) => {
-  const id = `light.tv_wand_streifen_${n}`;
+  const id = `light.tv_strip_${n}`;
   states[id] = fixed(
     entity(id, 'on', {
-      friendly_name: `TV Wand Streifen ${n}`,
+      friendly_name: `Lichtleiste ${n}`,
       brightness: 255,
       rgb_color: [255, 165, 110],
       color_mode: 'hs',
@@ -289,41 +289,41 @@ Object.assign(states, {
   );
 });
 
-// Heading (GlowHeading board, Gilbert's real entities)
+// Heading (GlowHeading board)
 Object.assign(states, {
-  'sensor.temperatursensor_wohnzimmer_temperature': entity(
-    'sensor.temperatursensor_wohnzimmer_temperature',
-    '21.5',
-    { device_class: 'temperature', unit_of_measurement: '°C', friendly_name: 'Temperatur' },
-  ),
-  'sensor.temperatursensor_wohnzimmer_humidity': entity(
-    'sensor.temperatursensor_wohnzimmer_humidity',
-    '60',
-    { device_class: 'humidity', unit_of_measurement: '%', friendly_name: 'Luftfeuchtigkeit' },
-  ),
-  'sensor.temperatursensor_wohnzimmer_battery': entity(
-    'sensor.temperatursensor_wohnzimmer_battery',
-    '0',
-    { device_class: 'battery', unit_of_measurement: '%', friendly_name: 'Batterie' },
-  ),
-  'sensor.bodenfeuchte_vorbeet_temperature': entity(
-    'sensor.bodenfeuchte_vorbeet_temperature',
-    '14.03',
-    { device_class: 'temperature', unit_of_measurement: '°C', friendly_name: 'Boden Vorbeet' },
-  ),
-  'sensor.temperatursensor_bad_temperature': entity(
-    'sensor.temperatursensor_bad_temperature',
-    '23.9',
-    { device_class: 'temperature', unit_of_measurement: '°C', friendly_name: 'Bad' },
-  ),
-  'light.tv_wand': entity('light.tv_wand', 'on', {
-    friendly_name: 'TV Wand',
+  'sensor.living_room_temperature': entity('sensor.living_room_temperature', '21.5', {
+    device_class: 'temperature',
+    unit_of_measurement: '°C',
+    friendly_name: 'Temperatur',
+  }),
+  'sensor.living_room_humidity': entity('sensor.living_room_humidity', '60', {
+    device_class: 'humidity',
+    unit_of_measurement: '%',
+    friendly_name: 'Luftfeuchtigkeit',
+  }),
+  'sensor.living_room_battery': entity('sensor.living_room_battery', '0', {
+    device_class: 'battery',
+    unit_of_measurement: '%',
+    friendly_name: 'Batterie',
+  }),
+  'sensor.garden_soil_temperature': entity('sensor.garden_soil_temperature', '14.03', {
+    device_class: 'temperature',
+    unit_of_measurement: '°C',
+    friendly_name: 'Boden Garten',
+  }),
+  'sensor.bathroom_temperature': entity('sensor.bathroom_temperature', '23.9', {
+    device_class: 'temperature',
+    unit_of_measurement: '°C',
+    friendly_name: 'Bad',
+  }),
+  'light.tv_strips': entity('light.tv_strips', 'on', {
+    friendly_name: 'Lichtleisten',
     rgb_color: [255, 165, 110],
-    entity_id: [1, 2, 3].map((n) => `light.tv_wand_streifen_${n}`),
+    entity_id: [1, 2, 3].map((n) => `light.tv_strip_${n}`),
   }),
 });
 
-const leds = ['Esszimmer', 'Flur oben', 'Dachboden', 'Kinderzimmer', 'Büro', 'Schlafzimmer'];
+const leds = ['Wohnzimmer', 'Flur', 'Küche', 'Kinderzimmer', 'Büro', 'Schlafzimmer'];
 leds.forEach((room, i) => {
   const id = `switch.led_${i}`;
   states[id] = entity(id, 'on', { friendly_name: `Rauchmelder ${room}` });
@@ -344,12 +344,12 @@ const entities: HomeAssistant['entities'] = {
   'switch.carpet_boost': { entity_id: 'switch.carpet_boost', area_id: 'utility' },
   'switch.dishwasher': { entity_id: 'switch.dishwasher', area_id: 'kitchen' },
   'switch.fairy_lights': { entity_id: 'switch.fairy_lights', area_id: 'terrace' },
-  'light.tv_wand_streifen_1': { entity_id: 'light.tv_wand_streifen_1', area_id: 'living' },
-  'light.tv_wand_streifen_2': { entity_id: 'light.tv_wand_streifen_2', area_id: 'living' },
-  'light.tv_wand_streifen_3': { entity_id: 'light.tv_wand_streifen_3', area_id: 'living' },
-  'binary_sensor.vesta_problem': { entity_id: 'binary_sensor.vesta_problem', device_id: 'vesta' },
-  'sensor.vesta_error': { entity_id: 'sensor.vesta_error', device_id: 'vesta' },
-  'vacuum.vesta': { entity_id: 'vacuum.vesta', device_id: 'vesta' },
+  'light.tv_strip_1': { entity_id: 'light.tv_strip_1', area_id: 'living' },
+  'light.tv_strip_2': { entity_id: 'light.tv_strip_2', area_id: 'living' },
+  'light.tv_strip_3': { entity_id: 'light.tv_strip_3', area_id: 'living' },
+  'binary_sensor.vacuum_problem': { entity_id: 'binary_sensor.vacuum_problem', device_id: 'robot' },
+  'sensor.vacuum_error': { entity_id: 'sensor.vacuum_error', device_id: 'robot' },
+  'vacuum.robot': { entity_id: 'vacuum.robot', device_id: 'robot' },
 };
 
 // Energy card "Lastring": nur Netz / mit PV / mit PV + Akku / Nacht
@@ -481,12 +481,12 @@ const STATE_TEXT: Record<string, string> = {
 /** Recorder-like history: TV Wand pattern from the mockup, simple patterns for the rest. */
 function fakeHistory(id: string, start: number) {
   if (id.startsWith('sensor.energy_today')) return energyHistory(id, start);
-  if (id === 'sensor.home_office_power') {
+  if (id === 'sensor.desk_plug_power') {
     const step = (nowMs - start) / OFFICE_SERIES.length;
     return OFFICE_SERIES.map((v, i) => ({ s: String(v), lu: (start + i * step) / 1000 }));
   }
   if (id.endsWith('_power')) return [{ s: '0', lu: start / 1000 }];
-  if (id === 'sensor.home_office_energy') {
+  if (id === 'sensor.desk_plug_energy') {
     const today = new Date(nowMs);
     today.setHours(0, 0, 0, 0);
     return [
@@ -522,9 +522,9 @@ export function fakeHass(darkMode: boolean): HomeAssistant {
     states: { ...states },
     entities,
     areas,
-    devices: { vesta: { id: 'vesta', name: 'Vesta' } },
+    devices: { robot: { id: 'robot', name: 'Saugroboter' } },
     language: 'de',
-    user: { name: 'Gilbert' },
+    user: { name: 'Alex' },
     formatEntityState: (e: HassEntity) => STATE_TEXT[e.state] ?? e.state,
     themes: { darkMode },
     async callWS<T>(msg: Record<string, unknown>): Promise<T> {
