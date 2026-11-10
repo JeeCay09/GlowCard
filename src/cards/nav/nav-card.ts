@@ -47,6 +47,7 @@ export class GlowNavCard extends GlowCardBase<NavCardConfig> {
   private placed = false;
   /** Button the marker starts on when a bar appears after a view change (-1: none). */
   @state() private glideFrom = -1;
+  private gliding = false;
   private pressed = -1;
   private resize?: ResizeObserver;
   private buttonPress = new PressController(
@@ -451,22 +452,35 @@ export class GlowNavCard extends GlowCardBase<NavCardConfig> {
     super.updated(changed);
     this.toggleAttribute('floating', this.floating);
     this.placePill();
-    if (this.glideFrom >= 0) {
-      // The marker sits on the old button now. Two frames later (after the first resize
-      // callback, which places it without animation) it glides to the current one.
-      requestAnimationFrame(() =>
-        requestAnimationFrame(() => {
-          this.glideFrom = -1;
-        }),
-      );
-    }
+    this.startGlide();
     if (!this.resize && typeof ResizeObserver !== 'undefined') {
       const dock = this.renderRoot.querySelector('.dock');
       if (dock) {
-        this.resize = new ResizeObserver(() => this.placePill(true));
+        this.resize = new ResizeObserver(() => {
+          this.placePill(true);
+          this.startGlide();
+        });
         this.resize.observe(dock);
       }
     }
+  }
+
+  /**
+   * After a view change the marker first sits on the old button. Once the bar is laid out
+   * (HA may attach the view before it is visible), it glides to the current button two
+   * frames later, after the first resize callback has placed it without animation.
+   */
+  private startGlide(): void {
+    if (this.glideFrom < 0 || this.gliding) return;
+    const dock = this.renderRoot.querySelector<HTMLElement>('.dock');
+    if (!dock || !dock.offsetWidth) return;
+    this.gliding = true;
+    requestAnimationFrame(() =>
+      requestAnimationFrame(() => {
+        this.gliding = false;
+        this.glideFrom = -1;
+      }),
+    );
   }
 
   /** Moves the marker under the current button; without animation the first time. */
