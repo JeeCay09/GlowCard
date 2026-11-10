@@ -43,9 +43,15 @@ export function mix(a: Rgb, b: Rgb, f: number): Rgb {
   return a.map((v, i) => Math.round(v + (b[i] - v) * f)) as Rgb;
 }
 
-/** True when a colour is so light that icons on it need a dark colour (mockup rule). */
+/**
+ * True when a colour is so pale (almost white, e.g. neutral or cool white light) that a
+ * white icon on it would not be readable. Saturated light colours such as orange, amber
+ * or yellow keep the white icon like every other active orb (#139).
+ */
 export function isBright([r, g, b]: Rgb): boolean {
-  return (0.2126 * r + 0.7152 * g + 0.0722 * b) / 255 > 0.6;
+  const luminance = (0.2126 * r + 0.7152 * g + 0.0722 * b) / 255;
+  const chroma = (Math.max(r, g, b) - Math.min(r, g, b)) / 255;
+  return luminance > 0.6 && chroma < 0.45;
 }
 
 /** Hue 0–360, saturation 0–100 (as in hs_color) at full brightness. */
