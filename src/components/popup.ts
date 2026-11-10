@@ -51,13 +51,10 @@ export class GlowPopup extends LitElement {
         animation: fade 0.18s ease-out;
         overscroll-behavior: contain;
       }
-      /* The page behind is dimmed and blurred so nothing shows through the panel. */
       .dim {
         position: absolute;
         inset: 0;
         background: var(--glow-dim);
-        backdrop-filter: blur(14px);
-        -webkit-backdrop-filter: blur(14px);
       }
       .panel {
         position: relative;
@@ -72,7 +69,9 @@ export class GlowPopup extends LitElement {
         flex-direction: column;
         gap: 18px;
         border-radius: var(--glow-radius-popup);
-        background: var(--glow-pop-glass);
+        /* Glass look on an opaque base: nothing behind shows through the panel. */
+        background:
+          linear-gradient(var(--glow-pop-glass), var(--glow-pop-glass)), var(--glow-pop-solid);
         border: 1px solid var(--glow-pop-border);
         box-shadow: var(--glow-pop-shadow);
         backdrop-filter: var(--glow-blur-popup);
@@ -84,17 +83,20 @@ export class GlowPopup extends LitElement {
         animation: rise 0.22s cubic-bezier(0.2, 0.8, 0.2, 1);
       }
       :host([active]) .panel {
-        background: linear-gradient(
-          170deg,
-          rgba(var(--glow-accent), var(--glow-pop-lit-tint)),
-          var(--glow-pop-lit-base) 55%
-        );
+        background:
+          linear-gradient(
+            170deg,
+            rgba(var(--glow-accent), var(--glow-pop-lit-tint)),
+            var(--glow-pop-lit-base) 55%
+          ),
+          var(--glow-pop-solid);
         border-color: rgba(var(--glow-accent), var(--glow-pop-lit-border));
         box-shadow: var(--glow-pop-lit-shadow);
       }
       :host([glow-only]) .panel,
       :host([glow-only][active]) .panel {
-        background: var(--glow-pop-plain);
+        background:
+          linear-gradient(var(--glow-pop-plain), var(--glow-pop-plain)), var(--glow-pop-solid);
         border-color: var(--glow-pop-border);
         box-shadow: var(--glow-pop-shadow);
       }
