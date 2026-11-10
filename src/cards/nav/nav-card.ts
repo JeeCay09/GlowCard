@@ -1,4 +1,5 @@
 import { css, html, nothing, type PropertyValues } from 'lit';
+import { ORB_ICON_COLOR, orbIconShadow, orbLitBackground } from '../../core/orb-style';
 import { state } from 'lit/decorators.js';
 import { handleAction, type ActionConfig } from '../../core/action';
 import { GlowCardBase, type GlowCardConfig } from '../../core/base-card';
@@ -190,11 +191,7 @@ export class GlowNavCard extends GlowCardBase<NavCardConfig> {
         border-radius: inherit;
         opacity: 0;
         transition: opacity 0.18s;
-        background: radial-gradient(
-          circle at 35% 30%,
-          color-mix(in srgb, #ffffff 45%, rgb(var(--nav-a))),
-          color-mix(in srgb, rgb(var(--nav-a)) 82%, #5a2e00) 62%
-        );
+        background: ${orbLitBackground('rgb(var(--nav-a))')};
       }
       ha-icon {
         position: relative;
@@ -203,7 +200,7 @@ export class GlowNavCard extends GlowCardBase<NavCardConfig> {
       }
       /* The new orb lights up only once the marker has (nearly) arrived. */
       .cur .orb {
-        color: #ffffff;
+        color: ${ORB_ICON_COLOR};
         /* Written out here: --nav-a is set on the dock, so a shorthand on :host would not see it. */
         box-shadow: 0 0 var(--nav-glow-r) rgba(var(--nav-a), var(--nav-glow-a));
         transition:
@@ -215,7 +212,7 @@ export class GlowNavCard extends GlowCardBase<NavCardConfig> {
         transition: opacity 0.24s calc(var(--nav-dur) * 0.8);
       }
       .cur ha-icon {
-        filter: drop-shadow(0 1px 2px color-mix(in srgb, rgb(var(--nav-a)) 45%, #3a1c00));
+        filter: ${orbIconShadow('rgb(var(--nav-a))')};
       }
       .dot {
         position: absolute;

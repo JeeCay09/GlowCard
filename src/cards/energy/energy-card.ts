@@ -1,4 +1,5 @@
 import { css, html, nothing, svg, type PropertyValues, type TemplateResult } from 'lit';
+import { orbLitBackground } from '../../core/orb-style';
 import { GlowCardBase, type GlowCardConfig } from '../../core/base-card';
 import type { ActionConfig } from '../../core/action';
 import {
@@ -1046,18 +1047,16 @@ export class GlowEnergyCard extends GlowCardBase<EnergyCardConfig> {
         --mdc-icon-size: 14px;
       }
       .sc.on .mini.solar {
-        background: radial-gradient(circle at 35% 30%, #fff3c4, var(--e-solar) 62%);
+        background: ${orbLitBackground('var(--e-solar)')};
         box-shadow: 0 0 10px rgba(var(--e-solar-rgb), 0.55);
-        color: #3a2504;
       }
       .sc.on .mini.grid {
-        background: radial-gradient(circle at 35% 30%, #dbeafe, var(--e-grid) 62%);
+        background: ${orbLitBackground('var(--e-grid)')};
         box-shadow: 0 0 10px rgba(var(--e-grid-rgb), 0.55);
       }
       .sc.on .mini.bat {
-        background: radial-gradient(circle at 35% 30%, #d1fae5, var(--e-bat) 62%);
+        background: ${orbLitBackground('var(--e-bat)')};
         box-shadow: 0 0 10px rgba(var(--e-bat-rgb), 0.55);
-        color: #063d2b;
       }
       .sc:not(.on) .mini {
         background: var(--glow-track);
@@ -1485,16 +1484,14 @@ export class GlowEnergyCard extends GlowCardBase<EnergyCardConfig> {
           --mdc-icon-size: 11px;
         }
         .mini.grid {
-          background: radial-gradient(circle at 35% 30%, #dbeafe, var(--e-grid) 62%);
+          background: ${orbLitBackground('var(--e-grid)')};
           box-shadow: 0 0 10px rgba(var(--e-grid-rgb), 0.55);
         }
         .mini.solar {
-          background: radial-gradient(circle at 35% 30%, #fff3c4, var(--e-solar) 62%);
-          color: #3a2504;
+          background: ${orbLitBackground('var(--e-solar)')};
         }
         .mini.bat {
-          background: radial-gradient(circle at 35% 30%, #d1fae5, var(--e-bat) 62%);
-          color: #063d2b;
+          background: ${orbLitBackground('var(--e-bat)')};
         }
         .sec {
           display: flex;
