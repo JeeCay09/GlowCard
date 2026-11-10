@@ -33,6 +33,72 @@ export function hexToRgb(hex: string): Rgb | null {
   return [(n >> 16) & 255, (n >> 8) & 255, n & 255];
 }
 
+/**
+ * Home Assistant's named theme colours, as offered by HA's colour list (`ui_color`
+ * selector), with HA's default values. A theme can override them via `--<name>-color`.
+ */
+export const HA_THEME_COLORS: Record<string, string> = {
+  primary: '#03A9F4',
+  accent: '#FF9800',
+  red: '#F44336',
+  pink: '#E91E63',
+  purple: '#926BC7',
+  'deep-purple': '#6E41AB',
+  indigo: '#3F51B5',
+  blue: '#2196F3',
+  'light-blue': '#03A9F4',
+  cyan: '#00BCD4',
+  teal: '#009688',
+  green: '#4CAF50',
+  'light-green': '#8BC34A',
+  lime: '#CDDC39',
+  yellow: '#FFEB3B',
+  amber: '#FFC107',
+  orange: '#FF9800',
+  'deep-orange': '#FF6F22',
+  brown: '#795548',
+  'light-grey': '#BDBDBD',
+  grey: '#9E9E9E',
+  'dark-grey': '#606060',
+  'blue-grey': '#607D8B',
+  black: '#000000',
+  white: '#FFFFFF',
+};
+
+/** "#rgb", "#rrggbb" or "rgb(r, g, b)" as [r, g, b]; null for anything else. */
+export function cssColorToRgb(value: string): Rgb | null {
+  const hex = hexToRgb(value);
+  if (hex) return hex;
+  const m = /^rgba?\(\s*([\d.]+)[\s,]+([\d.]+)[\s,]+([\d.]+)/i.exec(value.trim());
+  return m ? [Number(m[1]), Number(m[2]), Number(m[3])] : null;
+}
+
+/** "#rrggbb" for [r, g, b]. */
+export function rgbToHex(rgb: Rgb): string {
+  return `#${rgb
+    .map((v) =>
+      Math.round(Math.max(0, Math.min(255, v)))
+        .toString(16)
+        .padStart(2, '0'),
+    )
+    .join('')}`;
+}
+
+/**
+ * Colour of an HA theme colour name (`red`, `light-blue`, `primary` …): the active theme's
+ * `--<name>-color` on `el` when it is set, otherwise HA's default. Null for unknown names.
+ */
+export function themeColor(name: string, el?: Element): Rgb | null {
+  const key = name.toLowerCase();
+  if (!(key in HA_THEME_COLORS)) return null;
+  if (el && typeof getComputedStyle === 'function') {
+    const css = getComputedStyle(el).getPropertyValue(`--${key}-color`).trim();
+    const rgb = css ? cssColorToRgb(css) : null;
+    if (rgb) return rgb;
+  }
+  return hexToRgb(HA_THEME_COLORS[key]);
+}
+
 /** "r,g,b" so CSS can use it as rgb(var(--x)) and rgba(var(--x), 0.4). */
 export function rgbTriplet([r, g, b]: Rgb): string {
   return `${Math.round(r)},${Math.round(g)},${Math.round(b)}`;
@@ -43,9 +109,15 @@ export function mix(a: Rgb, b: Rgb, f: number): Rgb {
   return a.map((v, i) => Math.round(v + (b[i] - v) * f)) as Rgb;
 }
 
-/** True when a colour is so light that icons on it need a dark colour (mockup rule). */
+/**
+ * True when a colour is so pale (almost white, e.g. neutral or cool white light) that
+ * white text on it would not be readable. Saturated light colours such as orange, amber
+ * or yellow keep white text (#139). Orb icons do not use this: they are always white.
+ */
 export function isBright([r, g, b]: Rgb): boolean {
-  return (0.2126 * r + 0.7152 * g + 0.0722 * b) / 255 > 0.6;
+  const luminance = (0.2126 * r + 0.7152 * g + 0.0722 * b) / 255;
+  const chroma = (Math.max(r, g, b) - Math.min(r, g, b)) / 255;
+  return luminance > 0.6 && chroma < 0.45;
 }
 
 /** Hue 0–360, saturation 0–100 (as in hs_color) at full brightness. */

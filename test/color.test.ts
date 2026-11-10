@@ -50,8 +50,14 @@ describe('color helpers', () => {
 
   it('mixes colours and spots light ones like the mockup', () => {
     expect(mix([0, 0, 0], [255, 255, 255], 0.5)).toEqual([128, 128, 128]);
-    expect(isBright([255, 200, 114])).toBe(true);
+    expect(isBright([255, 206, 166])).toBe(true); // neutral white (4000 K)
+    expect(isBright([255, 254, 250])).toBe(true); // cool white
     expect(isBright([139, 92, 246])).toBe(false);
+    // Saturated warm colours keep the white icon like the other cards (#139).
+    expect(isBright([255, 200, 114])).toBe(false); // warm
+    expect(isBright([255, 167, 87])).toBe(false); // 2700 K
+    expect(isBright([245, 165, 36])).toBe(false); // amber
+    expect(isBright([234, 179, 8])).toBe(false); // yellow
   });
 
   it('uses the current light colour only while the light is on', () => {

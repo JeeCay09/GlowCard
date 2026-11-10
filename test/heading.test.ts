@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { cssColorToRgb, rgbToHex, themeColor } from '../src/core/color';
 import {
   badgeSegment,
   badgeView,
@@ -108,5 +109,23 @@ describe('heading glow', () => {
     expect(parseColor('green', true)).toEqual([16, 185, 129]);
     expect(parseColor('nonsense', true)).toBeNull();
     expect(parseColor([1, 2], true)).toBeNull();
+  });
+
+  it('understands the HA colour list (ui_color) names', () => {
+    expect(parseColor('light-blue', true)).toEqual([3, 169, 244]);
+    expect(parseColor('deep-orange', false)).toEqual([255, 111, 34]);
+    // Names GlowCard already knows keep their Glow tone.
+    expect(parseColor('amber', true)).toEqual([245, 165, 36]);
+    expect(iconLook(undefined, 'lime', true)).toBe('tint');
+  });
+});
+
+describe('heading colour helpers', () => {
+  it('converts css colours and rgb lists', () => {
+    expect(cssColorToRgb('rgb(1, 2, 3)')).toEqual([1, 2, 3]);
+    expect(cssColorToRgb('#ff0000')).toEqual([255, 0, 0]);
+    expect(cssColorToRgb('nonsense')).toBeNull();
+    expect(rgbToHex([255, 128, 0])).toBe('#ff8000');
+    expect(themeColor('unknown')).toBeNull();
   });
 });

@@ -701,7 +701,7 @@ class DemoCard extends GlowCardBase<GlowCardConfig> {
               vertical
               .value=${this.brightness}
               caption=${this.isActive ? `${this.brightness}%` : 'Aus'}
-              ?dark-text=${this.darkIcon}
+              ?dark-text=${this.darkText}
               label="Helligkeit"
               @value-changed=${this.setBrightness}
             ></glowcard-slider>
@@ -748,7 +748,6 @@ class DemoCard extends GlowCardBase<GlowCardConfig> {
     const orb = html`<glowcard-orb
       .icon=${this.icon}
       ?active=${this.isActive}
-      ?dark-icon=${this.darkIcon}
       label=${this.displayName}
       @pointerdown=${(e: Event) => e.stopPropagation()}
       @pointerup=${(e: Event) => e.stopPropagation()}
