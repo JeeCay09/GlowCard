@@ -1,4 +1,5 @@
 import { css, html, nothing, type PropertyValues, type TemplateResult } from 'lit';
+import { ORB_ICON_COLOR, orbIconShadow, orbLitBackground } from '../../core/orb-style';
 import type { GlowCardConfig } from '../../core/base-card';
 import { registerCard } from '../../core/register';
 import {
@@ -357,13 +358,12 @@ export class GlowChipCard extends GlowStatusBase<ChipCardConfig> {
       }
       .icon-chip.on {
         border: 0;
-        background: radial-gradient(
-          circle at 35% 30%,
-          color-mix(in srgb, #ffffff 60%, rgb(var(--c))),
-          rgb(var(--c)) 62%
-        );
+        background: ${orbLitBackground('rgb(var(--c))')};
         box-shadow: 0 0 calc(var(--g) * var(--gc-glow-f)) rgba(var(--c), var(--gc-glow-a));
-        color: #ffffff;
+        color: ${ORB_ICON_COLOR};
+      }
+      .icon-chip.on ha-icon {
+        filter: ${orbIconShadow('rgb(var(--c))')};
       }
       .icon-chip.calm {
         border: 1px solid rgba(var(--c), 0.3);

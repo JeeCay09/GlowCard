@@ -1,17 +1,17 @@
 import { LitElement, css, html } from 'lit';
+import { ORB_ICON_COLOR, orbIconShadow, orbLitBackground } from '../core/orb-style';
 import { property } from 'lit/decorators.js';
 import { defineOnce } from '../core/define';
 
 /**
  * Round icon "orb" (mockup: 52 px). Off: inset background, muted icon.
  * On: radial gradient with a white highlight and a glow in the accent colour.
- * `dark-icon` switches the icon to #3A2504 for very light colours (e.g. warm white).
+ * The lit look (always-white icon, #139) is defined once in core/orb-style.ts.
  * Tokens (--glow-*) are inherited from the card or popup around it.
  */
 export class GlowOrb extends LitElement {
   @property() icon = '';
   @property({ type: Boolean, reflect: true }) active = false;
-  @property({ type: Boolean, reflect: true, attribute: 'dark-icon' }) darkIcon = false;
   /** Soft style for "all good" states: tinted background, icon in the accent colour. */
   @property({ type: Boolean, reflect: true }) calm = false;
   @property({ type: Number }) size = 52;
@@ -45,23 +45,17 @@ export class GlowOrb extends LitElement {
       outline: 2px solid rgb(var(--glow-accent));
       outline-offset: 3px;
     }
-    /* The highlight is opaque (white mixed into the accent): a translucent white
-       let the dark card show through and looked grey in dark mode. */
     :host([active]) button {
-      background: radial-gradient(
-        circle at 35% 30%,
-        color-mix(in srgb, #ffffff 60%, rgb(var(--glow-accent))),
-        rgb(var(--glow-accent)) 62%
-      );
+      background: ${orbLitBackground('rgb(var(--glow-accent))')};
       box-shadow: var(--glow-orb-glow);
-      color: #ffffff;
+      color: ${ORB_ICON_COLOR};
     }
     :host([calm]:not([active])) button {
       background: rgba(var(--glow-accent), var(--glow-calm, 0.12));
       color: rgb(var(--glow-accent));
     }
-    :host([active][dark-icon]) button {
-      color: #3a2504;
+    :host([active]) ha-icon {
+      filter: ${orbIconShadow('rgb(var(--glow-accent))')};
     }
     ha-icon {
       display: flex;
