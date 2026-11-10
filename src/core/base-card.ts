@@ -179,8 +179,8 @@ export abstract class GlowCardBase<C extends GlowCardConfig = GlowCardConfig> ex
     return resolveAccent(this.config?.color, this.dark, this.defaultColor);
   }
 
-  /** True for very light accents (e.g. warm white): icons and labels on them turn dark. */
-  protected get darkIcon(): boolean {
+  /** True for pale, almost white accents (e.g. cool white): labels on them turn dark. */
+  protected get darkText(): boolean {
     return isBright(this.accent);
   }
 
@@ -293,7 +293,6 @@ export abstract class GlowCardBase<C extends GlowCardConfig = GlowCardConfig> ex
     this.popup.subtitle = view?.subtitle ?? '';
     this.popup.icon = this.icon;
     this.popup.active = this.isActive;
-    this.popup.darkIcon = this.darkIcon;
     this.popup.calm = this.popupCalm;
     this.popup.toggleAttribute('glow-only', this.popupStyle === 'glow');
     this.popup.toggleAttribute('unavailable', this.isUnavailable);

@@ -5,13 +5,14 @@ import { defineOnce } from '../core/define';
 /**
  * Round icon "orb" (mockup: 52 px). Off: inset background, muted icon.
  * On: radial gradient with a white highlight and a glow in the accent colour.
- * `dark-icon` switches the icon to #3A2504 for very light colours (e.g. warm white).
+ * The icon on an active orb is always white: the orb is a touch deeper than the accent
+ * and the icon has a fine shadow in a dark tone of it, so it stays readable on light
+ * colours such as warm or cool white (#139).
  * Tokens (--glow-*) are inherited from the card or popup around it.
  */
 export class GlowOrb extends LitElement {
   @property() icon = '';
   @property({ type: Boolean, reflect: true }) active = false;
-  @property({ type: Boolean, reflect: true, attribute: 'dark-icon' }) darkIcon = false;
   /** Soft style for "all good" states: tinted background, icon in the accent colour. */
   @property({ type: Boolean, reflect: true }) calm = false;
   @property({ type: Number }) size = 52;
@@ -50,8 +51,8 @@ export class GlowOrb extends LitElement {
     :host([active]) button {
       background: radial-gradient(
         circle at 35% 30%,
-        color-mix(in srgb, #ffffff 60%, rgb(var(--glow-accent))),
-        rgb(var(--glow-accent)) 62%
+        color-mix(in srgb, #ffffff 45%, rgb(var(--glow-accent))),
+        color-mix(in srgb, rgb(var(--glow-accent)) 82%, #5a2e00) 62%
       );
       box-shadow: var(--glow-orb-glow);
       color: #ffffff;
@@ -60,8 +61,8 @@ export class GlowOrb extends LitElement {
       background: rgba(var(--glow-accent), var(--glow-calm, 0.12));
       color: rgb(var(--glow-accent));
     }
-    :host([active][dark-icon]) button {
-      color: #3a2504;
+    :host([active]) ha-icon {
+      filter: drop-shadow(0 1px 2px color-mix(in srgb, rgb(var(--glow-accent)) 45%, #3a1c00));
     }
     ha-icon {
       display: flex;

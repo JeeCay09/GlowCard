@@ -192,8 +192,8 @@ export class GlowNavCard extends GlowCardBase<NavCardConfig> {
         transition: opacity 0.18s;
         background: radial-gradient(
           circle at 35% 30%,
-          color-mix(in srgb, #ffffff 60%, rgb(var(--nav-a))),
-          rgb(var(--nav-a)) 62%
+          color-mix(in srgb, #ffffff 45%, rgb(var(--nav-a))),
+          color-mix(in srgb, rgb(var(--nav-a)) 82%, #5a2e00) 62%
         );
       }
       ha-icon {
@@ -214,8 +214,8 @@ export class GlowNavCard extends GlowCardBase<NavCardConfig> {
         opacity: 1;
         transition: opacity 0.24s calc(var(--nav-dur) * 0.8);
       }
-      .cur.dark-icon .orb {
-        color: #3a2504;
+      .cur ha-icon {
+        filter: drop-shadow(0 1px 2px color-mix(in srgb, rgb(var(--nav-a)) 45%, #3a1c00));
       }
       .dot {
         position: absolute;
@@ -415,19 +415,17 @@ export class GlowNavCard extends GlowCardBase<NavCardConfig> {
       aria-label=${editorLabel('nav_label', this.hass?.language)}
     >
       <span class="pill ${cur ? '' : 'off'}"></span>
-      ${buttons.map((b, i) => this.renderButton(b, i, accent))}
+      ${buttons.map((b, i) => this.renderButton(b, i))}
     </nav>`;
   }
 
-  private renderButton(b: NavButtonConfig, i: number, accent: Rgb) {
+  private renderButton(b: NavButtonConfig, i: number) {
     const isCur = i === this.shown;
     const e = b.entity ? this.hass?.states[b.entity] : undefined;
     const own = b.color ? this.color(b) : undefined;
     const dot = dotActive(e) ? dotColor(e, own, this.dark) : undefined;
-    const bright =
-      isCur && (0.2126 * accent[0] + 0.7152 * accent[1] + 0.0722 * accent[2]) / 255 > 0.6;
     return html`<button
-      class="${isCur ? 'cur' : ''} ${bright ? 'dark-icon' : ''}"
+      class="${isCur ? 'cur' : ''}"
       title=${b.name ?? nothing}
       aria-label=${b.name ?? b.icon ?? `${i + 1}`}
       aria-current=${isCur ? 'page' : 'false'}

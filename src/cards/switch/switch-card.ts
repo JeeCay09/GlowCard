@@ -496,7 +496,6 @@ export class GlowSwitchCard extends GlowCardBase<SwitchCardConfig> {
       .icon=${this.icon}
       .size=${size}
       ?active=${this.isActive}
-      ?dark-icon=${this.darkIcon}
       label=${this.displayName}
     ></glowcard-orb>`;
   }
