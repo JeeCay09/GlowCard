@@ -23,6 +23,10 @@ export interface BinOverride {
 export interface Pickup {
   /** Bin key: the name in lower case, used to group pickups of the same bin. */
   key: string;
+  /** Recognised bin type (for the editor's colour per bin). */
+  kind: BinKind;
+  /** True when `bins` in YAML set the colour; it then wins over the editor colour. */
+  ownColor?: boolean;
   name: string;
   icon: string;
   color: Rgb;
@@ -69,14 +73,17 @@ export function binKind(name: string): BinKind {
 export function binLook(
   name: string,
   overrides: BinOverride[] = [],
-): { name: string; icon: string; color: Rgb } {
+): { name: string; icon: string; color: Rgb; kind: BinKind; ownColor: boolean } {
   const o = overrides.find((b) => b.match && name.toLowerCase().includes(b.match.toLowerCase()));
   const found = binKind(name);
-  const kind = KINDS[found === 'other' && o?.name ? binKind(o.name) : found];
+  const kind = found === 'other' && o?.name ? binKind(o.name) : found;
+  const own = o?.color ? hexToRgb(o.color) : null;
   return {
     name: o?.name ?? name,
-    icon: o?.icon ?? kind.icon,
-    color: (o?.color && hexToRgb(o.color)) || kind.color,
+    icon: o?.icon ?? KINDS[kind].icon,
+    color: own ?? KINDS[kind].color,
+    kind,
+    ownColor: !!own,
   };
 }
 

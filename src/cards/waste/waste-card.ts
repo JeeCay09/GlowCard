@@ -4,6 +4,7 @@ import { handleAction, type ActionConfig } from '../../core/action';
 import { rgbTriplet, type Rgb } from '../../core/color';
 import { orbLitBackground } from '../../core/orb-style';
 import { registerCard } from '../../core/register';
+import { parseColor } from '../heading/heading-logic';
 import {
   actionsField,
   configForm,
@@ -41,7 +42,21 @@ export interface WasteCardConfig extends GlowCardConfig {
   bins?: BinOverride[];
   /** The card glows from this many days before a pickup: 0 = on the day, 1 = from the day before. */
   highlight_days?: number | string;
+  /** Editor colours per bin type (HA colour name or hex); `bins` colours win. */
+  color_bio?: string;
+  color_paper?: string;
+  color_yellow?: string;
+  color_glass?: string;
+  color_rest?: string;
 }
+
+const BIN_COLOR_KEYS = [
+  'color_bio',
+  'color_paper',
+  'color_yellow',
+  'color_glass',
+  'color_rest',
+] as const;
 
 const WASTE_GESTURES: GestureSpec = {
   modes: {
@@ -100,23 +115,35 @@ export class GlowWasteCard extends GlowCardBase<WasteCardConfig> {
           selector: { entity: { domain: ['calendar', 'sensor'], multiple: true } },
         },
         {
-          name: 'highlight_days',
-          default: '1',
-          selector: {
-            select: {
-              mode: 'dropdown',
-              options: ['0', '1', '2'].map((v) => ({
-                value: v,
-                label: editorLabel(`waste_highlight_${v}` as 'waste_highlight_1'),
-              })),
-            },
-          },
-        },
-        lookSection({
           name: '',
-          type: 'grid',
-          schema: [{ name: 'name', selector: { text: {} } }, fontField, sizeField],
-        }),
+          type: 'expandable',
+          title: 'waste_bins_section',
+          icon: 'mdi:trash-can-outline',
+          schema: [
+            {
+              name: 'highlight_days',
+              default: '1',
+              selector: {
+                select: {
+                  mode: 'dropdown',
+                  options: ['0', '1', '2'].map((v) => ({
+                    value: v,
+                    label: editorLabel(`waste_highlight_${v}` as 'waste_highlight_1'),
+                  })),
+                },
+              },
+            },
+            {
+              name: '',
+              type: 'grid',
+              schema: BIN_COLOR_KEYS.map((name) => ({ name, selector: { ui_color: {} } })),
+            },
+          ],
+        },
+        lookSection(
+          { name: 'name', selector: { text: {} } },
+          { name: '', type: 'grid', schema: [fontField, sizeField] },
+        ),
         actionsField,
       ],
       { entities: 'waste_entities_helper', name: 'waste_name_helper' },
@@ -133,7 +160,9 @@ export class GlowWasteCard extends GlowCardBase<WasteCardConfig> {
         ? editorLabel('waste_entities')
         : s.name === 'highlight_days'
           ? editorLabel('waste_highlight')
-          : label(s);
+          : s.name.startsWith('color_')
+            ? editorLabel(`waste_${s.name}` as 'waste_color_bio')
+            : label(s);
     return form;
   }
 
@@ -217,7 +246,15 @@ export class GlowWasteCard extends GlowCardBase<WasteCardConfig> {
         if (p) all.push(p);
       }
     }
-    return upcoming(all);
+    return upcoming(all).map((p) => this.withEditorColor(p));
+  }
+
+  /** The editor's colour for this bin type, unless `bins` in YAML set one. */
+  private withEditorColor(p: Pickup): Pickup {
+    if (p.ownColor || p.kind === 'other') return p;
+    const value = this.config?.[`color_${p.kind}`];
+    const rgb = value ? parseColor(value, this.dark, this) : null;
+    return rgb ? { ...p, color: rgb } : p;
   }
 
   protected updated(changed: PropertyValues): void {
