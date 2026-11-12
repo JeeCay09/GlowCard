@@ -35,6 +35,7 @@
 | Überschrift   | `custom:glowcard-heading` | beliebige Entitäten als Badges                          | Beta (v0.4) |
 | Energie       | `custom:glowcard-energy`  | Leistungs-`sensor.*` für Haus oder Netz; Solar optional | Beta (v0.7) |
 | Navigation    | `custom:glowcard-nav`     | Ansichten, Popups (`#hash`); Status-Punkte optional     | Beta (v0.9) |
+| Müll          | `custom:glowcard-waste`   | `calendar.*` oder Datums-`sensor.*`                     | neu         |
 
 Alle Karten haben einen visuellen Editor (ab Home Assistant 2025.1). In einem Sections-Dashboard passen die Karten genau ins Raster von Home Assistant (Zeilen zu 56 px): Kachel 2 Zeilen am Handy bzw. 3 am PC, Schalter-Gruppe und Leistungs-Karte 3, Mini, Status-Leiste und Chip 1 Zeile. Breite: Kachel, Licht, Mini und Schalter-Gruppe = 1/2 (Kachel und Mini lassen sich auf 1/4 verkleinern), Schalter mit Leistung/Verbrauch, Kopfzeile, Status-Leiste, Überschrift, Energie und Chip-Reihen = ganze Breite (die Energie-Karte lässt sich nicht schmaler machen), einzelner Chip = 1/2, Symbol-Chip = 1/4. Die Breite kannst du im Dashboard-Editor weiterhin ändern. Neue Karten starten ohne Entität; fügst du eine Karte „nach Entität“ hinzu, nimmt sie die gewählte Entität.
 
@@ -337,6 +338,28 @@ buttons:
     tap_action:
       action: more-info
       entity: sensor.system_health
+```
+
+### Müllabfuhr
+
+Groß die nächste Abholung, darunter die folgenden Tonnen in kleinen Feldern. Am Vortag und am Abholtag leuchtet die Karte in der Farbe der Tonne. Antippen öffnet ein Popup mit einem Drei-Wochen-Kalender und den nächsten Terminen, Gedrückthalten den Kalender bzw. Sensor.
+
+- `entities`: ein oder mehrere Abfall-Kalender (z. B. aus Waste Collection Schedule oder einem ICS-Kalender) und/oder Sensoren mit dem nächsten Datum (Geräteklasse `date` oder `timestamp`), den Tagen bis dahin (Zahl) oder einem Attribut `daysTo`.
+- Tonnen werden am Namen erkannt (Bio, Papier, Gelber Sack/Wertstoff, Glas, Restmüll) und bekommen Icon und Farbe. Ein Termin wie „Papier, Gelber Sack“ zählt als zwei Tonnen.
+- `highlight_days`: `0` = nur am Abholtag leuchten, `1` (Standard) = ab dem Vortag, `2` = ab zwei Tage vorher.
+- `bins` (YAML): eigener Name, Icon oder Farbe pro Tonne, erkannt an einem Teil des Namens.
+- Höhe: 3 Rasterzeilen, am Handy 2. Standardmäßig volle Breite, mindestens eine halbe Section; schmale Karten zeigen weniger Felder.
+
+```yaml
+type: custom:glowcard-waste
+entities:
+  - calendar.abfall
+# optional:
+# highlight_days: 1
+# bins:
+#   - match: bio
+#     name: Braune Tonne
+#     color: '#8d6e63'
 ```
 
 ## Roadmap
