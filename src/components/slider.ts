@@ -34,8 +34,16 @@ export class GlowSlider extends LitElement {
   @property() label = '';
   /** Vertical: label turns dark on very light colours once the fill reaches it. */
   @property({ type: Boolean, attribute: 'dark-text' }) darkText = false;
-  /** Vertical only: text at the top of the column, e.g. "72%". */
+  /** Vertical: text at the top of the column, e.g. "72%". Pill: the value on the right. */
   @property() caption = '';
+  /**
+   * Horizontal pill (media volume): a tall rounded bar, the fill glows, icon + label on the
+   * left and `caption` on the right. Text over the fill turns white.
+   */
+  @property({ type: Boolean, reflect: true }) pill = false;
+  /** Pill only: icon and label on the left. */
+  @property() icon = '';
+  @property() text = '';
 
   /** Fire `value-live` while dragging (throttled). */
   @property({ type: Boolean }) live = false;
@@ -75,7 +83,7 @@ export class GlowSlider extends LitElement {
     :host(:not([vertical])) .hit {
       /* Vertical swipes scroll the page; see onDown. */
       touch-action: pan-y;
-      height: 36px;
+      height: var(--glow-slider-hit, 36px);
       display: flex;
       align-items: center;
       cursor: ew-resize;
@@ -83,7 +91,7 @@ export class GlowSlider extends LitElement {
     .bar {
       position: relative;
       width: 100%;
-      height: 8px;
+      height: var(--glow-slider-bar, 8px);
       border-radius: 999px;
       background: var(--glow-track);
       pointer-events: none;
@@ -118,6 +126,57 @@ export class GlowSlider extends LitElement {
         left 0.08s,
         bottom 0.08s,
         background 0.3s;
+    }
+
+    /* pill (media volume) */
+    :host([pill]) .hit {
+      height: var(--glow-pill-h, 44px);
+      border-radius: var(--glow-pill-r, 14px);
+      background: var(--glow-track);
+      overflow: hidden;
+    }
+    .pill-fill {
+      position: absolute;
+      left: 0;
+      top: 0;
+      bottom: 0;
+      border-radius: inherit;
+      background: linear-gradient(90deg, rgba(var(--glow-accent), 0.6), rgb(var(--glow-accent)));
+      box-shadow: 0 0 18px rgba(var(--glow-accent), 0.55);
+      pointer-events: none;
+      transition: width 0.08s;
+    }
+    .pill-lab {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 0 var(--glow-pill-pad, 14px);
+      font: 700 var(--glow-pill-font, 13px) / 1.25 var(--glow-font);
+      color: var(--glow-text);
+      white-space: nowrap;
+      pointer-events: none;
+    }
+    .pill-lab.over {
+      color: #fff;
+    }
+    .pill-lab ha-icon {
+      display: flex;
+      flex-shrink: 0;
+      --mdc-icon-size: 18px;
+    }
+    .pill-lab .t {
+      min-width: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .pill-lab b {
+      margin-left: auto;
+      font-variant-numeric: tabular-nums;
+    }
+    .dragging .pill-fill {
+      transition: none;
     }
 
     /* vertical (popup) */
@@ -338,6 +397,21 @@ export class GlowSlider extends LitElement {
 
   render() {
     const pct = fillPercent(this.current, this.min, this.max);
+    if (this.pill) {
+      const lab = (over: boolean) =>
+        html`<div
+          class="pill-lab ${over ? 'over' : ''}"
+          style=${over ? `clip-path:inset(0 ${100 - pct}% 0 0)` : ''}
+        >
+          ${this.icon ? html`<ha-icon .icon=${this.icon}></ha-icon>` : nothing}
+          ${this.text ? html`<span class="t">${this.text}</span>` : nothing}
+          <b>${this.caption}</b>
+        </div>`;
+      return this.hit(
+        html`<div class="pill-fill" style="width:${pct}%"></div>
+          ${lab(false)}${lab(true)}`,
+      );
+    }
     if (!this.vertical) {
       return this.hit(
         html`<div class="bar">

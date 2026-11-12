@@ -37,6 +37,8 @@ export interface HassEntityEntry {
   area_id?: string | null;
   translation_key?: string;
   entity_category?: string | null;
+  /** Integration that provides the entity, e.g. `sonos`. */
+  platform?: string;
   hidden?: boolean;
 }
 

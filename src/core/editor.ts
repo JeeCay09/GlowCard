@@ -189,6 +189,10 @@ const LABELS = {
     waste_color_yellow: 'Gelber Sack / Wertstoff',
     waste_color_glass: 'Glas',
     waste_color_rest: 'Restmüll',
+    color_media_helper: 'Automatisch = Farbe aus dem Cover',
+    media_entities: 'Mediaplayer',
+    media_entities_helper: 'Lautsprecher und TVs, je eine Zeile',
+    media_name_helper: 'Überschrift, leer = „Medien“',
   },
   en: {
     entity: 'Entity',
@@ -343,6 +347,10 @@ const LABELS = {
     waste_color_yellow: 'Recycling / yellow bag',
     waste_color_glass: 'Glass',
     waste_color_rest: 'Residual waste',
+    color_media_helper: 'Automatic = colour from the cover',
+    media_entities: 'Media players',
+    media_entities_helper: 'Speakers and TVs, one row each',
+    media_name_helper: 'Heading, empty = "Media"',
   },
 };
 
