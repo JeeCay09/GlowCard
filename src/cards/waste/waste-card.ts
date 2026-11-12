@@ -76,9 +76,9 @@ const AGENDA_ROWS = 6;
 const compactWaste = css`
   --w-gap: 12px;
   --w-later-gap: 6px;
-  --w-later-pad: 8px;
+  --w-later-pad: 7px;
   --w-box-r: 13px;
-  --w-box-pad: 6px 10px;
+  --w-box-pad: 5px 10px;
   --w-box-gap: 1px;
   --w-bin: 12px;
   --w-bin-gap: 6px;
@@ -664,6 +664,7 @@ export class GlowWasteCard extends GlowCardBase<WasteCardConfig> {
         display: flex;
         flex-direction: column;
         gap: 3px;
+        line-height: 1.25;
       }
       .ellip {
         overflow: hidden;
@@ -706,6 +707,7 @@ export class GlowWasteCard extends GlowCardBase<WasteCardConfig> {
         align-items: center;
         gap: var(--w-bin-gap);
         font-size: var(--w-bin);
+        line-height: 1.25;
         font-weight: 700;
         min-width: 0;
       }
@@ -722,6 +724,7 @@ export class GlowWasteCard extends GlowCardBase<WasteCardConfig> {
         align-items: baseline;
         gap: 6px;
         min-width: 0;
+        line-height: 1.25;
         white-space: nowrap;
         overflow: hidden;
       }
