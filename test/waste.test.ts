@@ -42,7 +42,13 @@ describe('waste bins', () => {
 
   it('takes name, icon and colour from the bins overrides', () => {
     const look = binLook('Abfuhr Bio', [{ match: 'bio', name: 'Braune Tonne', color: '#795548' }]);
-    expect(look).toEqual({ name: 'Braune Tonne', icon: 'mdi:leaf', color: [121, 85, 72] });
+    expect(look).toEqual({
+      name: 'Braune Tonne',
+      icon: 'mdi:leaf',
+      color: [121, 85, 72],
+      kind: 'bio',
+      ownColor: true,
+    });
     expect(binLook('Papier').icon).toBe('mdi:newspaper-variant-outline');
   });
 });

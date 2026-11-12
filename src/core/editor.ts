@@ -183,6 +183,12 @@ const LABELS = {
     waste_highlight_1: 'Am Vortag und am Abholtag',
     waste_highlight_2: 'Ab zwei Tage vorher',
     waste_name_helper: 'Titel im Popup, leer = „Müllabfuhr“',
+    waste_bins_section: 'Tonnen',
+    waste_color_bio: 'Biotonne',
+    waste_color_paper: 'Papier',
+    waste_color_yellow: 'Gelber Sack / Wertstoff',
+    waste_color_glass: 'Glas',
+    waste_color_rest: 'Restmüll',
   },
   en: {
     entity: 'Entity',
@@ -331,6 +337,12 @@ const LABELS = {
     waste_highlight_1: 'The day before and on pickup day',
     waste_highlight_2: 'From two days before',
     waste_name_helper: 'Popup title, empty = “Waste collection”',
+    waste_bins_section: 'Bins',
+    waste_color_bio: 'Organic',
+    waste_color_paper: 'Paper',
+    waste_color_yellow: 'Recycling / yellow bag',
+    waste_color_glass: 'Glass',
+    waste_color_rest: 'Residual waste',
   },
 };
 

@@ -347,7 +347,8 @@ The next pickup large, with the bins that follow in small boxes below. On the da
 - `entities`: one or more waste calendars (e.g. from Waste Collection Schedule or an ICS calendar) and/or sensors with the next date (device class `date` or `timestamp`), the days until it (a number) or a `daysTo` attribute.
 - Bins are recognised by name (Bio, Paper, Yellow bag / Recycling, Glass, Residual) and get their icon and colour. An event such as "Paper, Yellow bag" counts as two bins.
 - `highlight_days`: `0` = glow only on the pickup day, `1` (default) = from the day before, `2` = from two days before.
-- `bins` (YAML): own name, icon or colour per bin, matched by part of its name.
+- Editor section "Bins": when the card glows and a colour per bin type (Organic, Paper, Recycling, Glass, Residual) from Home Assistant's colour list; empty = default colour. Keys: `color_bio`, `color_paper`, `color_yellow`, `color_glass`, `color_rest`.
+- `bins` (YAML): own name, icon or colour per bin, matched by part of its name; its colour wins over the editor colour.
 - Height: 3 grid rows, 2 on phones. Full width by default, at least half a section; narrow cards show fewer boxes.
 
 ```yaml

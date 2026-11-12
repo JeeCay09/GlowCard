@@ -347,7 +347,8 @@ Groß die nächste Abholung, darunter die folgenden Tonnen in kleinen Feldern. A
 - `entities`: ein oder mehrere Abfall-Kalender (z. B. aus Waste Collection Schedule oder einem ICS-Kalender) und/oder Sensoren mit dem nächsten Datum (Geräteklasse `date` oder `timestamp`), den Tagen bis dahin (Zahl) oder einem Attribut `daysTo`.
 - Tonnen werden am Namen erkannt (Bio, Papier, Gelber Sack/Wertstoff, Glas, Restmüll) und bekommen Icon und Farbe. Ein Termin wie „Papier, Gelber Sack“ zählt als zwei Tonnen.
 - `highlight_days`: `0` = nur am Abholtag leuchten, `1` (Standard) = ab dem Vortag, `2` = ab zwei Tage vorher.
-- `bins` (YAML): eigener Name, Icon oder Farbe pro Tonne, erkannt an einem Teil des Namens.
+- Editor-Abschnitt „Tonnen“: wann die Karte leuchtet und je eine Farbe für Bio, Papier, Gelber Sack/Wertstoff, Glas und Restmüll aus der HA-Farbliste; leer = Standardfarbe. Schlüssel: `color_bio`, `color_paper`, `color_yellow`, `color_glass`, `color_rest`.
+- `bins` (YAML): eigener Name, Icon oder Farbe pro Tonne, erkannt an einem Teil des Namens; diese Farbe gewinnt vor der Editor-Farbe.
 - Höhe: 3 Rasterzeilen, am Handy 2. Standardmäßig volle Breite, mindestens eine halbe Section; schmale Karten zeigen weniger Felder.
 
 ```yaml
