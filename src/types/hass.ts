@@ -61,4 +61,6 @@ export interface HomeAssistant {
     target?: Record<string, unknown>,
   ): Promise<unknown>;
   callWS?<T>(msg: Record<string, unknown>): Promise<T>;
+  /** REST call through the frontend's auth, e.g. `calendars/<entity>?start=…&end=…`. */
+  callApi?<T>(method: 'GET' | 'POST', path: string, data?: Record<string, unknown>): Promise<T>;
 }

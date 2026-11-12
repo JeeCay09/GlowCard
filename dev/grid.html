@@ -104,7 +104,28 @@
         ],
         ['glowcard-energy', { ...night, font: 'theme' }],
       ];
-      for (const [tag, config, c0, r0] of params.get('set') === 'energy' ? energy : cards) {
+      const waste = [
+        ['glowcard-waste', { entities: ['calendar.waste'], size }],
+        ['glowcard-waste', { entities: ['calendar.waste'], size }, 6],
+        ['glowcard-waste', { entities: ['calendar.waste'], size }, 6],
+        ['glowcard-waste', { entities: ['calendar.waste_same_day'], size }],
+        [
+          'glowcard-waste',
+          { entities: ['sensor.waste_paper', 'sensor.waste_yellow', 'sensor.waste_rest'], size },
+        ],
+        ['ha-tile', 'Tile (HA)', 6, 1],
+        ['ha-tile', 'Tile (HA)', 6, 1],
+      ];
+      if (params.get('light')) {
+        section.removeAttribute('data-dark');
+        document.body.style.background = '#e7e9ef';
+      }
+      const set = params.get('set');
+      for (const [tag, config, c0, r0] of set === 'energy'
+        ? energy
+        : set === 'waste'
+          ? waste
+          : cards) {
         let cols = c0;
         let rows = r0;
         let el;
@@ -117,7 +138,7 @@
           el.dataset.card = '';
           el.setConfig({ type: `custom:${tag}`, ...config });
           const o = el.getGridOptions();
-          cols = o.columns;
+          cols = c0 ?? o.columns;
           rows = o.rows;
         }
         el.style.gridColumn = `span ${cols}`;

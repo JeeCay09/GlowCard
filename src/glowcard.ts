@@ -13,5 +13,6 @@ import './cards/status/chip-card';
 import './cards/heading/heading-card';
 import './cards/energy/energy-card';
 import './cards/nav/nav-card';
+import './cards/waste/waste-card';
 
 logVersion();
