@@ -21,21 +21,23 @@
 - Works with **standard Home Assistant entities only**. No helpers, template sensors or automations required.
 
 > [!NOTE]
-> GlowCard is in beta. v0.10.1 contains the switch, light, header, status bar, chip, heading, energy, navigation and waste collection cards, all with a visual editor; more cards follow (see the roadmap). Options may still change before v1.0.
+> GlowCard is in beta. v0.11.0 contains the switch, light, header, status bar, chip, heading, energy, navigation, waste collection and media cards, all with a visual editor; more cards follow (see the roadmap). Options may still change before v1.0.
 
 ## Cards
 
-| Card       | Type                      | Entities                                       | Status       |
-| ---------- | ------------------------- | ---------------------------------------------- | ------------ |
-| Switch     | `custom:glowcard-switch`  | `switch.*` (plugs too), `input_boolean.*`      | beta (v0.1)  |
-| Light      | `custom:glowcard-light`   | `light.*`                                      | beta (v0.2)  |
-| Header     | `custom:glowcard-header`  | `person.*`, greeting, date/time                | beta (v0.3)  |
-| Status bar | `custom:glowcard-status`  | weather, lights, energy, security, alerts      | beta (v0.3)  |
-| Chip       | `custom:glowcard-chip`    | like the status bar, plus people and battery   | beta (v0.3)  |
-| Heading    | `custom:glowcard-heading` | any entities as badges                         | beta (v0.4)  |
-| Energy     | `custom:glowcard-energy`  | house or grid power `sensor.*`; solar optional | beta (v0.7)  |
-| Navigation | `custom:glowcard-nav`     | views, popups (`#hash`); status dots optional  | beta (v0.9)  |
-| Waste      | `custom:glowcard-waste`   | `calendar.*` or date `sensor.*`                | beta (v0.10) |
+| Card        | Type                          | Entities                                       | Status       |
+| ----------- | ----------------------------- | ---------------------------------------------- | ------------ |
+| Switch      | `custom:glowcard-switch`      | `switch.*` (plugs too), `input_boolean.*`      | beta (v0.1)  |
+| Light       | `custom:glowcard-light`       | `light.*`                                      | beta (v0.2)  |
+| Header      | `custom:glowcard-header`      | `person.*`, greeting, date/time                | beta (v0.3)  |
+| Status bar  | `custom:glowcard-status`      | weather, lights, energy, security, alerts      | beta (v0.3)  |
+| Chip        | `custom:glowcard-chip`        | like the status bar, plus people and battery   | beta (v0.3)  |
+| Heading     | `custom:glowcard-heading`     | any entities as badges                         | beta (v0.4)  |
+| Energy      | `custom:glowcard-energy`      | house or grid power `sensor.*`; solar optional | beta (v0.7)  |
+| Navigation  | `custom:glowcard-nav`         | views, popups (`#hash`); status dots optional  | beta (v0.9)  |
+| Waste       | `custom:glowcard-waste`       | `calendar.*` or date `sensor.*`                | beta (v0.10) |
+| Media       | `custom:glowcard-media`       | `media_player.*`                               | beta (v0.11) |
+| Media rooms | `custom:glowcard-media-rooms` | several `media_player.*`                       | beta (v0.11) |
 
 All cards have a visual editor (Home Assistant 2025.1 or newer). In a sections dashboard, the cards fit Home Assistant's grid exactly (rows of 56 px): tile 2 rows on phones or 3 on desktop, switch group and power card 3, mini, status bar and chip 1 row. Width: tile, light, mini and switch group = 1/2 (tile and mini can shrink to 1/4), switch with power/usage, header, status bar, heading, energy and chip rows = full width (the energy card cannot be made narrower), single chip = 1/2, icon-only chip = 1/4. You can still change the width in the dashboard editor. New cards start without an entity; when you add a card "by entity", it uses the entity you picked.
 
@@ -71,7 +73,7 @@ lovelace:
    - Type: **JavaScript module**
 4. Reload your browser.
 
-After an update, change the URL to e.g. `/local/glowcard/glowcard.js?v=0.10.1` so browsers load the new file.
+After an update, change the URL to e.g. `/local/glowcard/glowcard.js?v=0.11.0` so browsers load the new file.
 
 ## Configuration
 
@@ -363,16 +365,49 @@ entities:
 #     color: '#8d6e63'
 ```
 
+### Media
+
+One media player. At half width (default) it is a tile with the round cover, title, artist and a thin progress line. Widen it in the dashboard (from about 300 px) and it becomes the wide card: big cover, progress with times, previous / play-pause / next and a volume bar you drag (shown when there is room).
+
+- The card glows while something plays (or a TV is on), in the main colour of the cover. Without a cover it uses violet; `color` sets a fixed colour instead.
+- Long titles and artists glide slowly to their end and back while playing; otherwise they end in "…" (also with "reduce motion").
+- Tap = play/pause (switches the player on when it is off), hold = GlowCard popup. Both can be changed under "Tap behaviour".
+- Popup: cover, progress (drag to seek), shuffle, previous, play/pause, next, repeat, volume, source and speaker grouping (players of the same integration that support grouping). Tap the orb at the top to switch the player on or off. Only what the player supports is shown.
+- Height: 3 grid rows, 2 on phones. Width: 1/2 by default, at least 1/2.
+
+```yaml
+type: custom:glowcard-media
+entity: media_player.living_room
+```
+
+### Media rooms
+
+Several players in one card, one grid row each, with a heading row. Playing rows glow in their cover's colour, with a thin volume bar you can drag and a badge for grouped speakers ("+ Bath").
+
+- Tap a row = play/pause (switch on when off), hold a row = that player's popup (the same as on the media card).
+- `entities`: entity ids or `{ entity, name, icon }`; `name`: heading (default "Media").
+- Height: one grid row per player plus one for the heading. Full width by default, at least half.
+
+```yaml
+type: custom:glowcard-media-rooms
+name: Music
+entities:
+  - media_player.kitchen
+  - entity: media_player.living_room_tv
+    name: TV
+  - media_player.bath
+```
+
 ## Roadmap
 
 1. Core: glass, orb, drag bar, popups, light/dark mode
 2. Switch and plug cards → v0.1.0 (beta)
 3. Light card and popup → v0.2.0 (beta)
 4. Header, status bar and chips, visual editor and default widths → **v0.3.0 (beta)**
-5. Heading card (section titles with badges, added to the plan) → v0.4.0; Energy card "load ring" with popup → v0.7.0; energy card without ring (big current value), editor and phone layout → v0.8.0; navigation bar (floating or as a card) → v0.9.0; waste collection card → v0.10.0
+5. Heading card (section titles with badges, added to the plan) → v0.4.0; Energy card "load ring" with popup → v0.7.0; energy card without ring (big current value), editor and phone layout → v0.8.0; navigation bar (floating or as a card) → v0.9.0; waste collection card → v0.10.0; media card and media rooms card → v0.11.0
 6. Visual editors for all cards, full docs, submission to the HACS default list → v1.0.0
 
-Later: room card, binary sensor, irrigation/plant, media, cover and vacuum popups.
+Later: room card, binary sensor, irrigation/plant, cover and vacuum popups.
 
 ## Development
 

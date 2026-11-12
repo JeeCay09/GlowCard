@@ -76,6 +76,22 @@ const ICON_PATHS: Record<string, string> = {
   'mdi:trash-can-outline': 'M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13M10 11v6M14 11v6',
   'mdi:bottle-wine-outline': 'M10 3h4v5l2 3v10H8V11l2-3z',
   'mdi:delete-variant': 'M5 7h14l-1 13H6zM9 4h6',
+  // Media card
+  'mdi:speaker':
+    'M7 3h10a1 1 0 0 1 1 1v16a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1zM12 10a3.5 3.5 0 1 0 0 7a3.5 3.5 0 1 0 0-7M12 6v.5',
+  'mdi:play': 'M8 5v14l11-7z',
+  'mdi:pause': 'M8 5v14M16 5v14',
+  'mdi:skip-previous': 'M6 5v14M18 5l-9 7 9 7z',
+  'mdi:skip-next': 'M18 5v14M6 5l9 7-9 7z',
+  'mdi:shuffle-variant': 'M3 7h4l10 10h4M3 17h4l3-3M14 10l3-3h4M18 4l3 3-3 3M18 14l3 3-3 3',
+  'mdi:repeat': 'M4 11V9a2 2 0 0 1 2-2h13M16 4l3 3-3 3M20 13v2a2 2 0 0 1-2 2H5M8 20l-3-3 3-3',
+  'mdi:repeat-once':
+    'M4 11V9a2 2 0 0 1 2-2h13M16 4l3 3-3 3M20 13v2a2 2 0 0 1-2 2H5M8 20l-3-3 3-3M12 10v4',
+  'mdi:volume-high': 'M4 9v6h4l5 4V5L8 9zM16 9a4 4 0 0 1 0 6M18.5 6.5a7.5 7.5 0 0 1 0 11',
+  'mdi:volume-off': 'M4 9v6h4l5 4V5L8 9zM17 9l4 6M21 9l-4 6',
+  'mdi:check': 'M5 12l5 5L20 7',
+  'mdi:plus': 'M12 5v14M5 12h14',
+  'mdi:audio-video': 'M4 6h16v10H4zM8 20h8',
 };
 
 /** Stand-in for Home Assistant's <ha-icon>, drawing stroke icons like the mockups. */
@@ -378,6 +394,73 @@ leds.forEach((room, i) => {
   states[id] = entity(id, 'on', { friendly_name: `Rauchmelder ${room}` });
 });
 
+// Media card: made-up covers (SVG gradients) and players; no real album art.
+const svgCover = (a: string, b: string, c: string, sun: string, sx: number, sy: number) =>
+  `data:image/svg+xml;utf8,${encodeURIComponent(
+    `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><defs><linearGradient id="g" x1="0" y1="0" x2="0.6" y2="1"><stop offset="0" stop-color="${a}"/><stop offset="0.6" stop-color="${b}"/><stop offset="1" stop-color="${c}"/></linearGradient></defs><rect width="100" height="100" fill="url(#g)"/><circle cx="${sx}" cy="${sy}" r="17" fill="${sun}"/></svg>`,
+  )}`;
+const COVER_SUNSET = svgCover('#ff8a5c', '#c2366b', '#3b1648', '#ffd27a', 68, 30);
+const COVER_OCEAN = svgCover('#2dd4bf', '#0e7490', '#082f49', '#b9fff3', 30, 70);
+const MEDIA_FEATURES = 1 | 2 | 4 | 8 | 16 | 32 | 128 | 256 | 2048 | 16384 | 32768 | 262144 | 524288;
+const TV_FEATURES = 1 | 4 | 8 | 128 | 256 | 2048 | 16384;
+const mediaAt = new Date(nowMs - 20_000).toISOString();
+Object.assign(states, {
+  'media_player.kitchen': entity('media_player.kitchen', 'playing', {
+    friendly_name: 'Küche',
+    supported_features: MEDIA_FEATURES,
+    media_title: 'Golden Hour Drive',
+    media_artist: 'Nova Lane',
+    media_album_name: 'Lowlight',
+    media_duration: 221,
+    media_position: 64,
+    media_position_updated_at: mediaAt,
+    volume_level: 0.42,
+    entity_picture: COVER_SUNSET,
+    source: 'Spotify',
+    source_list: ['Spotify', 'Radio', 'AirPlay', 'Line-In'],
+    shuffle: false,
+    repeat: 'all',
+    group_members: ['media_player.kitchen', 'media_player.bath'],
+  }),
+  'media_player.long': entity('media_player.long', 'playing', {
+    friendly_name: 'Arbeitszimmer',
+    supported_features: MEDIA_FEATURES,
+    media_title: 'A Very Long Song Title That Never Fits On One Line (Extended Night Version)',
+    media_artist: 'The Orchestra of Endless Afternoons feat. Somebody Else',
+    media_album_name: 'Long Names',
+    media_duration: 412,
+    media_position: 300,
+    media_position_updated_at: mediaAt,
+    volume_level: 0.18,
+    entity_picture: COVER_OCEAN,
+  }),
+  'media_player.living_tv': entity('media_player.living_tv', 'on', {
+    friendly_name: 'TV Wohnzimmer',
+    device_class: 'tv',
+    supported_features: TV_FEATURES,
+    app_name: 'Netflix',
+    volume_level: 0.24,
+    source: 'Netflix',
+    source_list: ['Netflix', 'YouTube', 'HDMI 1', 'HDMI 2', 'Live TV', 'Mediathek'],
+  }),
+  'media_player.bath': entity('media_player.bath', 'paused', {
+    friendly_name: 'Bad',
+    supported_features: MEDIA_FEATURES,
+    media_title: 'Ocean Notes',
+    media_artist: 'Harbor Kids',
+    media_album_name: 'Tidal',
+    media_duration: 198,
+    media_position: 143,
+    media_position_updated_at: mediaAt,
+    volume_level: 0.3,
+    entity_picture: COVER_OCEAN,
+  }),
+  'media_player.terrace': entity('media_player.terrace', 'off', {
+    friendly_name: 'Terrasse',
+    supported_features: MEDIA_FEATURES,
+  }),
+});
+
 const areas = {
   living: { area_id: 'living', name: 'Wohnzimmer' },
   hall: { area_id: 'hall', name: 'Flur' },
@@ -399,6 +482,12 @@ const entities: HomeAssistant['entities'] = {
   'binary_sensor.vacuum_problem': { entity_id: 'binary_sensor.vacuum_problem', device_id: 'robot' },
   'sensor.vacuum_error': { entity_id: 'sensor.vacuum_error', device_id: 'robot' },
   'vacuum.robot': { entity_id: 'vacuum.robot', device_id: 'robot' },
+  ...Object.fromEntries(
+    ['kitchen', 'long', 'bath', 'terrace'].map((r) => [
+      `media_player.${r}`,
+      { entity_id: `media_player.${r}`, platform: 'demo_speaker' },
+    ]),
+  ),
 };
 
 // Energy card "Lastring": nur Netz / mit PV / mit PV + Akku / Nacht
@@ -637,6 +726,24 @@ export function fakeHass(darkMode: boolean): HomeAssistant {
       for (const id of ids) {
         const e = states[id];
         if (!e) continue;
+        if (domain === 'media_player') {
+          const a = e.attributes;
+          if (service === 'media_play_pause')
+            e.state = e.state === 'playing' ? 'paused' : 'playing';
+          if (service === 'turn_on') e.state = a.media_title ? 'paused' : 'idle';
+          if (service === 'turn_off') e.state = 'off';
+          if (service === 'volume_set') a.volume_level = data?.volume_level;
+          if (service === 'select_source') a.source = data?.source;
+          if (service === 'shuffle_set') a.shuffle = data?.shuffle;
+          if (service === 'repeat_set') a.repeat = data?.repeat;
+          if (service === 'media_seek') {
+            a.media_position = data?.seek_position;
+            a.media_position_updated_at = new Date().toISOString();
+          }
+          const t = new Date().toISOString();
+          states[id] = { ...e, attributes: { ...a }, last_changed: t, last_updated: t };
+          continue;
+        }
         if (service === 'toggle') e.state = e.state === 'on' ? 'off' : 'on';
         if (service === 'set_value') e.state = String(data?.value);
         if (service === 'turn_on') e.state = 'on';

@@ -116,6 +116,28 @@
         ['ha-tile', 'Tile (HA)', 6, 1],
         ['ha-tile', 'Tile (HA)', 6, 1],
       ];
+      const media = [
+        ['glowcard-media', { entity: 'media_player.kitchen', size }],
+        ['glowcard-media', { entity: 'media_player.living_tv', size }],
+        ['glowcard-media', { entity: 'media_player.bath', size }],
+        ['glowcard-media', { entity: 'media_player.terrace', size }],
+        ['glowcard-media', { entity: 'media_player.kitchen', size }, 12],
+        ['glowcard-media', { entity: 'media_player.long', size }, 12],
+        ['glowcard-media', { entity: 'media_player.long', size }, 6],
+        ['glowcard-media', { entity: 'media_player.living_tv', size }, 9],
+        [
+          'glowcard-media-rooms',
+          {
+            name: 'Musik im Haus',
+            entities: [
+              'media_player.kitchen',
+              'media_player.living_tv',
+              'media_player.bath',
+              'media_player.terrace',
+            ],
+          },
+        ],
+      ];
       if (params.get('light')) {
         section.removeAttribute('data-dark');
         document.body.style.background = '#e7e9ef';
@@ -125,7 +147,9 @@
         ? energy
         : set === 'waste'
           ? waste
-          : cards) {
+          : set === 'media'
+            ? media
+            : cards) {
         let cols = c0;
         let rows = r0;
         let el;
