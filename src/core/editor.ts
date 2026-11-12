@@ -175,6 +175,14 @@ const LABELS = {
     nav_yaml_only: 'Buttons mit eigenen Aktionen lassen sich nur im YAML-Modus bearbeiten',
     nav_empty: 'Buttons hinzufügen',
     nav_label: 'Navigation',
+    waste_entities: 'Kalender oder Sensoren',
+    waste_entities_helper:
+      'Abfall-Kalender (z. B. Waste Collection Schedule, ICS) oder Sensoren mit dem nächsten Datum',
+    waste_highlight: 'Karte leuchtet',
+    waste_highlight_0: 'Nur am Abholtag',
+    waste_highlight_1: 'Am Vortag und am Abholtag',
+    waste_highlight_2: 'Ab zwei Tage vorher',
+    waste_name_helper: 'Titel im Popup, leer = „Müllabfuhr“',
   },
   en: {
     entity: 'Entity',
@@ -315,6 +323,14 @@ const LABELS = {
     nav_yaml_only: 'Buttons with their own actions can only be edited in YAML mode',
     nav_empty: 'Add buttons',
     nav_label: 'Navigation',
+    waste_entities: 'Calendars or sensors',
+    waste_entities_helper:
+      'Waste calendar (e.g. Waste Collection Schedule, ICS) or sensors with the next date',
+    waste_highlight: 'Card glows',
+    waste_highlight_0: 'Only on pickup day',
+    waste_highlight_1: 'The day before and on pickup day',
+    waste_highlight_2: 'From two days before',
+    waste_name_helper: 'Popup title, empty = “Waste collection”',
   },
 };
 

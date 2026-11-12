@@ -35,6 +35,7 @@
 | Heading    | `custom:glowcard-heading` | any entities as badges                         | beta (v0.4) |
 | Energy     | `custom:glowcard-energy`  | house or grid power `sensor.*`; solar optional | beta (v0.7) |
 | Navigation | `custom:glowcard-nav`     | views, popups (`#hash`); status dots optional  | beta (v0.9) |
+| Waste      | `custom:glowcard-waste`   | `calendar.*` or date `sensor.*`                | new         |
 
 All cards have a visual editor (Home Assistant 2025.1 or newer). In a sections dashboard, the cards fit Home Assistant's grid exactly (rows of 56 px): tile 2 rows on phones or 3 on desktop, switch group and power card 3, mini, status bar and chip 1 row. Width: tile, light, mini and switch group = 1/2 (tile and mini can shrink to 1/4), switch with power/usage, header, status bar, heading, energy and chip rows = full width (the energy card cannot be made narrower), single chip = 1/2, icon-only chip = 1/4. You can still change the width in the dashboard editor. New cards start without an entity; when you add a card "by entity", it uses the entity you picked.
 
@@ -337,6 +338,28 @@ buttons:
     tap_action:
       action: more-info
       entity: sensor.system_health
+```
+
+### Waste collection
+
+The next pickup large, with the bins that follow in small boxes below. On the day before and on the pickup day the card glows in the bin's colour. Tap opens a popup with a three week calendar and the next dates; hold opens the calendar or sensor.
+
+- `entities`: one or more waste calendars (e.g. from Waste Collection Schedule or an ICS calendar) and/or sensors with the next date (device class `date` or `timestamp`), the days until it (a number) or a `daysTo` attribute.
+- Bins are recognised by name (Bio, Paper, Yellow bag / Recycling, Glass, Residual) and get their icon and colour. An event such as "Paper, Yellow bag" counts as two bins.
+- `highlight_days`: `0` = glow only on the pickup day, `1` (default) = from the day before, `2` = from two days before.
+- `bins` (YAML): own name, icon or colour per bin, matched by part of its name.
+- Height: 3 grid rows, 2 on phones. Full width by default, at least half a section; narrow cards show fewer boxes.
+
+```yaml
+type: custom:glowcard-waste
+entities:
+  - calendar.waste_collection
+# optional:
+# highlight_days: 1
+# bins:
+#   - match: bio
+#     name: Brown bin
+#     color: '#8d6e63'
 ```
 
 ## Roadmap
