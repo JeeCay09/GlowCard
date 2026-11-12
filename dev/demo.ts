@@ -68,6 +68,14 @@ const ICON_PATHS: Record<string, string> = {
   'mdi:floor-plan': 'M4 4h16v16H4zM4 11h7v9M11 4v4M15 11h5',
   'mdi:lightning-bolt-outline': 'M13 2L4 14h7l-1 8 9-12h-7z',
   'mdi:menu': 'M4 7h16M4 12h16M4 17h16',
+  // Waste card
+  'mdi:leaf': 'M5 19c0-8 5-13 14-14 0 9-5 14-13 14M5 19l7-7',
+  'mdi:newspaper-variant-outline':
+    'M5 5h11v14H6a1 1 0 0 1-1-1zM16 9h3v9a1 1 0 0 1-1 1h-2M8 9h5M8 12h5M8 15h5',
+  'mdi:recycle': 'M7 10l3-5h4l2 3M17 12l2 4-2 3h-4M10 19H6l-2-3 2-4M13 6l1 2M14 19l-1-2M5.5 13l2-1',
+  'mdi:trash-can-outline': 'M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13M10 11v6M14 11v6',
+  'mdi:bottle-wine-outline': 'M10 3h4v5l2 3v10H8V11l2-3z',
+  'mdi:delete-variant': 'M5 7h14l-1 13H6zM9 4h6',
 };
 
 /** Stand-in for Home Assistant's <ha-icon>, drawing stroke icons like the mockups. */
@@ -95,7 +103,48 @@ const entity = (
   last_updated: ago(changedHoursAgo),
 });
 
+/** Waste demo: pickups relative to today, so the preview always shows "Morgen". */
+const inDays = (n: number): string => {
+  const d = new Date(nowMs);
+  d.setDate(d.getDate() + n);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+};
+const WASTE_EVENTS: [number, string][] = [
+  [1, 'Biotonne'],
+  [2, 'Papier'],
+  [3, 'Gelber Sack'],
+  [9, 'Restmüll'],
+  [15, 'Biotonne'],
+  [16, 'Papier'],
+  [16, 'Gelber Sack'],
+  [23, 'Restmüll'],
+];
+
 const states: Record<string, HassEntity> = {
+  'calendar.waste': entity('calendar.waste', 'off', {
+    friendly_name: 'Abfallkalender',
+    message: 'Biotonne',
+    all_day: true,
+    start_time: `${inDays(1)} 00:00:00`,
+  }),
+  'calendar.waste_same_day': entity('calendar.waste_same_day', 'off', {
+    friendly_name: 'Abfallkalender 2',
+    message: 'Restmüll, Biotonne',
+    all_day: true,
+    start_time: `${inDays(0)} 00:00:00`,
+  }),
+  'sensor.waste_paper': entity('sensor.waste_paper', inDays(3), {
+    friendly_name: 'Papier',
+    device_class: 'date',
+  }),
+  'sensor.waste_yellow': entity('sensor.waste_yellow', 'in 4 Tagen', {
+    friendly_name: 'Gelber Sack',
+    daysTo: 4,
+  }),
+  'sensor.waste_rest': entity('sensor.waste_rest', '8', {
+    friendly_name: 'Restmüll',
+    unit_of_measurement: 'd',
+  }),
   'light.living': entity('light.living', 'on', {
     friendly_name: 'Deckenlicht Wohnzimmer',
     brightness: 184,
@@ -570,6 +619,18 @@ export function fakeHass(darkMode: boolean): HomeAssistant {
       }
       const ids = (msg.entity_ids as string[]) ?? [];
       return Object.fromEntries(ids.map((id) => [id, fakeHistory(id, start)])) as T;
+    },
+    async callApi<T>(_method: string, path: string): Promise<T> {
+      if (path.startsWith('calendars/calendar.waste_same_day')) {
+        return [
+          { summary: 'Restmüll, Biotonne', start: { date: inDays(0) } },
+          { summary: 'Papier', start: { date: inDays(5) } },
+        ] as T;
+      }
+      if (path.startsWith('calendars/calendar.waste')) {
+        return WASTE_EVENTS.map(([n, summary]) => ({ summary, start: { date: inDays(n) } })) as T;
+      }
+      return [] as T;
     },
     async callService(domain, service, data) {
       const ids = ([] as string[]).concat((data?.entity_id as string | string[]) ?? []);
