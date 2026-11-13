@@ -786,9 +786,6 @@ export class GlowFlowCard extends GlowCardBase<FlowCardConfig> {
       live
         ? html`${fnum(hass, Math.abs(v) / 1000, Math.abs(v) >= 1000 ? 1 : 2)}<small>kW</small>`
         : html`${fkwh(hass, Math.abs(v))}<small>kWh</small>`;
-    const solarToday = t?.solar;
-    const fc = forecastHours(this.forecast, this.setup.forecast, this.period);
-    const fcTotal = fc?.reduce((a, b) => a + b, 0);
     const c = this.config!;
 
     // Node texts
@@ -801,15 +798,7 @@ export class GlowFlowCard extends GlowCardBase<FlowCardConfig> {
       : t?.export
         ? `${ft(hass, 'imported')} · ${fkwh(hass, t.export)} ${ft(hass, 'exported')}`
         : ft(hass, 'imported');
-    const solarT3 = live
-      ? fcTotal !== undefined && solarToday !== undefined
-        ? this.narrow
-          ? ft(hass, 'forecast_short', { f: `${fkwh(hass, fcTotal)} kWh` })
-          : `${fkwh(hass, solarToday)} ${ft(hass, 'of_forecast', { f: `${fkwh(hass, fcTotal)} kWh` })}`
-        : solarToday !== undefined
-          ? `${ft(hass, 'production')} · ${fkwh(hass, solarToday)} kWh`
-          : ft(hass, 'production')
-      : ft(hass, 'produced');
+    const solarT3 = live ? ft(hass, 'production') : ft(hass, 'produced');
     const batT3 = live
       ? idle(f.bat)
         ? ft(hass, 'idle')
@@ -823,7 +812,8 @@ export class GlowFlowCard extends GlowCardBase<FlowCardConfig> {
 
     const nodes: PlanNode[] = [];
     const segs: PlanSeg[] = [];
-    const R = narrow ? 28 : 37; // icon half size + gap
+    // The nodes are opaque capsules on the lines (#191): wires run to their centres.
+    const R = 0;
     const gridV = live ? f.grid : (t?.import ?? 0);
     const node = (
       k: NodeKind,
@@ -849,11 +839,11 @@ export class GlowFlowCard extends GlowCardBase<FlowCardConfig> {
       const off = Math.min(160, h * 0.32);
       // Wide: the grid and home labels sit beside their icons, keep room for "12.345 kWh".
       // Compact (#187, narrow card on a computer): labels below the icons, near the edges.
-      const room = narrow ? 56 : R + 140;
+      const room = narrow ? 78 : 100;
       const xn = Math.max(room, s || b ? w * 0.12 : w * 0.2);
       const xh = Math.min(w - room, s || b ? w * 0.86 : w * 0.8);
-      const xs = s && b ? w * 0.36 : w * 0.5;
-      const xk = s && b ? w * 0.6 : w * 0.5;
+      const xs = s && b ? w * (narrow ? 0.42 : 0.38) : w * 0.5;
+      const xk = s && b ? w * (narrow ? 0.63 : 0.62) : w * 0.5;
       const side = narrow ? 'b' : undefined;
       node('grid', xn, yb, side ?? 'l', ft(hass, 'grid'), gridV, gridT3, c.grid);
       node('home', xh, yb, side ?? 'r', ft(hass, 'home'), f.home, homeT3, c.home);
@@ -937,39 +927,30 @@ export class GlowFlowCard extends GlowCardBase<FlowCardConfig> {
             svg`<circle cx=${x} cy=${y} r="5" fill="rgb(${lc})" style="filter:drop-shadow(0 0 5px rgba(${lc},1))"/>`,
         )}
       </svg>
-      ${nodes.map((nd) => this.node(nd, R, nd.k === 'bat' ? soc : null))}`;
+      ${nodes.map((nd) => this.node(nd, nd.k === 'bat' ? soc : null))}`;
   }
 
-  private node(nd: PlanNode, R: number, soc: number | null): TemplateResult {
+  /** A node: glass capsule on the line with the neon icon, name, state and value. */
+  private node(nd: PlanNode, soc: number | null): TemplateResult {
     const c = this.col(nd.k);
     const click = () => this.moreInfo(nd.entity);
-    const txt = html`<div class="t1">${nd.t1}</div>
-      <div class="t2">${nd.t2}</div>
-      ${
-        // left labels grow towards the card edge: one fact per line there
-        nd.lab === 'l'
-          ? nd.t3.split(' · ').map((l) => html`<div class="t3">${l}</div>`)
-          : html`<div class="t3">${nd.t3}</div>`
-      }`;
-    const pos =
-      nd.lab === 'b'
-        ? `left:${nd.x}px;top:${nd.y + R + 2}px;transform:translate(-50%,0);text-align:center`
-        : nd.lab === 'l'
-          ? `left:${nd.x - R - 6}px;top:${nd.y}px;transform:translate(-100%,-50%);text-align:right`
-          : `left:${nd.x + R + 6}px;top:${nd.y}px;transform:translate(0,-50%)`;
     const can = !!(nd.entity && this.hass?.states[nd.entity]);
     return html`<div
-        class="neon ${can ? 'tap' : ''}"
-        style="left:${nd.x}px;top:${nd.y}px"
-        role=${can ? 'button' : nothing}
-        tabindex=${can ? 0 : nothing}
-        aria-label=${nd.t1}
-        @click=${click}
-        @keydown=${this.onKey(click)}
-      >
-        ${neonIcon(nd.k, c, this.dark, soc)}
-      </div>
-      <div class="node" style="${pos};--a:${c}">${txt}</div>`;
+      class="cap ${can ? 'tap' : ''}"
+      style="left:${nd.x}px;top:${nd.y}px;--a:${c}"
+      role=${can ? 'button' : nothing}
+      tabindex=${can ? 0 : nothing}
+      @click=${click}
+      @keydown=${this.onKey(click)}
+    >
+      <span class="ci">${neonIcon(nd.k, c, this.dark, soc)}</span>
+      <span class="ct">
+        <span class="t1"
+          ><b>${nd.t1}</b>${this.vertical || !nd.t3 ? nothing : html` ${nd.t3}`}</span
+        >
+        <span class="t2">${nd.t2}</span>
+      </span>
+    </div>`;
   }
 
   // ---------- key figures ----------
@@ -1582,48 +1563,55 @@ export class GlowFlowCard extends GlowCardBase<FlowCardConfig> {
           animation: none;
         }
       }
-      .neon {
+      /* nodes: glass capsules sitting on the lines */
+      .cap {
         position: absolute;
-        width: 66px;
-        height: 66px;
         transform: translate(-50%, -50%);
         z-index: 2;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 7px 16px 7px 9px;
+        border-radius: 999px;
+        white-space: nowrap;
+        background:
+          linear-gradient(rgba(var(--a), 0.1), rgba(var(--a), 0.03)), var(--glow-pop-solid);
+        border: 1px solid rgba(var(--a), 0.45);
+        box-shadow:
+          0 0 20px -6px rgba(var(--a), 0.85),
+          inset 0 1px 0 rgba(255, 255, 255, 0.08);
       }
-      .narrow .neon {
-        width: 50px;
-        height: 50px;
-      }
-      .neon.tap {
+      .cap.tap {
         cursor: pointer;
       }
-      .neon svg {
+      .ci {
+        flex: none;
+        width: 36px;
+        height: 36px;
+      }
+      .ci svg {
         width: 100%;
         height: 100%;
         overflow: visible;
       }
-      /* node labels: small glass tiles like the key figures, edged in the node's colour */
-      .node {
-        position: absolute;
-        z-index: 2;
-        white-space: nowrap;
-        padding: 8px 12px 9px;
-        border-radius: 14px;
-        background: var(--glow-inset);
-        border: 1px solid rgba(var(--a), 0.3);
-        box-shadow: 0 6px 18px -12px rgba(var(--a), 0.9);
-        -webkit-backdrop-filter: blur(10px);
-        backdrop-filter: blur(10px);
+      .ct {
+        display: flex;
+        flex-direction: column;
+        line-height: 1.15;
       }
       .t1 {
-        font-size: 12px;
-        font-weight: 700;
+        font-size: 11px;
+        font-weight: 600;
+        color: var(--glow-muted);
+      }
+      .t1 b {
+        font-weight: 800;
         color: color-mix(in srgb, rgb(var(--a)) 70%, var(--glow-text));
       }
       .t2 {
-        font-size: 22px;
+        font-size: 20px;
         font-weight: 800;
         letter-spacing: -0.02em;
-        line-height: 1.15;
       }
       .t2 small,
       .big small {
@@ -1633,20 +1621,16 @@ export class GlowFlowCard extends GlowCardBase<FlowCardConfig> {
         margin-left: 3px;
         letter-spacing: 0;
       }
-      .t3 {
-        font-size: 12px;
-        font-weight: 600;
-        color: var(--glow-muted);
+      .narrow .cap {
+        gap: 6px;
+        padding: 6px 13px 6px 7px;
       }
-      .narrow .node {
-        padding: 6px 10px 7px;
-        border-radius: 12px;
+      .narrow .ci {
+        width: 30px;
+        height: 30px;
       }
       .narrow .t2 {
-        font-size: 20px;
-      }
-      .narrow .t3 {
-        font-size: 11px;
+        font-size: 18px;
       }
       /* key figures */
       .kpis {
