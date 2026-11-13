@@ -192,6 +192,16 @@ const LABELS = {
     color_media_helper: 'Automatisch = Farbe aus dem Cover',
     media_entities: 'Mediaplayer',
     media_entities_helper: 'Lautsprecher und TVs, je eine Zeile',
+    flow_live_section: 'Live-Leistung (optional)',
+    sections: 'Bereiche unter dem Schaltplan',
+    flow_sections_helper:
+      'Auswahl und Reihenfolge; ein Bereich erscheint nur, wenn das Energie-Dashboard Daten dafür hat',
+    period: 'Zeitraum beim Öffnen',
+    flow_period_helper: 'Auf der Karte jederzeit umschaltbar',
+    flow_grid_helper:
+      'Netzleistung (+ = Bezug). Ohne Leistungssensoren zeigt der Schaltplan kWh statt kW',
+    flow_home_helper: 'Leer = aus Netz, Solar und Akku berechnet',
+    flow_name_helper: 'Titel, leer = „Energiefluss“',
     media_name_helper: 'Überschrift, leer = „Medien“',
   },
   en: {
@@ -350,6 +360,16 @@ const LABELS = {
     color_media_helper: 'Automatic = colour from the cover',
     media_entities: 'Media players',
     media_entities_helper: 'Speakers and TVs, one row each',
+    flow_live_section: 'Live power (optional)',
+    sections: 'Areas below the line plan',
+    flow_sections_helper:
+      'Choice and order; an area only shows when the energy dashboard has data for it',
+    period: 'Period when opened',
+    flow_period_helper: 'Can be changed on the card at any time',
+    flow_grid_helper:
+      'Grid power (+ = import). Without power sensors the plan shows kWh instead of kW',
+    flow_home_helper: 'Empty = calculated from grid, solar and battery',
+    flow_name_helper: 'Title, empty = "Energy flow"',
     media_name_helper: 'Heading, empty = "Media"',
   },
 };
