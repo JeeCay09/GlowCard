@@ -408,7 +408,7 @@ Eine ganze Energie-Seite wie das Energie-Dashboard von Home Assistant, als eine 
 - **Bereiche** darunter (jeder optional, Reihenfolge im Editor über `sections`): `usage` (Balken je Stunde/Tag/Monat; nur Netz gegen den üblichen Bereich früherer Tage, mit Solar nach Quelle gestapelt, Einspeisung und Laden unter der Linie), `sources` (Tabelle mit kWh und Kosten je Quelle und Gesamt), `solar` (Produktion mit der Prognose aus der Solar-Vorhersage des Energie-Dashboards, nur für heute), `devices`, `gas` und `water`.
 - **Datumsauswahl:** Tag, Woche, Monat oder Jahr mit ‹ ›. `period` legt die Startansicht fest (Standard `day`).
 - **Live-Leistung (optional):** Heute zeigt kW, wenn du Leistungssensoren wählst (`grid`, `solar`, `battery_power`, `battery` für den Ladestand, `home`); `invert_grid` / `invert_battery` für umgekehrte Vorzeichen. Ohne sie zeigt der Plan die kWh von heute. Ein Gerät zeigt seine aktuelle Leistung, wenn im Energie-Dashboard ein Leistungssensor dafür hinterlegt ist.
-- Höhe: wächst mit den Bereichen und füllt immer ganze Rasterzeilen. Breite: immer ganze Breite.
+- Höhe: wächst mit den Bereichen und füllt immer ganze Rasterzeilen. Breite: immer ganze Breite. In einem normalen Abschnitt (etwa 450–500 px) ist der Plan kompakt; für die breite Ansicht den Abschnitt über mehrere Spalten ziehen (`column_span: 2` oder mehr im YAML des Abschnitts). Am Handy läuft der Plan von oben nach unten und passt sich der Bildschirmhöhe an.
 
 ```yaml
 type: custom:glowcard-energy-flow
