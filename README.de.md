@@ -406,6 +406,7 @@ Eine ganze Energie-Seite wie das Energie-Dashboard von Home Assistant, als eine 
 - **Plan:** ein Schaltplan Netz — Haus mit Lichtpunkten, die mit der Energie wandern. Solar kommt von oben und der Akku von unten dazu, wenn sie im Energie-Dashboard eingerichtet sind (am Handy läuft die Leitung von oben nach unten). Das Akku-Symbol füllt sich mit dem Ladestand. Tippen auf ein Symbol öffnet die Details.
 - **Kennzahlen** mit den Begriffen des Energie-Dashboards. Nur Netz: Verbrauch, Netzbezug, CO₂-arm bezogen (braucht die Integration CO2 Signal) und Kosten. Mit Solar: Autarkie, Solar selbst genutzt, Netzneutralität und Kosten.
 - **Bereiche** darunter (jeder optional, Reihenfolge im Editor über `sections`): `usage` (Balken je Stunde/Tag/Monat; nur Netz gegen den üblichen Bereich früherer Tage, mit Solar nach Quelle gestapelt, Einspeisung und Laden unter der Linie), `sources` (Tabelle mit kWh und Kosten je Quelle und Gesamt), `solar` (Produktion mit der Prognose aus der Solar-Vorhersage des Energie-Dashboards, nur für heute), `devices`, `gas` und `water`.
+- **Solar-Prognose:** Standard ist die Prognose aus dem Energie-Dashboard. Mit `solar_forecast` wählst du einen eigenen Sensor mit der erwarteten Energie von heute (z. B. Forecast.Solar oder Solcast); Stundenwerte in seinen Attributen (`detailedHourly`, `detailedForecast`, `wh_hours`) zeichnen auch die Kurve.
 - **Datumsauswahl:** Tag, Woche, Monat oder Jahr mit ‹ ›. `period` legt die Startansicht fest (Standard `day`).
 - **Live-Leistung (optional):** Heute zeigt kW, wenn du Leistungssensoren wählst (`grid`, `solar`, `battery_power`, `battery` für den Ladestand, `home`); `invert_grid` / `invert_battery` für umgekehrte Vorzeichen. Ohne sie zeigt der Plan die kWh von heute. Ein Gerät zeigt seine aktuelle Leistung, wenn im Energie-Dashboard ein Leistungssensor dafür hinterlegt ist.
 - Höhe: wächst mit den Bereichen und füllt immer ganze Rasterzeilen. Breite: immer ganze Breite.
@@ -415,6 +416,7 @@ type: custom:glowcard-energy-flow
 # alles optional:
 sections: [usage, sources, solar, devices, gas, water]
 period: day
+solar_forecast: sensor.solar_prognose_heute
 grid: sensor.netz_leistung # positiv = Bezug
 solar: sensor.pv_leistung
 battery_power: sensor.akku_leistung # positiv = Laden

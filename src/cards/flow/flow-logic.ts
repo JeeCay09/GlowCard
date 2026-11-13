@@ -1,4 +1,4 @@
-import type { HomeAssistant } from '../../types/hass';
+import type { HassEntity, HomeAssistant } from '../../types/hass';
 import { language } from '../../core/localize';
 import { quantile } from '../energy/energy-logic';
 
@@ -490,6 +490,55 @@ export function forecastHours(
     }
   }
   return seen ? out : undefined;
+}
+
+/** Forecast for one day: kWh per hour (when known) and the total. */
+export interface DayForecast {
+  hours?: number[];
+  total?: number;
+}
+
+const ENERGY_FACTOR: Record<string, number> = { wh: 0.001, kwh: 1, mwh: 1000 };
+
+/**
+ * Forecast from a chosen sensor (#179), for today only. The state is the expected energy
+ * of the day (Wh, kWh or MWh). Hourly values come from common attributes when present:
+ * Solcast `detailedHourly` / `detailedForecast` (kW per hour / half hour) and
+ * Forecast.Solar style `wh_hours` / `wh_period` (Wh per ISO time).
+ */
+export function sensorForecast(entity: HassEntity | undefined, p: Period): DayForecast | undefined {
+  if (!entity || p.range !== 'day') return undefined;
+  const unit = String(entity.attributes.unit_of_measurement ?? 'kWh').toLowerCase();
+  const raw = Number.parseFloat(entity.state);
+  const total = Number.isFinite(raw) ? raw * (ENERGY_FACTOR[unit] ?? 1) : undefined;
+
+  const hours = new Array(24).fill(0);
+  let seen = false;
+  const put = (iso: unknown, kwh: number) => {
+    const t = new Date(String(iso)).getTime();
+    if (!Number.isFinite(t) || !Number.isFinite(kwh)) return;
+    if (t < p.start.getTime() || t >= p.end.getTime()) return;
+    hours[bucketOf(p, t)] += kwh;
+    seen = true;
+  };
+  type Row = { period_start?: unknown; pv_estimate?: unknown };
+  const a = entity.attributes as Record<string, unknown>;
+  const rows = (key: string) => (Array.isArray(a[key]) ? (a[key] as Row[]) : undefined);
+  const hourly = rows('detailedHourly');
+  const half = rows('detailedForecast');
+  if (hourly) for (const r of hourly) put(r.period_start, Number(r.pv_estimate));
+  else if (half) for (const r of half) put(r.period_start, Number(r.pv_estimate) / 2);
+  else {
+    const wh = (a.wh_hours ?? a.wh_period) as Record<string, unknown> | undefined;
+    if (wh && typeof wh === 'object') {
+      for (const [iso, v] of Object.entries(wh)) put(iso, Number(v) / 1000);
+    }
+  }
+  if (!seen && total === undefined) return undefined;
+  return {
+    hours: seen ? hours : undefined,
+    total: total ?? (seen ? hours.reduce((x, y) => x + y, 0) : undefined),
+  };
 }
 
 // ---------- the line plan ----------

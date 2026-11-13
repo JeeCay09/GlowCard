@@ -13,6 +13,7 @@ import {
   periodPlan,
   selfConsumption,
   selfSufficiency,
+  sensorForecast,
   setupIds,
   toBuckets,
   totals,
@@ -212,6 +213,56 @@ describe('usual band and forecast', () => {
     expect(fc.reduce((x, y) => x + y, 0)).toBe(3);
     expect(forecastHours(data, ['a'], period('week', 0, NOW))).toBeUndefined();
     expect(forecastHours({}, ['a'], p)).toBeUndefined();
+  });
+});
+
+describe('forecast sensor', () => {
+  const p = period('day', 0, NOW);
+  const at = (hour: number, min = 0, day = 13) => new Date(2026, 10, day, hour, min).toISOString();
+  const ent = (state: string, attributes: Record<string, unknown> = {}) => ({
+    entity_id: 'sensor.fc',
+    state,
+    attributes,
+    last_changed: '',
+    last_updated: '',
+  });
+
+  it('reads the total in Wh, kWh or MWh', () => {
+    expect(sensorForecast(ent('12.5', { unit_of_measurement: 'kWh' }), p)).toEqual({ total: 12.5 });
+    expect(sensorForecast(ent('12500', { unit_of_measurement: 'Wh' }), p)?.total).toBe(12.5);
+    expect(sensorForecast(ent('unavailable'), p)).toBeUndefined();
+    expect(sensorForecast(undefined, p)).toBeUndefined();
+    expect(sensorForecast(ent('5'), period('week', 0, NOW))).toBeUndefined();
+  });
+
+  it('reads Solcast hourly and half-hourly values', () => {
+    const hourly = sensorForecast(
+      ent('3', {
+        unit_of_measurement: 'kWh',
+        detailedHourly: [
+          { period_start: at(12), pv_estimate: 2 },
+          { period_start: at(13), pv_estimate: 1 },
+          { period_start: at(12, 0, 14), pv_estimate: 9 },
+        ],
+      }),
+      p,
+    )!;
+    expect([hourly.hours?.[12], hourly.hours?.[13], hourly.total]).toEqual([2, 1, 3]);
+    const half = sensorForecast(
+      ent('x', {
+        detailedForecast: [
+          { period_start: at(12), pv_estimate: 2 },
+          { period_start: at(12, 30), pv_estimate: 4 },
+        ],
+      }),
+      p,
+    )!;
+    expect([half.hours?.[12], half.total]).toEqual([3, 3]);
+  });
+
+  it('reads Wh per hour attributes', () => {
+    const f = sensorForecast(ent('4', { wh_hours: { [at(9)]: 1500, [at(10)]: 2500 } }), p)!;
+    expect([f.hours?.[9], f.hours?.[10], f.total]).toEqual([1.5, 2.5, 4]);
   });
 });
 
