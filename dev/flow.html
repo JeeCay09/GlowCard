@@ -1,0 +1,78 @@
+<!doctype html>
+<html lang="de">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>GlowCard Energiefluss</title>
+    <style>
+      /* HA sections grid: 12 columns, rows of 56 px, 8 px gaps. ?w= sets the section width,
+         ?light=1 the light theme, ?set=grid|pv only one of the two houses. */
+      body {
+        margin: 0;
+        padding: 16px;
+        background: #07080b;
+        font-family: system-ui, sans-serif;
+      }
+      body.light {
+        background: #e7e9ef;
+      }
+      .section {
+        width: var(--w, 1200px);
+        max-width: 100%;
+        display: grid;
+        grid-template-columns: repeat(12, minmax(0, 1fr));
+        grid-auto-rows: 56px;
+        gap: 8px;
+        background-image: repeating-linear-gradient(
+          to bottom,
+          rgba(127, 127, 127, 0.08) 0 56px,
+          transparent 56px 64px
+        );
+      }
+    </style>
+  </head>
+  <body>
+    <div class="section" data-dark></div>
+    <script type="module">
+      import '../dist/glowcard.js';
+      import { mount } from './build/demo.js';
+      const params = new URLSearchParams(location.search);
+      if (params.get('w')) document.body.style.setProperty('--w', `${params.get('w')}px`);
+      const section = document.querySelector('.section');
+      if (params.get('light')) {
+        section.removeAttribute('data-dark');
+        document.body.classList.add('light');
+      }
+      const cards = {
+        grid: { grid: 'sensor.flow_grid_only_power' },
+        pv: {
+          grid: 'sensor.flow_grid_power',
+          solar: 'sensor.flow_pv_power',
+          battery_power: 'sensor.flow_bat_power',
+          battery: 'sensor.flow_bat_soc',
+        },
+      };
+      const set = params.get('set');
+      const extra = params.get('config') ? JSON.parse(params.get('config')) : {};
+      for (const [flow, config] of Object.entries(cards)) {
+        if (set && set !== flow) continue;
+        const el = document.createElement('glowcard-energy-flow');
+        el.dataset.card = '';
+        el.dataset.flow = flow;
+        el.setConfig({ type: 'custom:glowcard-energy-flow', ...config, ...extra });
+        el.style.gridColumn = 'span 12';
+        section.appendChild(el);
+        // Like HA's rows: 'auto', span as many rows as the card itself needs.
+        const fit = () => {
+          const card = el.shadowRoot?.querySelector('.card');
+          if (!card) return requestAnimationFrame(fit);
+          new ResizeObserver(() => {
+            el.style.gridRow = `span ${Math.max(1, Math.round((card.offsetHeight + 8) / 64))}`;
+          }).observe(card);
+        };
+        fit();
+      }
+      mount(document);
+    </script>
+  </body>
+</html>
