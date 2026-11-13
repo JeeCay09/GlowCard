@@ -165,6 +165,7 @@ interface PlanNode {
   lab: 'r' | 'l' | 'b';
   t1: string;
   t2: TemplateResult | string;
+  /** State word (import, charging, …): not shown, read out by screen readers. */
   t3: string;
   entity?: string;
 }
@@ -940,14 +941,13 @@ export class GlowFlowCard extends GlowCardBase<FlowCardConfig> {
       style="left:${nd.x}px;top:${nd.y}px;--a:${c}"
       role=${can ? 'button' : nothing}
       tabindex=${can ? 0 : nothing}
+      aria-label="${nd.t1}, ${nd.t3}"
       @click=${click}
       @keydown=${this.onKey(click)}
     >
       <span class="ci">${neonIcon(nd.k, c, this.dark, soc)}</span>
       <span class="ct">
-        <span class="t1"
-          ><b>${nd.t1}</b>${this.vertical || !nd.t3 ? nothing : html` ${nd.t3}`}</span
-        >
+        <span class="t1"><b>${nd.t1}</b></span>
         <span class="t2">${nd.t2}</span>
       </span>
     </div>`;
