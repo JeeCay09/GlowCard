@@ -15,6 +15,7 @@ import {
 import { numberState, powerW } from '../status/status-logic';
 import { flows, readNow, type EnergyNow } from '../energy/energy-logic';
 import type { HomeAssistant } from '../../types/hass';
+import { language } from '../../core/localize';
 import {
   RANGES,
   axisLabels,
@@ -25,6 +26,9 @@ import {
   fmoney,
   fnum,
   forecastHours,
+  isoWeek,
+  monthWeeks,
+  offsetFor,
   ft,
   gridNeutrality,
   isLive,
@@ -100,6 +104,16 @@ const ICON: Record<string, string> = {
   chart: 'M4 20V10M9.3 20V5M14.6 20v-8M20 20V8',
 };
 
+const CAL_ICON = svg`<svg viewBox="0 0 24 24" aria-hidden="true">
+  <path
+    d="M7 3v3M17 3v3M4.5 9.5h15M6.5 5h11a2 2 0 0 1 2 2v11a2 2 0 0 1-2 2h-11a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2z"
+    fill="none"
+    stroke="currentColor"
+    stroke-width="2"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+  />
+</svg>`;
 const CHEV_L = 'M15 5l-7 7 7 7';
 const CHEV_R = 'M9 5l7 7-7 7';
 
@@ -194,6 +208,10 @@ export class GlowFlowCard extends GlowCardBase<FlowCardConfig> {
   @state() private sizes: Record<string, { w: number; h: number }> = {};
   @state() private cardH = 0;
   @state() private viewH = typeof window === 'undefined' ? 800 : window.innerHeight;
+  /** Calendar popover of the date picker (#193) and the month / year it shows. */
+  @state() private calOpen = false;
+  @state() private calY = 0;
+  @state() private calM = 0;
   private onViewResize = () => {
     if (Math.abs(window.innerHeight - this.viewH) > 20) this.viewH = window.innerHeight;
   };
@@ -612,6 +630,7 @@ export class GlowFlowCard extends GlowCardBase<FlowCardConfig> {
   disconnectedCallback(): void {
     super.disconnectedCallback();
     window.removeEventListener('resize', this.onViewResize);
+    this.closeCal();
     this.resize?.disconnect();
     this.resize = undefined;
     this.observed.clear();
@@ -623,11 +642,179 @@ export class GlowFlowCard extends GlowCardBase<FlowCardConfig> {
     if (r === this.range && this.offset === 0) return;
     this.range = r;
     this.offset = 0;
+    this.syncCal();
   }
 
   private step(d: number): void {
     if (d > 0 && this.offset >= 0) return;
     this.offset += d;
+    this.syncCal();
+  }
+
+  // ---------- calendar of the date picker (#193) ----------
+
+  /** Shows the month / year of the selected period in the calendar. */
+  private syncCal(): void {
+    const s = this.period.start;
+    this.calY = s.getFullYear();
+    this.calM = s.getMonth();
+  }
+
+  private toggleCal(): void {
+    if (this.calOpen) return this.closeCal();
+    this.syncCal();
+    this.calOpen = true;
+    window.addEventListener('pointerdown', this.onCalOutside, true);
+    window.addEventListener('keydown', this.onCalKey);
+  }
+
+  private closeCal(): void {
+    this.calOpen = false;
+    window.removeEventListener('pointerdown', this.onCalOutside, true);
+    window.removeEventListener('keydown', this.onCalKey);
+  }
+
+  private onCalOutside = (ev: Event) => {
+    const box = this.renderRoot.querySelector('.dw');
+    if (!box || !ev.composedPath().includes(box)) this.closeCal();
+  };
+
+  private onCalKey = (ev: KeyboardEvent) => {
+    if (ev.key !== 'Escape') return;
+    this.closeCal();
+    this.renderRoot.querySelector<HTMLElement>('.dd')?.focus();
+  };
+
+  private pick(date: Date): void {
+    this.offset = Math.min(0, offsetFor(this.range, date));
+    this.closeCal();
+  }
+
+  /** Pages the calendar: a month (day, week), a year (month) or twelve years (year). */
+  private calStep(d: number): void {
+    if (this.range === 'month') this.calY += d;
+    else if (this.range === 'year') this.calY += 12 * d;
+    else {
+      const m = new Date(this.calY, this.calM + d, 1);
+      this.calY = m.getFullYear();
+      this.calM = m.getMonth();
+    }
+  }
+
+  private calendar(): TemplateResult {
+    const hass = this.hass;
+    const lang = language(hass);
+    const fmt = (o: Intl.DateTimeFormatOptions, d: Date) =>
+      new Intl.DateTimeFormat(lang, o).format(d);
+    const now = new Date();
+    const range = this.range;
+    const sel = this.period;
+    const inSel = (d: Date) => d >= sel.start && d < sel.end;
+    const y = this.calY;
+    const m = this.calM;
+    const yNow = now.getFullYear();
+
+    let title: string;
+    let canNext: boolean;
+    let body: TemplateResult;
+    if (range === 'day' || range === 'week') {
+      title = fmt({ month: 'long', year: 'numeric' }, new Date(y, m, 1));
+      canNext = y < yNow || (y === yNow && m < now.getMonth());
+      const today = new Date(yNow, now.getMonth(), now.getDate());
+      // 1 Jan 2024 was a Monday
+      const heads = Array.from({ length: 7 }, (_, i) =>
+        fmt({ weekday: 'short' }, new Date(2024, 0, 1 + i)).slice(0, 2),
+      );
+      const cell = (d: Date) => {
+        const cls = [
+          d.getMonth() === m ? '' : 'off',
+          d.getTime() === today.getTime() ? 'now' : '',
+          inSel(d) ? 'on' : '',
+        ].join(' ');
+        return range === 'week'
+          ? html`<span class="c ${cls}">${d.getDate()}</span>`
+          : html`<button
+              class="c ${cls}"
+              ?disabled=${d > today}
+              aria-label=${fmt({ day: 'numeric', month: 'long', year: 'numeric' }, d)}
+              aria-pressed=${inSel(d) ? 'true' : 'false'}
+              @click=${() => this.pick(d)}
+            >
+              ${d.getDate()}
+            </button>`;
+      };
+      const weeks = monthWeeks(y, m);
+      body = html`<div class="cg ${range}">
+        <div class="cr chd">
+          ${range === 'week' ? html`<span class="kw">${ft(hass, 'week_short')}</span>` : nothing}
+          ${heads.map((h) => html`<span>${h}</span>`)}
+        </div>
+        ${weeks.map((w) =>
+          range === 'week'
+            ? html`<button
+                class="cr wk ${inSel(w[0]) ? 'on' : ''}"
+                ?disabled=${w[0] > today}
+                aria-label="${ft(hass, 'week_short')} ${isoWeek(w[0])}"
+                aria-pressed=${inSel(w[0]) ? 'true' : 'false'}
+                @click=${() => this.pick(w[0])}
+              >
+                <span class="kw">${isoWeek(w[0])}</span>${w.map(cell)}
+              </button>`
+            : html`<div class="cr">${w.map(cell)}</div>`,
+        )}
+      </div>`;
+    } else {
+      const first = range === 'month' ? 0 : y - 11;
+      title = range === 'month' ? String(y) : `${first} – ${y}`;
+      canNext = y < yNow;
+      const items = Array.from({ length: 12 }, (_, i) =>
+        range === 'month' ? new Date(y, i, 1) : new Date(first + i, 0, 1),
+      );
+      body = html`<div class="cg cgb">
+        ${items.map((d) => {
+          const cur =
+            d.getFullYear() === yNow && (range === 'year' || d.getMonth() === now.getMonth());
+          return html`<button
+            class="c ${cur ? 'now' : ''} ${inSel(d) ? 'on' : ''}"
+            ?disabled=${d > now}
+            aria-label=${
+              range === 'month'
+                ? fmt({ month: 'long', year: 'numeric' }, d)
+                : String(d.getFullYear())
+            }
+            aria-pressed=${inSel(d) ? 'true' : 'false'}
+            @click=${() => this.pick(d)}
+          >
+            ${range === 'month' ? fmt({ month: 'short' }, d) : d.getFullYear()}
+          </button>`;
+        })}
+      </div>`;
+    }
+    const nowKey: Record<Range, FlowKey> = {
+      day: 'today',
+      week: 'this_week',
+      month: 'this_month',
+      year: 'this_year',
+    };
+    return html`<div class="cal" role="dialog" aria-label=${ft(hass, 'pick_date')}>
+      <div class="cn">
+        <button aria-label=${ft(hass, 'back')} @click=${() => this.calStep(-1)}>
+          ${chev(CHEV_L)}
+        </button>
+        <span class="ct2">${title}</span>
+        <button
+          aria-label=${ft(hass, 'next')}
+          ?disabled=${!canNext}
+          @click=${() => this.calStep(1)}
+        >
+          ${chev(CHEV_R)}
+        </button>
+      </div>
+      ${body}
+      <button class="cnow" ?disabled=${this.offset === 0} @click=${() => this.pick(now)}>
+        ${ft(hass, nowKey[range])}
+      </button>
+    </div>`;
   }
 
   private moreInfo(entity?: string): void {
@@ -749,18 +936,29 @@ export class GlowFlowCard extends GlowCardBase<FlowCardConfig> {
             </button>`,
         )}
       </div>
-      <div class="dnav">
-        <button aria-label=${ft(hass, 'back')} @click=${() => this.step(-1)}>
-          ${chev(CHEV_L)}
-        </button>
-        <span class="dd">${label}</span>
-        <button
-          aria-label=${ft(hass, 'next')}
-          ?disabled=${this.offset >= 0}
-          @click=${() => this.step(1)}
-        >
-          ${chev(CHEV_R)}
-        </button>
+      <div class="dw">
+        <div class="dnav">
+          <button aria-label=${ft(hass, 'back')} @click=${() => this.step(-1)}>
+            ${chev(CHEV_L)}
+          </button>
+          <button
+            class="dd"
+            aria-haspopup="dialog"
+            aria-expanded=${this.calOpen ? 'true' : 'false'}
+            title=${ft(hass, 'pick_date')}
+            @click=${() => this.toggleCal()}
+          >
+            ${CAL_ICON}<span>${label}</span>
+          </button>
+          <button
+            aria-label=${ft(hass, 'next')}
+            ?disabled=${this.offset >= 0}
+            @click=${() => this.step(1)}
+          >
+            ${chev(CHEV_R)}
+          </button>
+        </div>
+        ${this.calOpen ? this.calendar() : nothing}
       </div>
     </div>`;
   }
@@ -1514,26 +1712,184 @@ export class GlowFlowCard extends GlowCardBase<FlowCardConfig> {
         width: 26px;
         height: 26px;
       }
-      .dnav button[disabled] {
+      .dnav button[disabled],
+      .cal button[disabled] {
         opacity: 0.3;
         cursor: default;
       }
-      .dnav svg {
+      .dnav svg,
+      .cn svg {
         width: 15px;
         height: 15px;
       }
-      .dd {
+      .dw {
+        position: relative;
+        flex: none;
+      }
+      .card > .dp {
+        position: relative;
+      }
+      .narrow .dw {
+        position: static;
+      }
+      .narrow .cal {
+        left: 50%;
+        right: auto;
+        transform: translateX(-50%);
+        width: min(292px, 100%);
+      }
+      .dnav button.dd {
+        width: auto;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 6px;
         font-size: 13px;
         font-weight: 800;
         white-space: nowrap;
-        padding: 0 4px;
-        min-width: 112px;
-        text-align: center;
+        padding: 0 8px;
+        min-width: 124px;
       }
-      .narrow .dd {
+      .dnav button.dd svg {
+        width: 14px;
+        height: 14px;
+        color: var(--glow-muted);
+      }
+      .dnav button.dd[aria-expanded='true'] {
+        background: var(--glow-pop-solid);
+        box-shadow:
+          0 1px 4px rgba(0, 0, 0, 0.12),
+          0 0 0 1px rgba(var(--glow-accent), 0.35);
+      }
+      .narrow .dnav button.dd {
         font-size: 12px;
         min-width: 0;
-        padding: 0 2px;
+        padding: 0 6px;
+        gap: 5px;
+      }
+      /* calendar of the date picker (#193) */
+      .cal {
+        position: absolute;
+        top: calc(100% + 8px);
+        right: 0;
+        z-index: 6;
+        width: 292px;
+        box-sizing: border-box;
+        padding: 12px;
+        border-radius: 22px;
+        background: var(--glow-pop-solid);
+        border: 1px solid var(--glow-line);
+        box-shadow:
+          0 18px 40px rgba(0, 0, 0, 0.35),
+          0 0 0 1px rgba(var(--glow-accent), 0.18);
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+      }
+      .cn {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+      }
+      .cn button {
+        width: 32px;
+        height: 32px;
+        border-radius: 999px;
+        display: grid;
+        place-items: center;
+        background: var(--glow-inset);
+      }
+      .ct2 {
+        font-size: 14px;
+        font-weight: 800;
+      }
+      .cg {
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+      }
+      .cr {
+        display: grid;
+        grid-template-columns: repeat(7, 1fr);
+        align-items: center;
+        justify-items: center;
+        width: 100%;
+      }
+      .cg.week .cr {
+        grid-template-columns: 34px repeat(7, 1fr);
+      }
+      .chd {
+        font-size: 11px;
+        font-weight: 700;
+        color: var(--glow-muted);
+        height: 24px;
+      }
+      .c {
+        width: 34px;
+        height: 34px;
+        border-radius: 999px;
+        display: grid;
+        place-items: center;
+        font-size: 13px;
+        font-weight: 700;
+        font-variant-numeric: tabular-nums;
+      }
+      .c.off {
+        color: var(--glow-muted);
+        opacity: 0.55;
+      }
+      .c.now {
+        box-shadow: inset 0 0 0 1.5px rgba(var(--glow-accent), 0.7);
+      }
+      button.c.on,
+      .cgb .c.on {
+        background: rgb(var(--glow-accent));
+        color: #fff;
+        opacity: 1;
+        box-shadow: 0 0 14px rgba(var(--glow-accent), 0.5);
+      }
+      .kw {
+        font-size: 11px;
+        font-weight: 700;
+        color: var(--glow-muted);
+        font-variant-numeric: tabular-nums;
+      }
+      .wk {
+        border-radius: 999px;
+      }
+      .wk.on {
+        background: rgba(var(--glow-accent), 0.28);
+        box-shadow: inset 0 0 0 1px rgba(var(--glow-accent), 0.6);
+      }
+      .wk.on .c.off {
+        opacity: 1;
+        color: inherit;
+      }
+      .cg.cgb {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 6px;
+      }
+      .cgb .c {
+        width: auto;
+        height: 40px;
+        background: var(--glow-inset);
+      }
+      .cnow {
+        align-self: center;
+        padding: 7px 16px;
+        border-radius: 999px;
+        font-size: 12px;
+        font-weight: 800;
+        background: var(--glow-inset);
+      }
+      @media (hover: hover) {
+        button.c:not([disabled]):not(.on):hover,
+        .wk:not([disabled]):not(.on):hover,
+        .cn button:not([disabled]):hover,
+        .cnow:not([disabled]):hover {
+          background: rgba(var(--glow-accent), 0.18);
+        }
       }
       /* line plan */
       .plan {

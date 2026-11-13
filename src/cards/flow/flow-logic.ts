@@ -190,6 +190,34 @@ export function period(range: Range, offset: number, now = new Date()): Period {
   return { range, offset, start, end, buckets: 12, stat: 'month' };
 }
 
+/** Offset of the period that contains `date`, counted from the period of `now` (#193). */
+export function offsetFor(range: Range, date: Date, now = new Date()): number {
+  const a = period(range, 0, now).start;
+  if (range === 'year') return date.getFullYear() - a.getFullYear();
+  if (range === 'month') {
+    return (date.getFullYear() - a.getFullYear()) * 12 + date.getMonth() - a.getMonth();
+  }
+  // whole days between local midnights, safe across daylight saving changes
+  const days = Math.round(
+    (Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()) -
+      Date.UTC(a.getFullYear(), a.getMonth(), a.getDate())) /
+      86_400_000,
+  );
+  return range === 'day' ? days : Math.floor(days / 7);
+}
+
+/** The weeks (Monday first) that cover a month, as six rows at most. */
+export function monthWeeks(year: number, month: number): Date[][] {
+  const first = new Date(year, month, 1);
+  const lead = (first.getDay() + 6) % 7;
+  const last = new Date(year, month + 1, 0).getDate();
+  const rows: Date[][] = [];
+  for (let d = 1 - lead; d <= last; d += 7) {
+    rows.push(Array.from({ length: 7 }, (_, i) => new Date(year, month, d + i)));
+  }
+  return rows;
+}
+
 /** The period before (same length), for "previous" comparisons. */
 export function previous(p: Period, now = new Date()): Period {
   return period(p.range, p.offset - 1, now);
@@ -595,6 +623,8 @@ const de = {
   range_year: 'Jahr',
   back: 'Zurück',
   next: 'Weiter',
+  pick_date: 'Datum wählen',
+  week_short: 'KW',
   import: 'Bezug',
   export: 'Einspeisung',
   imported: 'bezogen',
@@ -681,6 +711,8 @@ const en: typeof de = {
   range_year: 'Year',
   back: 'Back',
   next: 'Next',
+  pick_date: 'Pick a date',
+  week_short: 'Wk',
   import: 'Import',
   export: 'Export',
   imported: 'imported',
