@@ -408,7 +408,7 @@ A whole page about energy, like Home Assistant's energy dashboard, as one card. 
 - **Areas** below (each optional, order set in the editor with `sections`): `usage` (bars per hour/day/month; grid only against the usual range of earlier days, with solar stacked by source with export and charging below the line), `sources` (table with kWh and cost per source and a total), `solar` (production with the forecast of the energy dashboard's solar forecast, today only), `devices`, `gas` and `water`.
 - **Date picker:** day, week, month or year with ‹ ›. `period` sets the view the card starts with (default `day`).
 - **Live power (optional):** today shows kW when you pick power sensors (`grid`, `solar`, `battery_power`, `battery` for the state of charge, `home`); `invert_grid` / `invert_battery` for opposite signs. Without them the plan shows today's kWh. A device shows its current power when the energy dashboard has a power sensor for it.
-- Height: grows with the areas and always fills whole grid rows. Width: always full width.
+- Height: grows with the areas and always fills whole grid rows. Width: always full width. In a normal section (about 450–500 px) the plan is compact; for the wide layout let the section span more columns (`column_span: 2` or more in the section's YAML). Phones show the plan top to bottom, sized to the screen.
 
 ```yaml
 type: custom:glowcard-energy-flow

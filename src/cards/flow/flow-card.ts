@@ -105,6 +105,8 @@ const CHEV_R = 'M9 5l7 7-7 7';
 
 /** Width below which the plan turns vertical and the date picker gets its own row. */
 const NARROW = 560;
+/** Below this the line plan runs top to bottom (phones); above it, left to right (#187). */
+const VERTICAL = 420;
 /** Width from which sections sit side by side in the 12 column layout. */
 const WIDE = 900;
 /** Screen height on phones that is not for the plan (HA top bar, card header, bottom bar). */
@@ -655,6 +657,11 @@ export class GlowFlowCard extends GlowCardBase<FlowCardConfig> {
     return this.width < NARROW;
   }
 
+  /** Vertical line plan: phones only. Narrow cards on a computer keep the horizontal plan. */
+  private get vertical(): boolean {
+    return this.width < VERTICAL;
+  }
+
   render() {
     if (!this.config) return nothing;
     const hass = this.hass;
@@ -686,6 +693,7 @@ export class GlowFlowCard extends GlowCardBase<FlowCardConfig> {
   }
 
   private get planMin(): number {
+    if (this.narrow && !this.vertical) return this.pv ? 340 : 200;
     if (this.narrow) {
       // Phones (#185): the plan takes what the screen leaves next to HA's top bar, the card
       // header, the date picker and a bottom bar, between a sensible minimum and its full size.
@@ -857,20 +865,31 @@ export class GlowFlowCard extends GlowCardBase<FlowCardConfig> {
     const s = this.hasSolar;
     const b = this.hasBattery;
 
-    if (!narrow) {
-      const yb = h / 2;
+    if (!this.vertical) {
+      const yb = narrow ? h * 0.46 : h / 2;
       const off = Math.min(160, h * 0.32);
-      // the grid and home labels sit outside their icons: keep room for "12.345 kWh"
-      const room = R + 140;
+      // Wide: the grid and home labels sit beside their icons, keep room for "12.345 kWh".
+      // Compact (#187, narrow card on a computer): labels below the icons, near the edges.
+      const room = narrow ? 56 : R + 140;
       const xn = Math.max(room, s || b ? w * 0.12 : w * 0.2);
       const xh = Math.min(w - room, s || b ? w * 0.86 : w * 0.8);
-      const xs = s && b ? w * 0.38 : w * 0.5;
-      const xk = s && b ? w * 0.62 : w * 0.5;
-      node('grid', xn, yb, 'l', ft(hass, 'grid'), gridV, gridT3, c.grid);
-      node('home', xh, yb, 'r', ft(hass, 'home'), f.home, homeT3, c.home);
+      const xs = s && b ? w * 0.36 : w * 0.5;
+      const xk = s && b ? w * 0.6 : w * 0.5;
+      const side = narrow ? 'b' : undefined;
+      node('grid', xn, yb, side ?? 'l', ft(hass, 'grid'), gridV, gridT3, c.grid);
+      node('home', xh, yb, side ?? 'r', ft(hass, 'home'), f.home, homeT3, c.home);
       if (s) node('solar', xs, yb - off, 'r', ft(hass, 'solar'), f.solar ?? 0, solarT3, c.solar);
       if (b)
-        node('bat', xk, yb + off, 'r', batName, f.bat ?? 0, batT3, c.battery_power ?? c.battery);
+        node(
+          'bat',
+          xk,
+          yb + off,
+          narrow ? 'l' : 'r',
+          batName,
+          f.bat ?? 0,
+          batT3,
+          c.battery_power ?? c.battery,
+        );
       const j1 = s ? xs : b ? xk : xh - R;
       seg([xn + R, yb], [j1, yb], s || b ? lineK : 'grid', f.grid);
       tag((xn + R + j1) / 2, yb, s || b ? lineK : 'grid', f.grid, '→', '←');
