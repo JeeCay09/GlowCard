@@ -953,10 +953,10 @@ export class GlowFlowCard extends GlowCardBase<FlowCardConfig> {
       }`;
     const pos =
       nd.lab === 'b'
-        ? `left:${nd.x}px;top:${nd.y + R + 4}px;transform:translate(-50%,0);text-align:center`
+        ? `left:${nd.x}px;top:${nd.y + R + 2}px;transform:translate(-50%,0);text-align:center`
         : nd.lab === 'l'
-          ? `left:${nd.x - R - 8}px;top:${nd.y}px;transform:translate(-100%,-50%);text-align:right`
-          : `left:${nd.x + R + 8}px;top:${nd.y}px;transform:translate(0,-50%)`;
+          ? `left:${nd.x - R - 6}px;top:${nd.y}px;transform:translate(-100%,-50%);text-align:right`
+          : `left:${nd.x + R + 6}px;top:${nd.y}px;transform:translate(0,-50%)`;
     const can = !!(nd.entity && this.hass?.states[nd.entity]);
     return html`<div
         class="neon ${can ? 'tap' : ''}"
@@ -969,7 +969,7 @@ export class GlowFlowCard extends GlowCardBase<FlowCardConfig> {
       >
         ${neonIcon(nd.k, c, this.dark, soc)}
       </div>
-      <div class="node" style=${pos}>${txt}</div>`;
+      <div class="node" style="${pos};--a:${c}">${txt}</div>`;
   }
 
   // ---------- key figures ----------
@@ -1601,20 +1601,29 @@ export class GlowFlowCard extends GlowCardBase<FlowCardConfig> {
         height: 100%;
         overflow: visible;
       }
+      /* node labels: small glass tiles like the key figures, edged in the node's colour */
       .node {
         position: absolute;
         z-index: 2;
         white-space: nowrap;
+        padding: 8px 12px 9px;
+        border-radius: 14px;
+        background: var(--glow-inset);
+        border: 1px solid rgba(var(--a), 0.3);
+        box-shadow: 0 6px 18px -12px rgba(var(--a), 0.9);
+        -webkit-backdrop-filter: blur(10px);
+        backdrop-filter: blur(10px);
       }
       .t1 {
-        font-size: 15px;
-        font-weight: 800;
+        font-size: 12px;
+        font-weight: 700;
+        color: color-mix(in srgb, rgb(var(--a)) 70%, var(--glow-text));
       }
       .t2 {
-        font-size: 26px;
+        font-size: 22px;
         font-weight: 800;
-        letter-spacing: -0.03em;
-        line-height: 1.1;
+        letter-spacing: -0.02em;
+        line-height: 1.15;
       }
       .t2 small,
       .big small {
@@ -1629,11 +1638,12 @@ export class GlowFlowCard extends GlowCardBase<FlowCardConfig> {
         font-weight: 600;
         color: var(--glow-muted);
       }
-      .narrow .t1 {
-        font-size: 14px;
+      .narrow .node {
+        padding: 6px 10px 7px;
+        border-radius: 12px;
       }
       .narrow .t2 {
-        font-size: 22px;
+        font-size: 20px;
       }
       .narrow .t3 {
         font-size: 11px;
