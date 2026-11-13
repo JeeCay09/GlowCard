@@ -654,8 +654,167 @@ function fakeHistory(id: string, start: number) {
   return points;
 }
 
+// ---------- Energy flow card (#152): fake energy dashboard with hourly statistics ----------
+
+const FLOW_DEVICES: [string, string][] = [
+  ['sensor.flow_dev_hp', 'Wärmepumpe'],
+  ['sensor.flow_dev_wm', 'Waschmaschine'],
+  ['sensor.flow_dev_fridge', 'Kühlschrank'],
+  ['sensor.flow_dev_tv', 'Fernseher'],
+];
+const flowDevices = () =>
+  FLOW_DEVICES.map(([id, name]) => ({ stat_consumption: id, name, stat_rate: `${id}_power` }));
+const FLOW_PREFS: Record<string, unknown> = {
+  grid: {
+    energy_sources: [
+      {
+        type: 'grid',
+        flow_from: [
+          { stat_energy_from: 'sensor.flow_import', stat_cost: 'sensor.flow_import_cost' },
+        ],
+        flow_to: [],
+      },
+      { type: 'gas', stat_energy_from: 'sensor.flow_gas', stat_cost: 'sensor.flow_gas_cost' },
+      { type: 'water', stat_energy_from: 'sensor.flow_water', stat_cost: 'sensor.flow_water_cost' },
+    ],
+    device_consumption: flowDevices(),
+  },
+  pv: {
+    energy_sources: [
+      {
+        type: 'grid',
+        flow_from: [
+          { stat_energy_from: 'sensor.flow_import', stat_cost: 'sensor.flow_import_cost' },
+        ],
+        flow_to: [
+          { stat_energy_to: 'sensor.flow_export', stat_compensation: 'sensor.flow_export_comp' },
+        ],
+      },
+      {
+        type: 'solar',
+        stat_energy_from: 'sensor.flow_solar',
+        config_entry_solar_forecast: ['forecast_demo'],
+      },
+      {
+        type: 'battery',
+        stat_energy_from: 'sensor.flow_discharge',
+        stat_energy_to: 'sensor.flow_charge',
+      },
+      { type: 'gas', stat_energy_from: 'sensor.flow_gas', stat_cost: 'sensor.flow_gas_cost' },
+      { type: 'water', stat_energy_from: 'sensor.flow_water', stat_cost: 'sensor.flow_water_cost' },
+    ],
+    device_consumption: flowDevices(),
+  },
+};
+
+const rnd = (n: number) => {
+  const x = Math.sin(n * 12.9898) * 43758.5453;
+  return x - Math.floor(x);
+};
+const HOME_PROFILE = [
+  0.24, 0.21, 0.2, 0.2, 0.21, 0.26, 0.5, 0.8, 0.7, 0.52, 0.47, 0.6, 0.9, 0.75, 0.62, 0.6, 0.7, 0.95,
+  1.2, 1.25, 1.05, 0.85, 0.6, 0.45,
+];
+
+/** kWh (gas m³, water L) of one statistic in the hour starting at t. */
+function flowHour(id: string, t: number, pv: boolean): number {
+  const d = new Date(t);
+  const h = d.getHours();
+  const day = Math.floor(t / (24 * HOUR));
+  const winter = 1 + 0.35 * Math.cos((2 * Math.PI * (d.getMonth() + 0.5)) / 12);
+  const home = HOME_PROFILE[h] * winter * (0.8 + 0.4 * rnd(day + h * 0.37));
+  const sunSeason = 0.25 + 0.75 * Math.sin((Math.PI * (d.getMonth() + 0.5)) / 12);
+  const sun =
+    h < 6 || h > 19 ? 0 : 2.4 * sunSeason * Math.pow(Math.sin((Math.PI * (h - 6)) / 14), 1.6);
+  const solar = pv ? sun * (0.55 + 0.45 * rnd(day * 3.1)) : 0;
+  const used = Math.min(solar, home);
+  const surplus = solar - used;
+  const charge = pv ? Math.min(surplus, 0.9) : 0;
+  const discharge = pv && h >= 18 ? Math.min(home - used, 0.45) : 0;
+  const exp = surplus - charge;
+  const imp = Math.max(0, home - used - discharge);
+  const gas = (h >= 5 && h <= 22 ? 0.18 : 0.04) * winter * winter * (0.7 + 0.6 * rnd(day + h));
+  const water = [6, 7, 12, 18, 19, 21].includes(h) ? 18 + 30 * rnd(day + h * 1.7) : 2;
+  const table: Record<string, number> = {
+    'sensor.flow_import': imp,
+    'sensor.flow_import_cost': imp * 0.32,
+    'sensor.flow_export': exp,
+    'sensor.flow_export_comp': exp * 0.08,
+    'sensor.flow_solar': solar,
+    'sensor.flow_charge': charge,
+    'sensor.flow_discharge': discharge,
+    'sensor.flow_gas': gas,
+    'sensor.flow_gas_cost': gas * 1.16,
+    'sensor.flow_water': water,
+    'sensor.flow_water_cost': water * 0.0043,
+    'sensor.flow_dev_hp': home * 0.32,
+    'sensor.flow_dev_wm': h === 9 || h === 10 ? 0.45 : 0,
+    'sensor.flow_dev_fridge': 0.04,
+    'sensor.flow_dev_tv': h >= 19 && h <= 22 ? 0.11 : 0.004,
+  };
+  return table[id] ?? 0;
+}
+
+function flowChanges(msg: Record<string, unknown>, pv: boolean) {
+  const start = new Date(String(msg.start_time)).getTime();
+  const end = Math.min(new Date(String(msg.end_time)).getTime(), nowMs);
+  const per = String(msg.period);
+  const ids = (msg.statistic_ids as string[]) ?? [];
+  const key = (t: number) => {
+    const d = new Date(t);
+    if (per === 'month') return new Date(d.getFullYear(), d.getMonth(), 1).getTime();
+    if (per === 'day') return new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
+    return t;
+  };
+  const out: Record<string, { start: number; change: number }[]> = {};
+  for (const id of ids) {
+    const rows = new Map<number, number>();
+    for (let t = Math.floor(start / HOUR) * HOUR; t < end; t += HOUR) {
+      const frac = Math.min(1, (end - t) / HOUR);
+      rows.set(key(t), (rows.get(key(t)) ?? 0) + flowHour(id, t, pv) * frac);
+    }
+    out[id] = [...rows.entries()].map(([s, change]) => ({ start: s, change }));
+  }
+  return out;
+}
+
+function flowForecast() {
+  const d0 = new Date(nowMs);
+  d0.setHours(0, 0, 0, 0);
+  const wh: Record<string, number> = {};
+  for (let h = 0; h < 48; h++) {
+    const t = d0.getTime() + h * HOUR;
+    const hh = h % 24;
+    const month = new Date(t).getMonth();
+    const season = 0.25 + 0.75 * Math.sin((Math.PI * (month + 0.5)) / 12);
+    const v =
+      hh < 6 || hh > 19 ? 0 : 2.4 * season * Math.pow(Math.sin((Math.PI * (hh - 6)) / 14), 1.6);
+    wh[new Date(t).toISOString()] = Math.round(v * 1000 * 0.95);
+  }
+  return { forecast_demo: { wh_hours: wh } };
+}
+
+Object.assign(states, {
+  'sensor.flow_gas': entity('sensor.flow_gas', '1234', { unit_of_measurement: 'm³' }),
+  'sensor.flow_water': entity('sensor.flow_water', '98765', { unit_of_measurement: 'L' }),
+  'sensor.flow_grid_only_power': kwE('sensor.flow_grid_only_power', 0.62),
+  'sensor.flow_grid_power': kwE('sensor.flow_grid_power', -0.6),
+  'sensor.flow_pv_power': kwE('sensor.flow_pv_power', 3.2),
+  'sensor.flow_bat_power': kwE('sensor.flow_bat_power', 1.5),
+  'sensor.flow_bat_soc': entity('sensor.flow_bat_soc', '64', {
+    device_class: 'battery',
+    unit_of_measurement: '%',
+  }),
+  'sensor.flow_dev_hp_power': kwE('sensor.flow_dev_hp_power', 0.42),
+  'sensor.flow_dev_wm_power': kwE('sensor.flow_dev_wm_power', 0),
+  'sensor.flow_dev_fridge_power': kwE('sensor.flow_dev_fridge_power', 0.06),
+  'sensor.flow_dev_tv_power': kwE('sensor.flow_dev_tv_power', 0.08),
+  'sensor.co2_fossil': entity('sensor.co2_fossil', '52', { unit_of_measurement: '%' }),
+});
+entities!['sensor.co2_fossil'] = { entity_id: 'sensor.co2_fossil', platform: 'co2signal' };
+
 const listeners = new Set<() => void>();
-export function fakeHass(darkMode: boolean): HomeAssistant {
+export function fakeHass(darkMode: boolean, flow?: string): HomeAssistant {
   return {
     states: { ...states },
     entities,
@@ -667,6 +826,25 @@ export function fakeHass(darkMode: boolean): HomeAssistant {
     themes: { darkMode },
     async callWS<T>(msg: Record<string, unknown>): Promise<T> {
       const start = new Date(String(msg.start_time)).getTime();
+      if (flow && msg.type === 'energy/get_prefs') return FLOW_PREFS[flow] as T;
+      if (flow && msg.type === 'energy/info') return {} as T;
+      if (flow && msg.type === 'energy/solar_forecast') return flowForecast() as T;
+      if (flow && msg.type === 'energy/fossil_energy_consumption') {
+        const r = flowChanges(
+          { ...msg, statistic_ids: ['sensor.flow_import'], period: 'hour' },
+          flow === 'pv',
+        );
+        return Object.fromEntries(
+          r['sensor.flow_import'].map((x) => [x.start, x.change * 0.52]),
+        ) as T;
+      }
+      if (
+        flow &&
+        msg.type === 'recorder/statistics_during_period' &&
+        (msg.types as string[])?.[0] === 'change'
+      ) {
+        return flowChanges(msg, flow === 'pv') as T;
+      }
       if (msg.type === 'energy/get_prefs') {
         return {
           energy_sources: [
@@ -963,7 +1141,7 @@ export function mount(root: ParentNode): void {
   const refresh = () =>
     root.querySelectorAll<HTMLElement & { hass?: HomeAssistant }>('[data-card]').forEach((card) => {
       const dark = card.closest('[data-dark]') !== null;
-      card.hass = fakeHass(dark);
+      card.hass = fakeHass(dark, card.dataset.flow);
     });
   listeners.add(refresh);
   refresh();

@@ -13,6 +13,7 @@ import './cards/status/status-card';
 import './cards/status/chip-card';
 import './cards/heading/heading-card';
 import './cards/energy/energy-card';
+import './cards/flow/flow-card';
 import './cards/nav/nav-card';
 import './cards/waste/waste-card';
 import './cards/media/media-card';

@@ -25,19 +25,20 @@
 
 ## Karten
 
-| Karte         | Typ                           | Entitäten                                               | Status       |
-| ------------- | ----------------------------- | ------------------------------------------------------- | ------------ |
-| Schalter      | `custom:glowcard-switch`      | `switch.*` (auch Steckdosen), `input_boolean.*`         | Beta (v0.1)  |
-| Licht         | `custom:glowcard-light`       | `light.*`                                               | Beta (v0.2)  |
-| Kopfzeile     | `custom:glowcard-header`      | `person.*`, Begrüßung, Datum/Uhrzeit                    | Beta (v0.3)  |
-| Status-Leiste | `custom:glowcard-status`      | Wetter, Lichter, Energie, Sicherheit, Warnungen         | Beta (v0.3)  |
-| Chip          | `custom:glowcard-chip`        | wie die Status-Leiste, plus Personen und Akku           | Beta (v0.3)  |
-| Überschrift   | `custom:glowcard-heading`     | beliebige Entitäten als Badges                          | Beta (v0.4)  |
-| Energie       | `custom:glowcard-energy`      | Leistungs-`sensor.*` für Haus oder Netz; Solar optional | Beta (v0.7)  |
-| Navigation    | `custom:glowcard-nav`         | Ansichten, Popups (`#hash`); Status-Punkte optional     | Beta (v0.9)  |
-| Müll          | `custom:glowcard-waste`       | `calendar.*` oder Datums-`sensor.*`                     | Beta (v0.10) |
-| Medien        | `custom:glowcard-media`       | `media_player.*`                                        | Beta (v0.11) |
-| Medien-Räume  | `custom:glowcard-media-rooms` | mehrere `media_player.*`                                | Beta (v0.11) |
+| Karte         | Typ                           | Entitäten                                               | Status         |
+| ------------- | ----------------------------- | ------------------------------------------------------- | -------------- |
+| Schalter      | `custom:glowcard-switch`      | `switch.*` (auch Steckdosen), `input_boolean.*`         | Beta (v0.1)    |
+| Licht         | `custom:glowcard-light`       | `light.*`                                               | Beta (v0.2)    |
+| Kopfzeile     | `custom:glowcard-header`      | `person.*`, Begrüßung, Datum/Uhrzeit                    | Beta (v0.3)    |
+| Status-Leiste | `custom:glowcard-status`      | Wetter, Lichter, Energie, Sicherheit, Warnungen         | Beta (v0.3)    |
+| Chip          | `custom:glowcard-chip`        | wie die Status-Leiste, plus Personen und Akku           | Beta (v0.3)    |
+| Überschrift   | `custom:glowcard-heading`     | beliebige Entitäten als Badges                          | Beta (v0.4)    |
+| Energie       | `custom:glowcard-energy`      | Leistungs-`sensor.*` für Haus oder Netz; Solar optional | Beta (v0.7)    |
+| Navigation    | `custom:glowcard-nav`         | Ansichten, Popups (`#hash`); Status-Punkte optional     | Beta (v0.9)    |
+| Müll          | `custom:glowcard-waste`       | `calendar.*` oder Datums-`sensor.*`                     | Beta (v0.10)   |
+| Medien        | `custom:glowcard-media`       | `media_player.*`                                        | Beta (v0.11)   |
+| Medien-Räume  | `custom:glowcard-media-rooms` | mehrere `media_player.*`                                | Beta (v0.11)   |
+| Energiefluss  | `custom:glowcard-energy-flow` | HA-Energie-Dashboard; Leistungs-`sensor.*` optional     | Beta (nächste) |
 
 Alle Karten haben einen visuellen Editor (ab Home Assistant 2025.1). In einem Sections-Dashboard passen die Karten genau ins Raster von Home Assistant (Zeilen zu 56 px): Kachel 2 Zeilen am Handy bzw. 3 am PC, Schalter-Gruppe und Leistungs-Karte 3, Mini, Status-Leiste und Chip 1 Zeile. Breite: Kachel, Licht, Mini und Schalter-Gruppe = 1/2 (Kachel und Mini lassen sich auf 1/4 verkleinern), Schalter mit Leistung/Verbrauch, Kopfzeile, Status-Leiste, Überschrift, Energie und Chip-Reihen = ganze Breite (die Energie-Karte lässt sich nicht schmaler machen), einzelner Chip = 1/2, Symbol-Chip = 1/4. Die Breite kannst du im Dashboard-Editor weiterhin ändern. Neue Karten starten ohne Entität; fügst du eine Karte „nach Entität“ hinzu, nimmt sie die gewählte Entität.
 
@@ -396,6 +397,28 @@ entities:
   - entity: media_player.wohnzimmer_tv
     name: TV
   - media_player.bad
+```
+
+### Energiefluss
+
+Eine ganze Energie-Seite wie das Energie-Dashboard von Home Assistant, als eine Karte. Alles kommt aus dem **Energie-Dashboard** (Einstellungen → Dashboards → Energie): Netzbezug/Einspeisung, Solar, Akku, Gas, Wasser, Kosten und einzelne Geräte. Sonst ist nichts einzurichten. Die Karte funktioniert auch nur mit Netzanschluss; Solar und Akku sind optionale Erweiterungen.
+
+- **Plan:** ein Schaltplan Netz — Haus mit Lichtpunkten, die mit der Energie wandern. Solar kommt von oben und der Akku von unten dazu, wenn sie im Energie-Dashboard eingerichtet sind (am Handy läuft die Leitung von oben nach unten). Das Akku-Symbol füllt sich mit dem Ladestand. Tippen auf ein Symbol öffnet die Details.
+- **Kennzahlen** mit den Begriffen des Energie-Dashboards. Nur Netz: Verbrauch, Netzbezug, CO₂-arm bezogen (braucht die Integration CO2 Signal) und Kosten. Mit Solar: Autarkie, Solar selbst genutzt, Netzneutralität und Kosten.
+- **Bereiche** darunter (jeder optional, Reihenfolge im Editor über `sections`): `usage` (Balken je Stunde/Tag/Monat; nur Netz gegen den üblichen Bereich früherer Tage, mit Solar nach Quelle gestapelt, Einspeisung und Laden unter der Linie), `sources` (Tabelle mit kWh und Kosten je Quelle und Gesamt), `solar` (Produktion mit der Prognose aus der Solar-Vorhersage des Energie-Dashboards, nur für heute), `devices`, `gas` und `water`.
+- **Datumsauswahl:** Tag, Woche, Monat oder Jahr mit ‹ ›. `period` legt die Startansicht fest (Standard `day`).
+- **Live-Leistung (optional):** Heute zeigt kW, wenn du Leistungssensoren wählst (`grid`, `solar`, `battery_power`, `battery` für den Ladestand, `home`); `invert_grid` / `invert_battery` für umgekehrte Vorzeichen. Ohne sie zeigt der Plan die kWh von heute. Ein Gerät zeigt seine aktuelle Leistung, wenn im Energie-Dashboard ein Leistungssensor dafür hinterlegt ist.
+- Höhe: wächst mit den Bereichen und füllt immer ganze Rasterzeilen. Breite: immer ganze Breite.
+
+```yaml
+type: custom:glowcard-energy-flow
+# alles optional:
+sections: [usage, sources, solar, devices, gas, water]
+period: day
+grid: sensor.netz_leistung # positiv = Bezug
+solar: sensor.pv_leistung
+battery_power: sensor.akku_leistung # positiv = Laden
+battery: sensor.akku_ladestand
 ```
 
 ## Roadmap
