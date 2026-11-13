@@ -107,6 +107,8 @@ const CHEV_R = 'M9 5l7 7-7 7';
 const NARROW = 560;
 /** Width from which sections sit side by side in the 12 column layout. */
 const WIDE = 900;
+/** Screen height on phones that is not for the plan (HA top bar, card header, bottom bar). */
+const PHONE_RESERVE = 340;
 /** Below this the flow counts as idle (W live, kWh for a period). */
 const IDLE_W = 10;
 const IDLE_KWH = 0.05;
@@ -195,6 +197,10 @@ export class GlowFlowCard extends GlowCardBase<FlowCardConfig> {
   @state() private forecast: ForecastData | null = null;
   @state() private sizes: Record<string, { w: number; h: number }> = {};
   @state() private cardH = 0;
+  @state() private viewH = typeof window === 'undefined' ? 800 : window.innerHeight;
+  private onViewResize = () => {
+    if (Math.abs(window.innerHeight - this.viewH) > 20) this.viewH = window.innerHeight;
+  };
   private co2Id?: string;
   private loadingKey?: string;
   private forecastAt = 0;
@@ -601,8 +607,15 @@ export class GlowFlowCard extends GlowCardBase<FlowCardConfig> {
     if (Math.abs(h - this.cardH) > 0.5) this.cardH = h;
   }
 
+  connectedCallback(): void {
+    super.connectedCallback();
+    window.addEventListener('resize', this.onViewResize);
+    this.onViewResize();
+  }
+
   disconnectedCallback(): void {
     super.disconnectedCallback();
+    window.removeEventListener('resize', this.onViewResize);
     this.resize?.disconnect();
     this.resize = undefined;
     this.observed.clear();
@@ -673,7 +686,12 @@ export class GlowFlowCard extends GlowCardBase<FlowCardConfig> {
   }
 
   private get planMin(): number {
-    if (this.narrow) return this.pv ? 560 : 300;
+    if (this.narrow) {
+      // Phones (#185): the plan takes what the screen leaves next to HA's top bar, the card
+      // header, the date picker and a bottom bar, between a sensible minimum and its full size.
+      const [min, max] = this.pv ? [380, 560] : [240, 300];
+      return Math.round(Math.min(max, Math.max(min, this.viewH - PHONE_RESERVE)));
+    }
     return this.pv ? 440 : 240;
   }
 
