@@ -392,20 +392,12 @@ export class GlowFlowCard extends GlowCardBase<FlowCardConfig> {
   }
 
   /** Main source for the tint: live from the power values, else from the period totals. */
+  /**
+   * Card colour (glow, orb, main line): fixed, so it stays the same while browsing days.
+   * Solar yellow when solar is set up, grid blue otherwise (#177).
+   */
   private get main(): NodeKind {
-    if (this.live) {
-      const m = flows(this.now).main;
-      return m === 'bat' ? 'bat' : m;
-    }
-    const t = this.pd?.totals;
-    if (!t) return this.pv ? 'solar' : 'grid';
-    const used = (t.solar ?? 0) - (t.export ?? 0) - (t.charge ?? 0);
-    const cand: [NodeKind, number][] = [
-      ['grid', t.import ?? 0],
-      ['solar', used],
-      ['bat', t.discharge ?? 0],
-    ];
-    return cand.reduce((a, b) => (b[1] > a[1] ? b : a))[0];
+    return this.hasSolar ? 'solar' : 'grid';
   }
 
   protected get accent(): Rgb {
@@ -1068,7 +1060,7 @@ export class GlowFlowCard extends GlowCardBase<FlowCardConfig> {
     ) => nodes.push({ k, x, y, lab, t1, t2: big(v), t3: short(t3), entity });
     const seg = (a: [number, number], b: [number, number], k: NodeKind, v: number | undefined) =>
       segs.push({ a, b, k, v: v ?? 0, idle: idle(v) });
-    const lineK: NodeKind = this.pv ? (this.main === 'grid' ? 'grid' : this.main) : 'grid';
+    const lineK: NodeKind = this.main;
     const batName =
       soc !== null && live ? `${ft(hass, 'battery')} ${fnum(hass, soc, 0)} %` : ft(hass, 'battery');
     const homeT3 = live ? ft(hass, 'consumption') : ft(hass, 'consumed');
