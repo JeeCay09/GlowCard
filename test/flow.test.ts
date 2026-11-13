@@ -8,6 +8,8 @@ import {
   isLive,
   livePlan,
   lowCarbon,
+  monthWeeks,
+  offsetFor,
   parseSetup,
   period,
   periodPlan,
@@ -234,5 +236,36 @@ describe('card', () => {
       period: 'day',
       font: 'glow',
     });
+  });
+});
+
+describe('date picker', () => {
+  it('finds the offset of a picked date', () => {
+    expect(offsetFor('day', new Date(2026, 10, 13), NOW)).toBe(0);
+    expect(offsetFor('day', new Date(2026, 9, 31, 23), NOW)).toBe(-13);
+    // across the end of daylight saving time (25 Oct 2026 in Europe)
+    expect(period('day', offsetFor('day', new Date(2026, 9, 20), NOW), NOW).start.getDate()).toBe(
+      20,
+    );
+    expect(offsetFor('week', new Date(2026, 10, 9), NOW)).toBe(0);
+    expect(offsetFor('week', new Date(2026, 10, 15, 22), NOW)).toBe(0);
+    expect(offsetFor('week', new Date(2026, 10, 8), NOW)).toBe(-1);
+    expect(offsetFor('week', new Date(2026, 9, 20), NOW)).toBe(-3);
+    expect(offsetFor('month', new Date(2025, 11, 24), NOW)).toBe(-11);
+    expect(offsetFor('year', new Date(2023, 5, 1), NOW)).toBe(-3);
+    for (const r of ['day', 'week', 'month', 'year'] as const) {
+      const d = new Date(2025, 1, 14);
+      const p = period(r, offsetFor(r, d, NOW), NOW);
+      expect(p.start <= d && d < p.end).toBe(true);
+    }
+  });
+
+  it('lays a month out in weeks from Monday', () => {
+    const nov = monthWeeks(2026, 10);
+    expect(nov).toHaveLength(6);
+    expect([nov[0][0].getMonth(), nov[0][0].getDate()]).toEqual([9, 26]);
+    expect(nov[0][6].getDate()).toBe(1);
+    expect(nov[5][0].getDate()).toBe(30);
+    expect(monthWeeks(2027, 1)).toHaveLength(4); // Feb 2027 starts on a Monday
   });
 });

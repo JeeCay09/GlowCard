@@ -15,6 +15,7 @@ import {
 import { numberState, powerW } from '../status/status-logic';
 import { flows, readNow, type EnergyNow } from '../energy/energy-logic';
 import type { HomeAssistant } from '../../types/hass';
+import { language } from '../../core/localize';
 import {
   RANGES,
   axisLabels,
@@ -25,6 +26,9 @@ import {
   fmoney,
   fnum,
   forecastHours,
+  isoWeek,
+  monthWeeks,
+  offsetFor,
   ft,
   gridNeutrality,
   isLive,
@@ -100,13 +104,29 @@ const ICON: Record<string, string> = {
   chart: 'M4 20V10M9.3 20V5M14.6 20v-8M20 20V8',
 };
 
+const CAL_ICON = svg`<svg viewBox="0 0 24 24" aria-hidden="true">
+  <path
+    d="M7 3v3M17 3v3M4.5 9.5h15M6.5 5h11a2 2 0 0 1 2 2v11a2 2 0 0 1-2 2h-11a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2z"
+    fill="none"
+    stroke="currentColor"
+    stroke-width="2"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+  />
+</svg>`;
+type CalLevel = 'days' | 'months' | 'years';
 const CHEV_L = 'M15 5l-7 7 7 7';
 const CHEV_R = 'M9 5l7 7-7 7';
+const CHEV_D = 'M5 9l7 7 7-7';
 
 /** Width below which the plan turns vertical and the date picker gets its own row. */
 const NARROW = 560;
+/** Below this the line plan runs top to bottom (phones); above it, left to right (#187). */
+const VERTICAL = 420;
 /** Width from which sections sit side by side in the 12 column layout. */
 const WIDE = 900;
+/** Screen height on phones that is not for the plan (HA top bar, card header, bottom bar). */
+const PHONE_RESERVE = 340;
 /** Below this the flow counts as idle (W live, kWh for a period). */
 const IDLE_W = 10;
 const IDLE_KWH = 0.05;
@@ -161,6 +181,7 @@ interface PlanNode {
   lab: 'r' | 'l' | 'b';
   t1: string;
   t2: TemplateResult | string;
+  /** State word (import, charging, …): not shown, read out by screen readers. */
   t3: string;
   entity?: string;
 }
@@ -172,13 +193,6 @@ interface PlanSeg {
   /** Signed value: + = from a to b. */
   v: number;
   idle: boolean;
-}
-
-interface PlanTag {
-  x: number;
-  y: number;
-  k: NodeKind;
-  text: string;
 }
 
 /**
@@ -195,6 +209,16 @@ export class GlowFlowCard extends GlowCardBase<FlowCardConfig> {
   @state() private forecast: ForecastData | null = null;
   @state() private sizes: Record<string, { w: number; h: number }> = {};
   @state() private cardH = 0;
+  @state() private viewH = typeof window === 'undefined' ? 800 : window.innerHeight;
+  /** Calendar popover of the date picker (#193) and the month / year it shows. */
+  @state() private calOpen = false;
+  @state() private calY = 0;
+  @state() private calM = 0;
+  /** What the calendar lists: days of a month, months of a year or twelve years. */
+  @state() private calLvl: CalLevel = 'days';
+  private onViewResize = () => {
+    if (Math.abs(window.innerHeight - this.viewH) > 20) this.viewH = window.innerHeight;
+  };
   private co2Id?: string;
   private loadingKey?: string;
   private forecastAt = 0;
@@ -601,8 +625,16 @@ export class GlowFlowCard extends GlowCardBase<FlowCardConfig> {
     if (Math.abs(h - this.cardH) > 0.5) this.cardH = h;
   }
 
+  connectedCallback(): void {
+    super.connectedCallback();
+    window.addEventListener('resize', this.onViewResize);
+    this.onViewResize();
+  }
+
   disconnectedCallback(): void {
     super.disconnectedCallback();
+    window.removeEventListener('resize', this.onViewResize);
+    this.closeCal();
     this.resize?.disconnect();
     this.resize = undefined;
     this.observed.clear();
@@ -614,11 +646,217 @@ export class GlowFlowCard extends GlowCardBase<FlowCardConfig> {
     if (r === this.range && this.offset === 0) return;
     this.range = r;
     this.offset = 0;
+    this.syncCal();
   }
 
   private step(d: number): void {
     if (d > 0 && this.offset >= 0) return;
     this.offset += d;
+    this.syncCal();
+  }
+
+  // ---------- calendar of the date picker (#193) ----------
+
+  /** Shows the month / year of the selected period in the calendar. */
+  private syncCal(): void {
+    const s = this.period.start;
+    this.calY = s.getFullYear();
+    this.calM = s.getMonth();
+    this.calLvl = this.calBase;
+  }
+
+  /** The level on which the selected range is picked. */
+  private get calBase(): CalLevel {
+    return this.range === 'year' ? 'years' : this.range === 'month' ? 'months' : 'days';
+  }
+
+  /** Title tap: from days to months to years, for far jumps. */
+  private calUp(): void {
+    this.calLvl = this.calLvl === 'days' ? 'months' : 'years';
+  }
+
+  /** Tap on a month or year above the base level: go one level down again. */
+  private calDown(d: Date): void {
+    this.calY = d.getFullYear();
+    if (this.calLvl === 'months') this.calM = d.getMonth();
+    this.calLvl = this.calLvl === 'years' && this.calBase === 'days' ? 'months' : this.calBase;
+  }
+
+  private toggleCal(): void {
+    if (this.calOpen) return this.closeCal();
+    this.syncCal();
+    this.calOpen = true;
+    window.addEventListener('pointerdown', this.onCalOutside, true);
+    window.addEventListener('keydown', this.onCalKey);
+  }
+
+  private closeCal(): void {
+    this.calOpen = false;
+    window.removeEventListener('pointerdown', this.onCalOutside, true);
+    window.removeEventListener('keydown', this.onCalKey);
+  }
+
+  private onCalOutside = (ev: Event) => {
+    const box = this.renderRoot.querySelector('.dw');
+    if (!box || !ev.composedPath().includes(box)) this.closeCal();
+  };
+
+  private onCalKey = (ev: KeyboardEvent) => {
+    if (ev.key !== 'Escape') return;
+    this.closeCal();
+    this.renderRoot.querySelector<HTMLElement>('.dd')?.focus();
+  };
+
+  private pick(date: Date): void {
+    this.offset = Math.min(0, offsetFor(this.range, date));
+    this.closeCal();
+  }
+
+  /** Pages the calendar: a month (day, week), a year (month) or twelve years (year). */
+  private calStep(d: number): void {
+    if (this.calLvl === 'months') this.calY += d;
+    else if (this.calLvl === 'years')
+      this.calY = Math.min(new Date().getFullYear(), this.calY) + 12 * d;
+    else {
+      const m = new Date(this.calY, this.calM + d, 1);
+      this.calY = m.getFullYear();
+      this.calM = m.getMonth();
+    }
+  }
+
+  private calendar(): TemplateResult {
+    const hass = this.hass;
+    const lang = language(hass);
+    const fmt = (o: Intl.DateTimeFormatOptions, d: Date) =>
+      new Intl.DateTimeFormat(lang, o).format(d);
+    const now = new Date();
+    const range = this.range;
+    const sel = this.period;
+    const inSel = (d: Date) => d >= sel.start && d < sel.end;
+    const y = this.calY;
+    const m = this.calM;
+    const yNow = now.getFullYear();
+
+    let title: string;
+    let canNext: boolean;
+    let body: TemplateResult;
+    const lvl = this.calLvl;
+    const base = lvl === this.calBase;
+    if (lvl === 'days') {
+      title = fmt({ month: 'long', year: 'numeric' }, new Date(y, m, 1));
+      canNext = y < yNow || (y === yNow && m < now.getMonth());
+      const today = new Date(yNow, now.getMonth(), now.getDate());
+      // 1 Jan 2024 was a Monday
+      const heads = Array.from({ length: 7 }, (_, i) =>
+        fmt({ weekday: 'short' }, new Date(2024, 0, 1 + i)).slice(0, 2),
+      );
+      const cell = (d: Date) => {
+        const cls = [
+          d.getMonth() === m ? '' : 'off',
+          d.getTime() === today.getTime() ? 'now' : '',
+          inSel(d) ? 'on' : '',
+        ].join(' ');
+        return range === 'week'
+          ? html`<span class="c ${cls}">${d.getDate()}</span>`
+          : html`<button
+              class="c ${cls}"
+              ?disabled=${d > today}
+              aria-label=${fmt({ day: 'numeric', month: 'long', year: 'numeric' }, d)}
+              aria-pressed=${inSel(d) ? 'true' : 'false'}
+              @click=${() => this.pick(d)}
+            >
+              ${d.getDate()}
+            </button>`;
+      };
+      const weeks = monthWeeks(y, m);
+      body = html`<div class="cg ${range}">
+        <div class="cr chd">
+          ${range === 'week' ? html`<span class="kw">${ft(hass, 'week_short')}</span>` : nothing}
+          ${heads.map((h) => html`<span>${h}</span>`)}
+        </div>
+        ${weeks.map((w) =>
+          range === 'week'
+            ? html`<button
+                class="cr wk ${inSel(w[0]) ? 'on' : ''}"
+                ?disabled=${w[0] > today}
+                aria-label="${ft(hass, 'week_short')} ${isoWeek(w[0])}"
+                aria-pressed=${inSel(w[0]) ? 'true' : 'false'}
+                @click=${() => this.pick(w[0])}
+              >
+                <span class="kw">${isoWeek(w[0])}</span>${w.map(cell)}
+              </button>`
+            : html`<div class="cr">${w.map(cell)}</div>`,
+        )}
+      </div>`;
+    } else {
+      const months = lvl === 'months';
+      // the years page ends with the current year when it would reach past it
+      const last = months ? y : Math.min(yNow, y);
+      const first = last - 11;
+      title = months ? String(y) : `${first} – ${last}`;
+      canNext = months ? y < yNow : last < yNow;
+      const items = Array.from({ length: 12 }, (_, i) =>
+        months ? new Date(y, i, 1) : new Date(first + i, 0, 1),
+      );
+      // above the base level the month / year of the selection is marked
+      const sy = sel.start.getFullYear();
+      const on = (d: Date) =>
+        base
+          ? inSel(d)
+          : d.getFullYear() === sy && (!months || d.getMonth() === sel.start.getMonth());
+      body = html`<div class="cg cgb">
+        ${items.map((d) => {
+          const cur = d.getFullYear() === yNow && (!months || d.getMonth() === now.getMonth());
+          const label = months
+            ? fmt({ month: 'long', year: 'numeric' }, d)
+            : String(d.getFullYear());
+          return html`<button
+            class="c ${cur ? 'now' : ''} ${on(d) ? 'on' : ''}"
+            ?disabled=${d > now}
+            aria-label=${label}
+            aria-pressed=${on(d) ? 'true' : 'false'}
+            @click=${() => (base ? this.pick(d) : this.calDown(d))}
+          >
+            ${months ? fmt({ month: 'short' }, d) : d.getFullYear()}
+          </button>`;
+        })}
+      </div>`;
+    }
+    const nowKey: Record<Range, FlowKey> = {
+      day: 'today',
+      week: 'this_week',
+      month: 'this_month',
+      year: 'this_year',
+    };
+    return html`<div class="cal" role="dialog" aria-label=${ft(hass, 'pick_date')}>
+      <div class="cn">
+        <button aria-label=${ft(hass, 'back')} @click=${() => this.calStep(-1)}>
+          ${chev(CHEV_L)}
+        </button>
+        ${
+          lvl === 'years'
+            ? html`<span class="ct2">${title}</span>`
+            : html`<button
+                class="ct2 up"
+                aria-label="${title}, ${ft(hass, lvl === 'days' ? 'pick_month' : 'pick_year')}"
+                @click=${() => this.calUp()}
+              >
+                ${title}${chev(CHEV_D)}
+              </button>`
+        }
+        <button
+          aria-label=${ft(hass, 'next')}
+          ?disabled=${!canNext}
+          @click=${() => this.calStep(1)}
+        >
+          ${chev(CHEV_R)}
+        </button>
+      </div>
+      ${body}
+      <button class="cnow" ?disabled=${this.offset === 0} @click=${() => this.pick(now)}>
+        ${ft(hass, nowKey[range])}
+      </button>
+    </div>`;
   }
 
   private moreInfo(entity?: string): void {
@@ -640,6 +878,11 @@ export class GlowFlowCard extends GlowCardBase<FlowCardConfig> {
 
   private get narrow(): boolean {
     return this.width < NARROW;
+  }
+
+  /** Vertical line plan: phones only. Narrow cards on a computer keep the horizontal plan. */
+  private get vertical(): boolean {
+    return this.width < VERTICAL;
   }
 
   render() {
@@ -673,7 +916,13 @@ export class GlowFlowCard extends GlowCardBase<FlowCardConfig> {
   }
 
   private get planMin(): number {
-    if (this.narrow) return this.pv ? 560 : 300;
+    if (this.narrow && !this.vertical) return this.pv ? 340 : 200;
+    if (this.narrow) {
+      // Phones (#185): the plan takes what the screen leaves next to HA's top bar, the card
+      // header, the date picker and a bottom bar, between a sensible minimum and its full size.
+      const [min, max] = this.pv ? [380, 560] : [240, 300];
+      return Math.round(Math.min(max, Math.max(min, this.viewH - PHONE_RESERVE)));
+    }
     return this.pv ? 440 : 240;
   }
 
@@ -729,18 +978,29 @@ export class GlowFlowCard extends GlowCardBase<FlowCardConfig> {
             </button>`,
         )}
       </div>
-      <div class="dnav">
-        <button aria-label=${ft(hass, 'back')} @click=${() => this.step(-1)}>
-          ${chev(CHEV_L)}
-        </button>
-        <span class="dd">${label}</span>
-        <button
-          aria-label=${ft(hass, 'next')}
-          ?disabled=${this.offset >= 0}
-          @click=${() => this.step(1)}
-        >
-          ${chev(CHEV_R)}
-        </button>
+      <div class="dw">
+        <div class="dnav">
+          <button aria-label=${ft(hass, 'back')} @click=${() => this.step(-1)}>
+            ${chev(CHEV_L)}
+          </button>
+          <button
+            class="dd"
+            aria-haspopup="dialog"
+            aria-expanded=${this.calOpen ? 'true' : 'false'}
+            title=${ft(hass, 'pick_date')}
+            @click=${() => this.toggleCal()}
+          >
+            ${CAL_ICON}<span>${label}</span>
+          </button>
+          <button
+            aria-label=${ft(hass, 'next')}
+            ?disabled=${this.offset >= 0}
+            @click=${() => this.step(1)}
+          >
+            ${chev(CHEV_R)}
+          </button>
+        </div>
+        ${this.calOpen ? this.calendar() : nothing}
       </div>
     </div>`;
   }
@@ -763,14 +1023,10 @@ export class GlowFlowCard extends GlowCardBase<FlowCardConfig> {
     if (!f) return nothing;
     const idle = (v: number | undefined) =>
       v === undefined || Math.abs(v) < (live ? IDLE_W : IDLE_KWH);
-    const val = (v: number) => (live ? kwText(hass, v) : `${fkwh(hass, Math.abs(v))} kWh`);
     const big = (v: number) =>
       live
         ? html`${fnum(hass, Math.abs(v) / 1000, Math.abs(v) >= 1000 ? 1 : 2)}<small>kW</small>`
         : html`${fkwh(hass, Math.abs(v))}<small>kWh</small>`;
-    const solarToday = t?.solar;
-    const fc = forecastHours(this.forecast, this.setup.forecast, this.period);
-    const fcTotal = fc?.reduce((a, b) => a + b, 0);
     const c = this.config!;
 
     // Node texts
@@ -783,15 +1039,7 @@ export class GlowFlowCard extends GlowCardBase<FlowCardConfig> {
       : t?.export
         ? `${ft(hass, 'imported')} · ${fkwh(hass, t.export)} ${ft(hass, 'exported')}`
         : ft(hass, 'imported');
-    const solarT3 = live
-      ? fcTotal !== undefined && solarToday !== undefined
-        ? this.narrow
-          ? ft(hass, 'forecast_short', { f: `${fkwh(hass, fcTotal)} kWh` })
-          : `${fkwh(hass, solarToday)} ${ft(hass, 'of_forecast', { f: `${fkwh(hass, fcTotal)} kWh` })}`
-        : solarToday !== undefined
-          ? `${ft(hass, 'production')} · ${fkwh(hass, solarToday)} kWh`
-          : ft(hass, 'production')
-      : ft(hass, 'produced');
+    const solarT3 = live ? ft(hass, 'production') : ft(hass, 'produced');
     const batT3 = live
       ? idle(f.bat)
         ? ft(hass, 'idle')
@@ -805,8 +1053,8 @@ export class GlowFlowCard extends GlowCardBase<FlowCardConfig> {
 
     const nodes: PlanNode[] = [];
     const segs: PlanSeg[] = [];
-    const tags: PlanTag[] = [];
-    const R = narrow ? 28 : 37; // icon half size + gap
+    // The nodes are opaque capsules on the lines (#191): wires run to their centres.
+    const R = 0;
     const gridV = live ? f.grid : (t?.import ?? 0);
     const node = (
       k: NodeKind,
@@ -820,18 +1068,6 @@ export class GlowFlowCard extends GlowCardBase<FlowCardConfig> {
     ) => nodes.push({ k, x, y, lab, t1, t2: big(v), t3: short(t3), entity });
     const seg = (a: [number, number], b: [number, number], k: NodeKind, v: number | undefined) =>
       segs.push({ a, b, k, v: v ?? 0, idle: idle(v) });
-    const tag = (
-      x: number,
-      y: number,
-      k: NodeKind,
-      v: number | undefined,
-      fwd: string,
-      back: string,
-    ) => {
-      if (idle(v)) return;
-      const txt = val(v!);
-      tags.push({ x, y, k, text: v! >= 0 ? `${txt} ${fwd}` : `${back} ${txt}` });
-    };
     const lineK: NodeKind = this.pv ? (this.main === 'grid' ? 'grid' : this.main) : 'grid';
     const batName =
       soc !== null && live ? `${ft(hass, 'battery')} ${fnum(hass, soc, 0)} %` : ft(hass, 'battery');
@@ -839,39 +1075,45 @@ export class GlowFlowCard extends GlowCardBase<FlowCardConfig> {
     const s = this.hasSolar;
     const b = this.hasBattery;
 
-    if (!narrow) {
-      const yb = h / 2;
+    if (!this.vertical) {
+      const yb = narrow ? h * 0.46 : h / 2;
       const off = Math.min(160, h * 0.32);
-      // the grid and home labels sit outside their icons: keep room for "12.345 kWh"
-      const room = R + 140;
+      // Wide: the grid and home labels sit beside their icons, keep room for "12.345 kWh".
+      // Compact (#187, narrow card on a computer): labels below the icons, near the edges.
+      const room = narrow ? 78 : 100;
       const xn = Math.max(room, s || b ? w * 0.12 : w * 0.2);
       const xh = Math.min(w - room, s || b ? w * 0.86 : w * 0.8);
-      const xs = s && b ? w * 0.38 : w * 0.5;
-      const xk = s && b ? w * 0.62 : w * 0.5;
-      node('grid', xn, yb, 'l', ft(hass, 'grid'), gridV, gridT3, c.grid);
-      node('home', xh, yb, 'r', ft(hass, 'home'), f.home, homeT3, c.home);
+      const xs = s && b ? w * (narrow ? 0.42 : 0.38) : w * 0.5;
+      const xk = s && b ? w * (narrow ? 0.63 : 0.62) : w * 0.5;
+      const side = narrow ? 'b' : undefined;
+      node('grid', xn, yb, side ?? 'l', ft(hass, 'grid'), gridV, gridT3, c.grid);
+      node('home', xh, yb, side ?? 'r', ft(hass, 'home'), f.home, homeT3, c.home);
       if (s) node('solar', xs, yb - off, 'r', ft(hass, 'solar'), f.solar ?? 0, solarT3, c.solar);
       if (b)
-        node('bat', xk, yb + off, 'r', batName, f.bat ?? 0, batT3, c.battery_power ?? c.battery);
+        node(
+          'bat',
+          xk,
+          yb + off,
+          narrow ? 'l' : 'r',
+          batName,
+          f.bat ?? 0,
+          batT3,
+          c.battery_power ?? c.battery,
+        );
       const j1 = s ? xs : b ? xk : xh - R;
       seg([xn + R, yb], [j1, yb], s || b ? lineK : 'grid', f.grid);
-      tag((xn + R + j1) / 2, yb, s || b ? lineK : 'grid', f.grid, '→', '←');
       if (s) {
         seg([xs, yb - off + R], [xs, yb], 'solar', f.solar);
-        tag(xs, yb - off / 2, 'solar', f.solar, '↓', '↑');
       }
       if (s && b) {
         seg([xs, yb], [xk, yb], lineK, f.middle);
-        tag((xs + xk) / 2, yb, lineK, f.middle, '→', '←');
       }
       if (b) {
         seg([xk, yb], [xk, yb + off - R], 'bat', f.bat);
-        tag(xk, yb + off / 2, 'bat', f.bat, '↓', '↑');
       }
       if (s || b) {
         const last = b ? xk : xs;
         seg([last, yb], [xh - R, yb], lineK, f.home);
-        tag((last + xh - R) / 2, yb, lineK, f.home, '→', '←');
       }
     } else {
       const xb = w / 2;
@@ -887,17 +1129,14 @@ export class GlowFlowCard extends GlowCardBase<FlowCardConfig> {
       if (b) node('bat', xr, yk, 'b', batName, f.bat ?? 0, batT3, c.battery_power ?? c.battery);
       const j1 = s ? ys : b ? yk : yh - R;
       seg([xb, yn + R], [xb, j1], s || b ? lineK : 'grid', f.grid);
-      tag(xb, s || b ? (yn + j1) / 2 + 10 : h / 2, s || b ? lineK : 'grid', f.grid, '↓', '↑');
       if (s) seg([xl + R, ys], [xb, ys], 'solar', f.solar);
       if (s && b) {
         seg([xb, ys], [xb, yk], lineK, f.middle);
-        tag(xb, (ys + yk) / 2, lineK, f.middle, '↓', '↑');
       }
       if (b) seg([xb, yk], [xr - R, yk], 'bat', f.bat);
       if (s || b) {
         const last = b ? yk : ys;
         seg([xb, last], [xb, yh - R], lineK, f.home);
-        tag(xb, (last + yh) / 2, lineK, f.home, '↓', '↑');
       }
     }
 
@@ -936,45 +1175,29 @@ export class GlowFlowCard extends GlowCardBase<FlowCardConfig> {
             : svg`<circle cx=${x} cy=${y} r="4" fill="rgba(${idleC},.7)"/>`,
         )}
       </svg>
-      ${nodes.map((nd) => this.node(nd, R, nd.k === 'bat' ? soc : null))}
-      ${tags.map(
-        (tg) =>
-          html`<div class="tag" style="left:${tg.x}px;top:${tg.y}px;--a:${this.col(tg.k)}">
-            ${tg.text}
-          </div>`,
-      )}`;
+      ${nodes.map((nd) => this.node(nd, nd.k === 'bat' ? soc : null))}`;
   }
 
-  private node(nd: PlanNode, R: number, soc: number | null): TemplateResult {
+  /** A node: glass capsule on the line with the neon icon, name, state and value. */
+  private node(nd: PlanNode, soc: number | null): TemplateResult {
     const c = this.col(nd.k);
     const click = () => this.moreInfo(nd.entity);
-    const txt = html`<div class="t1">${nd.t1}</div>
-      <div class="t2">${nd.t2}</div>
-      ${
-        // left labels grow towards the card edge: one fact per line there
-        nd.lab === 'l'
-          ? nd.t3.split(' · ').map((l) => html`<div class="t3">${l}</div>`)
-          : html`<div class="t3">${nd.t3}</div>`
-      }`;
-    const pos =
-      nd.lab === 'b'
-        ? `left:${nd.x}px;top:${nd.y + R + 4}px;transform:translate(-50%,0);text-align:center`
-        : nd.lab === 'l'
-          ? `left:${nd.x - R - 8}px;top:${nd.y}px;transform:translate(-100%,-50%);text-align:right`
-          : `left:${nd.x + R + 8}px;top:${nd.y}px;transform:translate(0,-50%)`;
     const can = !!(nd.entity && this.hass?.states[nd.entity]);
     return html`<div
-        class="neon ${can ? 'tap' : ''}"
-        style="left:${nd.x}px;top:${nd.y}px"
-        role=${can ? 'button' : nothing}
-        tabindex=${can ? 0 : nothing}
-        aria-label=${nd.t1}
-        @click=${click}
-        @keydown=${this.onKey(click)}
-      >
-        ${neonIcon(nd.k, c, this.dark, soc)}
-      </div>
-      <div class="node" style=${pos}>${txt}</div>`;
+      class="cap ${can ? 'tap' : ''}"
+      style="left:${nd.x}px;top:${nd.y}px;--a:${c}"
+      role=${can ? 'button' : nothing}
+      tabindex=${can ? 0 : nothing}
+      aria-label="${nd.t1}, ${nd.t3}"
+      @click=${click}
+      @keydown=${this.onKey(click)}
+    >
+      <span class="ci">${neonIcon(nd.k, c, this.dark, soc)}</span>
+      <span class="ct">
+        <span class="t1"><b>${nd.t1}</b></span>
+        <span class="t2">${nd.t2}</span>
+      </span>
+    </div>`;
   }
 
   // ---------- key figures ----------
@@ -1199,44 +1422,69 @@ export class GlowFlowCard extends GlowCardBase<FlowCardConfig> {
     const exp = s.export ?? z;
     const chg = s.charge ?? z;
     return this.chartFrame('usage', (w, h, bw) => {
+      // One kWh scale above and below the line (like HA's energy dashboard, #183): the zero
+      // line sits where the largest bar up and the largest bar down both fit.
       const top = 6;
-      const bot = h * 0.66;
+      const bottom = h - 16;
       const up = used.map((v, i) => v + dis[i] + imp[i]);
       const down = exp.map((v, i) => v + chg[i]);
-      const mx = Math.max(0.01, ...up, ...down.map((v) => v / 0.4)) * 1.1;
-      const sc = (bot - top) / mx;
+      const maxUp = Math.max(0, ...up);
+      const maxDown = Math.max(0, ...down);
+      const span = Math.max(0.01, maxUp + maxDown) * 1.08;
+      const sc = (bottom - top) / span;
+      const bot = top + maxUp * 1.04 * sc;
       const fill = filledBuckets(this.period);
       const live = isLive(this.period);
+      const x = (i: number) => i * bw + bw * 0.18;
+      const bwid = bw * 0.64;
+      const rx = Math.min(3, bw * 0.2);
       const out: TemplateResult[] = [];
+      // Rectangle as a path, rounded only at its top (t) and/or bottom (b) end.
+      const box = (x0: number, y0: number, hh: number, t: boolean, b: boolean) => {
+        const r = Math.min(rx, hh / 2, bwid / 2);
+        const rt = t ? r : 0;
+        const rb = b ? r : 0;
+        const x1 = x0 + bwid;
+        const y1 = y0 + hh;
+        return `M${x0},${y0 + rt} Q${x0},${y0} ${x0 + rt},${y0} L${x1 - rt},${y0} Q${x1},${y0} ${x1},${y0 + rt} L${x1},${y1 - rb} Q${x1},${y1} ${x1 - rb},${y1} L${x0 + rb},${y1} Q${x0},${y1} ${x0},${y1 - rb} Z`;
+      };
+      // Stacked segments touch each other; only the outer end of the bar is rounded.
+      const stack = (i: number, parts: [number, Kind][], dir: 1 | -1, a: number) => {
+        const shown = parts.filter(([v]) => v * sc >= 0.5);
+        let y = dir > 0 ? bot : bot + 1;
+        shown.forEach(([v, k], j) => {
+          const sh = v * sc;
+          const outer = j === shown.length - 1;
+          const y0 = dir > 0 ? y - sh : y;
+          out.push(
+            svg`<path d=${box(x(i), y0, sh, dir > 0 && outer, dir < 0 && outer)} fill="rgba(${this.col(k)},${a})"/>`,
+          );
+          y += dir > 0 ? -sh : sh;
+        });
+      };
       for (let i = 0; i < fill; i++) {
         const a = live && i === fill - 1 ? 0.45 : 0.85;
-        let y = bot;
-        for (const [v, k] of [
-          [used[i], 'solar'],
-          [dis[i], 'bat'],
-          [imp[i], 'grid'],
-        ] as [number, Kind][]) {
-          if (v <= 0) continue;
-          const hh = v * sc;
-          out.push(
-            svg`<rect x=${i * bw + bw * 0.18} y=${y - hh} width=${bw * 0.64} height=${hh} rx=${Math.min(3, bw * 0.2)} fill="rgba(${this.col(k)},${a})"/>`,
-          );
-          y -= hh + 1;
-        }
-        let y2 = bot + 2;
-        for (const [v, k] of [
-          [exp[i], 'solar'],
-          [chg[i], 'bat'],
-        ] as [number, Kind][]) {
-          if (v <= 0) continue;
-          const hh = v * sc * 0.4;
-          out.push(
-            svg`<rect x=${i * bw + bw * 0.18} y=${y2} width=${bw * 0.64} height=${hh} rx=${Math.min(3, bw * 0.2)} fill="rgba(${this.col(k)},.45)"/>`,
-          );
-          y2 += hh + 1;
-        }
+        stack(
+          i,
+          [
+            [used[i], 'solar'],
+            [dis[i], 'bat'],
+            [imp[i], 'grid'],
+          ],
+          1,
+          a,
+        );
+        stack(
+          i,
+          [
+            [exp[i], 'solar'],
+            [chg[i], 'bat'],
+          ],
+          -1,
+          live && i === fill - 1 ? 0.3 : 0.45,
+        );
       }
-      out.push(svg`<line x1="0" x2=${w} y1=${bot + 1} y2=${bot + 1} class="base"/>`);
+      out.push(svg`<line x1="0" x2=${w} y1=${bot + 0.5} y2=${bot + 0.5} class="base"/>`);
       out.push(svg`${this.slots(bw, bot)}`);
       out.push(svg`${this.nowLine(bw, h)}`);
       return [svg`<g style="filter:drop-shadow(0 0 4px rgba(${this.col('grid')},.25))">${out}</g>`];
@@ -1538,26 +1786,196 @@ export class GlowFlowCard extends GlowCardBase<FlowCardConfig> {
         width: 26px;
         height: 26px;
       }
-      .dnav button[disabled] {
+      .dnav button[disabled],
+      .cal button[disabled] {
         opacity: 0.3;
         cursor: default;
       }
-      .dnav svg {
+      .dnav svg,
+      .cn svg {
         width: 15px;
         height: 15px;
       }
-      .dd {
+      .dw {
+        position: relative;
+        flex: none;
+      }
+      .card > .dp {
+        position: relative;
+      }
+      .narrow .dw {
+        position: static;
+      }
+      .narrow .cal {
+        left: 50%;
+        right: auto;
+        transform: translateX(-50%);
+        width: min(292px, 100%);
+      }
+      .dnav button.dd {
+        width: auto;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 6px;
         font-size: 13px;
         font-weight: 800;
         white-space: nowrap;
-        padding: 0 4px;
-        min-width: 112px;
-        text-align: center;
+        padding: 0 8px;
+        min-width: 124px;
       }
-      .narrow .dd {
+      .dnav button.dd svg {
+        width: 14px;
+        height: 14px;
+        color: var(--glow-muted);
+      }
+      .dnav button.dd[aria-expanded='true'] {
+        background: var(--glow-pop-solid);
+        box-shadow:
+          0 1px 4px rgba(0, 0, 0, 0.12),
+          0 0 0 1px rgba(var(--glow-accent), 0.35);
+      }
+      .narrow .dnav button.dd {
         font-size: 12px;
         min-width: 0;
-        padding: 0 2px;
+        padding: 0 6px;
+        gap: 5px;
+      }
+      /* calendar of the date picker (#193) */
+      .cal {
+        position: absolute;
+        top: calc(100% + 8px);
+        right: 0;
+        z-index: 6;
+        width: 292px;
+        box-sizing: border-box;
+        padding: 12px;
+        border-radius: 22px;
+        background: var(--glow-pop-solid);
+        border: 1px solid var(--glow-line);
+        box-shadow:
+          0 18px 40px rgba(0, 0, 0, 0.35),
+          0 0 0 1px rgba(var(--glow-accent), 0.18);
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+      }
+      .cn {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+      }
+      .cn button {
+        width: 32px;
+        height: 32px;
+        border-radius: 999px;
+        display: grid;
+        place-items: center;
+        background: var(--glow-inset);
+      }
+      .cn button.up {
+        width: auto;
+        display: flex;
+        align-items: center;
+        gap: 4px;
+        padding: 0 8px 0 12px;
+      }
+      .cn .up svg {
+        width: 12px;
+        height: 12px;
+        color: var(--glow-muted);
+      }
+      .ct2 {
+        font-size: 14px;
+        font-weight: 800;
+      }
+      .cg {
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+      }
+      .cr {
+        display: grid;
+        grid-template-columns: repeat(7, 1fr);
+        align-items: center;
+        justify-items: center;
+        width: 100%;
+      }
+      .cg.week .cr {
+        grid-template-columns: 34px repeat(7, 1fr);
+      }
+      .chd {
+        font-size: 11px;
+        font-weight: 700;
+        color: var(--glow-muted);
+        height: 24px;
+      }
+      .c {
+        width: 34px;
+        height: 34px;
+        border-radius: 999px;
+        display: grid;
+        place-items: center;
+        font-size: 13px;
+        font-weight: 700;
+        font-variant-numeric: tabular-nums;
+      }
+      .c.off {
+        color: var(--glow-muted);
+        opacity: 0.55;
+      }
+      .c.now {
+        box-shadow: inset 0 0 0 1.5px rgba(var(--glow-accent), 0.7);
+      }
+      button.c.on,
+      .cgb .c.on {
+        background: rgb(var(--glow-accent));
+        color: #fff;
+        opacity: 1;
+        box-shadow: 0 0 14px rgba(var(--glow-accent), 0.5);
+      }
+      .kw {
+        font-size: 11px;
+        font-weight: 700;
+        color: var(--glow-muted);
+        font-variant-numeric: tabular-nums;
+      }
+      .wk {
+        border-radius: 999px;
+      }
+      .wk.on {
+        background: rgba(var(--glow-accent), 0.28);
+        box-shadow: inset 0 0 0 1px rgba(var(--glow-accent), 0.6);
+      }
+      .wk.on .c.off {
+        opacity: 1;
+        color: inherit;
+      }
+      .cg.cgb {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 6px;
+      }
+      .cgb .c {
+        width: auto;
+        height: 40px;
+        background: var(--glow-inset);
+      }
+      .cnow {
+        align-self: center;
+        padding: 7px 16px;
+        border-radius: 999px;
+        font-size: 12px;
+        font-weight: 800;
+        background: var(--glow-inset);
+      }
+      @media (hover: hover) {
+        button.c:not([disabled]):not(.on):hover,
+        .wk:not([disabled]):not(.on):hover,
+        .cn button:not([disabled]):hover,
+        .cnow:not([disabled]):hover {
+          background: rgba(var(--glow-accent), 0.18);
+        }
       }
       /* line plan */
       .plan {
@@ -1587,39 +2005,55 @@ export class GlowFlowCard extends GlowCardBase<FlowCardConfig> {
           animation: none;
         }
       }
-      .neon {
+      /* nodes: glass capsules sitting on the lines */
+      .cap {
         position: absolute;
-        width: 66px;
-        height: 66px;
         transform: translate(-50%, -50%);
         z-index: 2;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 7px 16px 7px 9px;
+        border-radius: 999px;
+        white-space: nowrap;
+        background:
+          linear-gradient(rgba(var(--a), 0.1), rgba(var(--a), 0.03)), var(--glow-pop-solid);
+        border: 1px solid rgba(var(--a), 0.45);
+        box-shadow:
+          0 0 20px -6px rgba(var(--a), 0.85),
+          inset 0 1px 0 rgba(255, 255, 255, 0.08);
       }
-      .narrow .neon {
-        width: 50px;
-        height: 50px;
-      }
-      .neon.tap {
+      .cap.tap {
         cursor: pointer;
       }
-      .neon svg {
+      .ci {
+        flex: none;
+        width: 36px;
+        height: 36px;
+      }
+      .ci svg {
         width: 100%;
         height: 100%;
         overflow: visible;
       }
-      .node {
-        position: absolute;
-        z-index: 2;
-        white-space: nowrap;
+      .ct {
+        display: flex;
+        flex-direction: column;
+        line-height: 1.15;
       }
       .t1 {
-        font-size: 15px;
+        font-size: 11px;
+        font-weight: 600;
+        color: var(--glow-muted);
+      }
+      .t1 b {
         font-weight: 800;
+        color: color-mix(in srgb, rgb(var(--a)) 70%, var(--glow-text));
       }
       .t2 {
-        font-size: 26px;
+        font-size: 20px;
         font-weight: 800;
-        letter-spacing: -0.03em;
-        line-height: 1.1;
+        letter-spacing: -0.02em;
       }
       .t2 small,
       .big small {
@@ -1629,33 +2063,16 @@ export class GlowFlowCard extends GlowCardBase<FlowCardConfig> {
         margin-left: 3px;
         letter-spacing: 0;
       }
-      .t3 {
-        font-size: 12px;
-        font-weight: 600;
-        color: var(--glow-muted);
+      .narrow .cap {
+        gap: 6px;
+        padding: 6px 13px 6px 7px;
       }
-      .narrow .t1 {
-        font-size: 14px;
+      .narrow .ci {
+        width: 30px;
+        height: 30px;
       }
       .narrow .t2 {
-        font-size: 22px;
-      }
-      .narrow .t3 {
-        font-size: 11px;
-      }
-      .tag {
-        position: absolute;
-        transform: translate(-50%, -50%);
-        z-index: 2;
-        padding: 4px 10px;
-        border-radius: 99px;
-        font-size: 12px;
-        font-weight: 800;
-        white-space: nowrap;
-        background: var(--glow-pop-solid);
-        border: 1px solid rgba(var(--a), 0.5);
-        color: color-mix(in srgb, rgb(var(--a)) 75%, var(--glow-text));
-        box-shadow: 0 0 14px -4px rgba(var(--a), 0.8);
+        font-size: 18px;
       }
       /* key figures */
       .kpis {
