@@ -1,4 +1,4 @@
-import type { HomeAssistant } from '../../types/hass';
+import type { HassEntity, HomeAssistant } from '../../types/hass';
 import { language } from '../../core/localize';
 import { quantile } from '../energy/energy-logic';
 
@@ -188,6 +188,34 @@ export function period(range: Range, offset: number, now = new Date()): Period {
   const start = new Date(today.getFullYear() + offset, 0, 1);
   const end = new Date(start.getFullYear() + 1, 0, 1);
   return { range, offset, start, end, buckets: 12, stat: 'month' };
+}
+
+/** Offset of the period that contains `date`, counted from the period of `now` (#193). */
+export function offsetFor(range: Range, date: Date, now = new Date()): number {
+  const a = period(range, 0, now).start;
+  if (range === 'year') return date.getFullYear() - a.getFullYear();
+  if (range === 'month') {
+    return (date.getFullYear() - a.getFullYear()) * 12 + date.getMonth() - a.getMonth();
+  }
+  // whole days between local midnights, safe across daylight saving changes
+  const days = Math.round(
+    (Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()) -
+      Date.UTC(a.getFullYear(), a.getMonth(), a.getDate())) /
+      86_400_000,
+  );
+  return range === 'day' ? days : Math.floor(days / 7);
+}
+
+/** The weeks (Monday first) that cover a month, as six rows at most. */
+export function monthWeeks(year: number, month: number): Date[][] {
+  const first = new Date(year, month, 1);
+  const lead = (first.getDay() + 6) % 7;
+  const last = new Date(year, month + 1, 0).getDate();
+  const rows: Date[][] = [];
+  for (let d = 1 - lead; d <= last; d += 7) {
+    rows.push(Array.from({ length: 7 }, (_, i) => new Date(year, month, d + i)));
+  }
+  return rows;
 }
 
 /** The period before (same length), for "previous" comparisons. */
@@ -492,6 +520,55 @@ export function forecastHours(
   return seen ? out : undefined;
 }
 
+/** Forecast for one day: kWh per hour (when known) and the total. */
+export interface DayForecast {
+  hours?: number[];
+  total?: number;
+}
+
+const ENERGY_FACTOR: Record<string, number> = { wh: 0.001, kwh: 1, mwh: 1000 };
+
+/**
+ * Forecast from a chosen sensor (#179), for today only. The state is the expected energy
+ * of the day (Wh, kWh or MWh). Hourly values come from common attributes when present:
+ * Solcast `detailedHourly` / `detailedForecast` (kW per hour / half hour) and
+ * Forecast.Solar style `wh_hours` / `wh_period` (Wh per ISO time).
+ */
+export function sensorForecast(entity: HassEntity | undefined, p: Period): DayForecast | undefined {
+  if (!entity || p.range !== 'day') return undefined;
+  const unit = String(entity.attributes.unit_of_measurement ?? 'kWh').toLowerCase();
+  const raw = Number.parseFloat(entity.state);
+  const total = Number.isFinite(raw) ? raw * (ENERGY_FACTOR[unit] ?? 1) : undefined;
+
+  const hours = new Array(24).fill(0);
+  let seen = false;
+  const put = (iso: unknown, kwh: number) => {
+    const t = new Date(String(iso)).getTime();
+    if (!Number.isFinite(t) || !Number.isFinite(kwh)) return;
+    if (t < p.start.getTime() || t >= p.end.getTime()) return;
+    hours[bucketOf(p, t)] += kwh;
+    seen = true;
+  };
+  type Row = { period_start?: unknown; pv_estimate?: unknown };
+  const a = entity.attributes as Record<string, unknown>;
+  const rows = (key: string) => (Array.isArray(a[key]) ? (a[key] as Row[]) : undefined);
+  const hourly = rows('detailedHourly');
+  const half = rows('detailedForecast');
+  if (hourly) for (const r of hourly) put(r.period_start, Number(r.pv_estimate));
+  else if (half) for (const r of half) put(r.period_start, Number(r.pv_estimate) / 2);
+  else {
+    const wh = (a.wh_hours ?? a.wh_period) as Record<string, unknown> | undefined;
+    if (wh && typeof wh === 'object') {
+      for (const [iso, v] of Object.entries(wh)) put(iso, Number(v) / 1000);
+    }
+  }
+  if (!seen && total === undefined) return undefined;
+  return {
+    hours: seen ? hours : undefined,
+    total: total ?? (seen ? hours.reduce((x, y) => x + y, 0) : undefined),
+  };
+}
+
 // ---------- the line plan ----------
 
 export type NodeKind = 'grid' | 'solar' | 'bat' | 'home';
@@ -595,6 +672,10 @@ const de = {
   range_year: 'Jahr',
   back: 'Zurück',
   next: 'Weiter',
+  pick_date: 'Datum wählen',
+  pick_month: 'Monat wählen',
+  pick_year: 'Jahr wählen',
+  week_short: 'KW',
   import: 'Bezug',
   export: 'Einspeisung',
   imported: 'bezogen',
@@ -681,6 +762,10 @@ const en: typeof de = {
   range_year: 'Year',
   back: 'Back',
   next: 'Next',
+  pick_date: 'Pick a date',
+  pick_month: 'pick a month',
+  pick_year: 'pick a year',
+  week_short: 'Wk',
   import: 'Import',
   export: 'Export',
   imported: 'imported',

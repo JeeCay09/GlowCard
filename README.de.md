@@ -21,7 +21,7 @@
 - Funktioniert **nur mit Standard-Entitäten von Home Assistant**. Keine Helfer, Template-Sensoren oder Automationen nötig.
 
 > [!NOTE]
-> GlowCard ist in der Beta. v0.12.0 enthält Schalter, Licht, Kopfzeile, Status-Leiste, Chips, Überschrift, Energie, Energiefluss, Navigation, Müllabfuhr und Medien, alle mit visuellem Editor; weitere Karten folgen (siehe Roadmap). Optionen können sich bis v1.0 noch ändern.
+> GlowCard ist in der Beta. v0.13.0 enthält Schalter, Licht, Kopfzeile, Status-Leiste, Chips, Überschrift, Energie, Energiefluss, Navigation, Müllabfuhr und Medien, alle mit visuellem Editor; weitere Karten folgen (siehe Roadmap). Optionen können sich bis v1.0 noch ändern.
 
 ## Karten
 
@@ -74,7 +74,7 @@ lovelace:
    - Typ: **JavaScript-Modul**
 4. Browser neu laden.
 
-Nach einem Update die URL z. B. auf `/local/glowcard/glowcard.js?v=0.12.0` ändern, damit Browser die neue Datei laden.
+Nach einem Update die URL z. B. auf `/local/glowcard/glowcard.js?v=0.13.0` ändern, damit Browser die neue Datei laden.
 
 ## Konfiguration
 
@@ -406,15 +406,17 @@ Eine ganze Energie-Seite wie das Energie-Dashboard von Home Assistant, als eine 
 - **Plan:** ein Schaltplan Netz — Haus mit Lichtpunkten, die mit der Energie wandern. Solar kommt von oben und der Akku von unten dazu, wenn sie im Energie-Dashboard eingerichtet sind (am Handy läuft die Leitung von oben nach unten). Das Akku-Symbol füllt sich mit dem Ladestand. Tippen auf ein Symbol öffnet die Details.
 - **Kennzahlen** mit den Begriffen des Energie-Dashboards. Nur Netz: Verbrauch, Netzbezug, CO₂-arm bezogen (braucht die Integration CO2 Signal) und Kosten. Mit Solar: Autarkie, Solar selbst genutzt, Netzneutralität und Kosten.
 - **Bereiche** darunter (jeder optional, Reihenfolge im Editor über `sections`): `usage` (Balken je Stunde/Tag/Monat; nur Netz gegen den üblichen Bereich früherer Tage, mit Solar nach Quelle gestapelt, Einspeisung und Laden unter der Linie), `sources` (Tabelle mit kWh und Kosten je Quelle und Gesamt), `solar` (Produktion mit der Prognose aus der Solar-Vorhersage des Energie-Dashboards, nur für heute), `devices`, `gas` und `water`.
-- **Datumsauswahl:** Tag, Woche, Monat oder Jahr mit ‹ ›. `period` legt die Startansicht fest (Standard `day`).
+- **Solar-Prognose:** Standard ist die Prognose aus dem Energie-Dashboard. Mit `solar_forecast` wählst du einen eigenen Sensor mit der erwarteten Energie von heute (z. B. Forecast.Solar oder Solcast); Stundenwerte in seinen Attributen (`detailedHourly`, `detailedForecast`, `wh_hours`) zeichnen auch die Kurve.
+- **Datumsauswahl:** Tag, Woche, Monat oder Jahr mit ‹ ›. Ein Tippen auf das Datum öffnet einen Kalender, mit dem man direkt zu jedem Tag, jeder Woche (mit KW), jedem Monat oder Jahr springt; ein Tippen auf den Kalendertitel wechselt für weite Sprünge zur Monats- und Jahresauswahl. `period` legt die Startansicht fest (Standard `day`).
 - **Live-Leistung (optional):** Heute zeigt kW, wenn du Leistungssensoren wählst (`grid`, `solar`, `battery_power`, `battery` für den Ladestand, `home`); `invert_grid` / `invert_battery` für umgekehrte Vorzeichen. Ohne sie zeigt der Plan die kWh von heute. Ein Gerät zeigt seine aktuelle Leistung, wenn im Energie-Dashboard ein Leistungssensor dafür hinterlegt ist.
-- Höhe: wächst mit den Bereichen und füllt immer ganze Rasterzeilen. Breite: immer ganze Breite.
+- Höhe: wächst mit den Bereichen und füllt immer ganze Rasterzeilen. Breite: immer ganze Breite. In einem normalen Abschnitt (etwa 450–500 px) ist der Plan kompakt; für die breite Ansicht den Abschnitt über mehrere Spalten ziehen (`column_span: 2` oder mehr im YAML des Abschnitts). Am Handy läuft der Plan von oben nach unten und passt sich der Bildschirmhöhe an.
 
 ```yaml
 type: custom:glowcard-energy-flow
 # alles optional:
 sections: [usage, sources, solar, devices, gas, water]
 period: day
+solar_forecast: sensor.solar_prognose_heute
 grid: sensor.netz_leistung # positiv = Bezug
 solar: sensor.pv_leistung
 battery_power: sensor.akku_leistung # positiv = Laden
@@ -427,7 +429,7 @@ battery: sensor.akku_ladestand
 2. Schalter- und Steckdosen-Karte → v0.1.0 (Beta)
 3. Licht-Karte und Popup → v0.2.0 (Beta)
 4. Kopfzeile, Status-Leiste und Chips, visueller Editor und Standard-Breiten → **v0.3.0 (Beta)**
-5. Überschrift-Karte (Abschnittstitel mit Badges, zusätzlich zum Plan) → v0.4.0; Energie-Karte „Lastring“ mit Popup → v0.7.0; Energie-Karte ohne Ring (große Zahl), Editor und Handy-Layout → v0.8.0; Navigationsleiste (schwebend oder als Karte) → v0.9.0; Müll-Karte → v0.10.0; Medien-Karte und Medien-Räume → v0.11.0; Energiefluss-Karte (ganze Energie-Seite aus dem Energie-Dashboard) → v0.12.0
+5. Überschrift-Karte (Abschnittstitel mit Badges, zusätzlich zum Plan) → v0.4.0; Energie-Karte „Lastring“ mit Popup → v0.7.0; Energie-Karte ohne Ring (große Zahl), Editor und Handy-Layout → v0.8.0; Navigationsleiste (schwebend oder als Karte) → v0.9.0; Müll-Karte → v0.10.0; Medien-Karte und Medien-Räume → v0.11.0; Energiefluss-Karte (ganze Energie-Seite aus dem Energie-Dashboard) → v0.12.0; Energiefluss-Karte: Kalender-Datumsauswahl, eigener Solar-Prognose-Sensor, neue Knoten-Optik und kompaktes Layout → v0.13.0
 6. Visuelle Editoren für alle Karten, vollständige Doku, Antrag auf HACS-Standardliste → v1.0.0
 
 Später: Raum-Karte, Binärsensor, Bewässerung/Pflanze, Popups für Rollos und Saugroboter.

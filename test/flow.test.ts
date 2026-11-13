@@ -8,11 +8,14 @@ import {
   isLive,
   livePlan,
   lowCarbon,
+  monthWeeks,
+  offsetFor,
   parseSetup,
   period,
   periodPlan,
   selfConsumption,
   selfSufficiency,
+  sensorForecast,
   setupIds,
   toBuckets,
   totals,
@@ -215,6 +218,56 @@ describe('usual band and forecast', () => {
   });
 });
 
+describe('forecast sensor', () => {
+  const p = period('day', 0, NOW);
+  const at = (hour: number, min = 0, day = 13) => new Date(2026, 10, day, hour, min).toISOString();
+  const ent = (state: string, attributes: Record<string, unknown> = {}) => ({
+    entity_id: 'sensor.fc',
+    state,
+    attributes,
+    last_changed: '',
+    last_updated: '',
+  });
+
+  it('reads the total in Wh, kWh or MWh', () => {
+    expect(sensorForecast(ent('12.5', { unit_of_measurement: 'kWh' }), p)).toEqual({ total: 12.5 });
+    expect(sensorForecast(ent('12500', { unit_of_measurement: 'Wh' }), p)?.total).toBe(12.5);
+    expect(sensorForecast(ent('unavailable'), p)).toBeUndefined();
+    expect(sensorForecast(undefined, p)).toBeUndefined();
+    expect(sensorForecast(ent('5'), period('week', 0, NOW))).toBeUndefined();
+  });
+
+  it('reads Solcast hourly and half-hourly values', () => {
+    const hourly = sensorForecast(
+      ent('3', {
+        unit_of_measurement: 'kWh',
+        detailedHourly: [
+          { period_start: at(12), pv_estimate: 2 },
+          { period_start: at(13), pv_estimate: 1 },
+          { period_start: at(12, 0, 14), pv_estimate: 9 },
+        ],
+      }),
+      p,
+    )!;
+    expect([hourly.hours?.[12], hourly.hours?.[13], hourly.total]).toEqual([2, 1, 3]);
+    const half = sensorForecast(
+      ent('x', {
+        detailedForecast: [
+          { period_start: at(12), pv_estimate: 2 },
+          { period_start: at(12, 30), pv_estimate: 4 },
+        ],
+      }),
+      p,
+    )!;
+    expect([half.hours?.[12], half.total]).toEqual([3, 3]);
+  });
+
+  it('reads Wh per hour attributes', () => {
+    const f = sensorForecast(ent('4', { wh_hours: { [at(9)]: 1500, [at(10)]: 2500 } }), p)!;
+    expect([f.hours?.[9], f.hours?.[10], f.total]).toEqual([1.5, 2.5, 4]);
+  });
+});
+
 describe('card', () => {
   it('packs the areas into full rows of 12 columns', () => {
     expect(packSpans([8, 4, 6, 6, 3, 3])).toEqual([8, 4, 6, 6, 6, 6]);
@@ -234,5 +287,36 @@ describe('card', () => {
       period: 'day',
       font: 'glow',
     });
+  });
+});
+
+describe('date picker', () => {
+  it('finds the offset of a picked date', () => {
+    expect(offsetFor('day', new Date(2026, 10, 13), NOW)).toBe(0);
+    expect(offsetFor('day', new Date(2026, 9, 31, 23), NOW)).toBe(-13);
+    // across the end of daylight saving time (25 Oct 2026 in Europe)
+    expect(period('day', offsetFor('day', new Date(2026, 9, 20), NOW), NOW).start.getDate()).toBe(
+      20,
+    );
+    expect(offsetFor('week', new Date(2026, 10, 9), NOW)).toBe(0);
+    expect(offsetFor('week', new Date(2026, 10, 15, 22), NOW)).toBe(0);
+    expect(offsetFor('week', new Date(2026, 10, 8), NOW)).toBe(-1);
+    expect(offsetFor('week', new Date(2026, 9, 20), NOW)).toBe(-3);
+    expect(offsetFor('month', new Date(2025, 11, 24), NOW)).toBe(-11);
+    expect(offsetFor('year', new Date(2023, 5, 1), NOW)).toBe(-3);
+    for (const r of ['day', 'week', 'month', 'year'] as const) {
+      const d = new Date(2025, 1, 14);
+      const p = period(r, offsetFor(r, d, NOW), NOW);
+      expect(p.start <= d && d < p.end).toBe(true);
+    }
+  });
+
+  it('lays a month out in weeks from Monday', () => {
+    const nov = monthWeeks(2026, 10);
+    expect(nov).toHaveLength(6);
+    expect([nov[0][0].getMonth(), nov[0][0].getDate()]).toEqual([9, 26]);
+    expect(nov[0][6].getDate()).toBe(1);
+    expect(nov[5][0].getDate()).toBe(30);
+    expect(monthWeeks(2027, 1)).toHaveLength(4); // Feb 2027 starts on a Monday
   });
 });
