@@ -810,6 +810,18 @@ Object.assign(states, {
   'sensor.flow_dev_fridge_power': kwE('sensor.flow_dev_fridge_power', 0.06),
   'sensor.flow_dev_tv_power': kwE('sensor.flow_dev_tv_power', 0.08),
   'sensor.co2_fossil': entity('sensor.co2_fossil', '52', { unit_of_measurement: '%' }),
+  // Own forecast sensor in Solcast style (#179): kWh today + kW per hour.
+  'sensor.flow_pv_forecast': entity('sensor.flow_pv_forecast', '11.8', {
+    unit_of_measurement: 'kWh',
+    detailedHourly: Array.from({ length: 24 }, (_, h) => {
+      const d = new Date();
+      d.setHours(h, 0, 0, 0);
+      return {
+        period_start: d.toISOString(),
+        pv_estimate: h < 7 || h > 17 ? 0 : 2.1 * Math.sin(((h - 7) / 10) * Math.PI),
+      };
+    }),
+  }),
 });
 entities!['sensor.co2_fossil'] = { entity_id: 'sensor.co2_fossil', platform: 'co2signal' };
 

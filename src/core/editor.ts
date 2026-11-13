@@ -198,6 +198,9 @@ const LABELS = {
       'Auswahl und Reihenfolge; ein Bereich erscheint nur, wenn das Energie-Dashboard Daten dafür hat',
     period: 'Zeitraum beim Öffnen',
     flow_period_helper: 'Auf der Karte jederzeit umschaltbar',
+    solar_forecast: 'Solar-Prognose (optional)',
+    flow_forecast_helper:
+      'Sensor mit der erwarteten Energie von heute, z. B. von Forecast.Solar oder Solcast. Leer = Prognose aus dem Energie-Dashboard',
     flow_grid_helper:
       'Netzleistung (+ = Bezug). Ohne Leistungssensoren zeigt der Schaltplan kWh statt kW',
     flow_home_helper: 'Leer = aus Netz, Solar und Akku berechnet',
@@ -366,6 +369,9 @@ const LABELS = {
       'Choice and order; an area only shows when the energy dashboard has data for it',
     period: 'Period when opened',
     flow_period_helper: 'Can be changed on the card at any time',
+    solar_forecast: 'Solar forecast (optional)',
+    flow_forecast_helper:
+      "Sensor with today's expected energy, e.g. from Forecast.Solar or Solcast. Empty = forecast from the energy dashboard",
     flow_grid_helper:
       'Grid power (+ = import). Without power sensors the plan shows kWh instead of kW',
     flow_home_helper: 'Empty = calculated from grid, solar and battery',

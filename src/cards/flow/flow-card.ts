@@ -26,6 +26,8 @@ import {
   fmoney,
   fnum,
   forecastHours,
+  sensorForecast,
+  type DayForecast,
   isoWeek,
   monthWeeks,
   offsetFor,
@@ -75,6 +77,8 @@ export interface FlowCardConfig extends GlowCardConfig {
   sections?: FlowSection[];
   /** Period the card opens with. */
   period?: Range;
+  /** Own solar forecast sensor (energy of today); default: the energy dashboard's forecast. */
+  solar_forecast?: string;
 }
 
 type Kind = NodeKind | 'gas' | 'water' | 'rest';
@@ -253,6 +257,7 @@ export class GlowFlowCard extends GlowCardBase<FlowCardConfig> {
             },
           },
         },
+        { name: 'solar_forecast', selector: { entity: { domain: ['sensor'] } } },
         {
           name: '',
           type: 'expandable',
@@ -282,6 +287,7 @@ export class GlowFlowCard extends GlowCardBase<FlowCardConfig> {
       {
         sections: 'flow_sections_helper',
         period: 'flow_period_helper',
+        solar_forecast: 'flow_forecast_helper',
         grid: 'flow_grid_helper',
         home: 'flow_home_helper',
         invert_grid: 'invert_grid_helper',
@@ -333,7 +339,7 @@ export class GlowFlowCard extends GlowCardBase<FlowCardConfig> {
     const c = this.config;
     if (!c) return [];
     const rates = (this.setup?.devices ?? []).map((d) => d.rate);
-    return [c.grid, c.solar, c.battery, c.battery_power, c.home, ...rates].filter(
+    return [c.grid, c.solar, c.battery, c.battery_power, c.home, c.solar_forecast, ...rates].filter(
       (x): x is string => !!x,
     );
   }
@@ -420,6 +426,7 @@ export class GlowFlowCard extends GlowCardBase<FlowCardConfig> {
     if ((!pd || stale) && this.loadingKey !== this.key) void this.loadPeriod();
     if (
       this.setup.forecast.length &&
+      !this.config?.solar_forecast &&
       this.range === 'day' &&
       this.offset === 0 &&
       Date.now() - this.forecastAt > 30 * 60_000
@@ -538,6 +545,14 @@ export class GlowFlowCard extends GlowCardBase<FlowCardConfig> {
     next.set(key, pd);
     this.data = next;
     if (this.loadingKey === key) this.loadingKey = undefined;
+  }
+
+  /** Today's forecast: the chosen sensor, else the energy dashboard's forecast. */
+  private dayForecast(p: Period): DayForecast | undefined {
+    const id = this.config?.solar_forecast;
+    if (id) return isLive(p) ? sensorForecast(this.hass?.states[id], p) : undefined;
+    const hours = forecastHours(this.forecast, this.setup?.forecast ?? [], p);
+    return hours ? { hours, total: hours.reduce((a, b) => a + b, 0) } : undefined;
   }
 
   private async loadForecast(): Promise<void> {
@@ -1488,9 +1503,10 @@ export class GlowFlowCard extends GlowCardBase<FlowCardConfig> {
     const pd = this.pd!;
     const solar = pd.series.solar ?? [];
     const p = this.period;
-    const fc = forecastHours(this.forecast, this.setup!.forecast, p);
+    const day = this.dayForecast(p);
+    const fc = day?.hours;
     const tot = pd.totals.solar ?? 0;
-    const fcTotal = fc?.reduce((a, b) => a + b, 0);
+    const fcTotal = day?.total;
     const right = html`<span class="big">${fkwh(hass, tot)}<small>kWh</small></span>`;
     const chart = this.chartFrame('solar', (w, h, bw) => {
       const top = 6;
