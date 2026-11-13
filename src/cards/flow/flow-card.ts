@@ -1192,44 +1192,69 @@ export class GlowFlowCard extends GlowCardBase<FlowCardConfig> {
     const exp = s.export ?? z;
     const chg = s.charge ?? z;
     return this.chartFrame('usage', (w, h, bw) => {
+      // One kWh scale above and below the line (like HA's energy dashboard, #183): the zero
+      // line sits where the largest bar up and the largest bar down both fit.
       const top = 6;
-      const bot = h * 0.66;
+      const bottom = h - 16;
       const up = used.map((v, i) => v + dis[i] + imp[i]);
       const down = exp.map((v, i) => v + chg[i]);
-      const mx = Math.max(0.01, ...up, ...down.map((v) => v / 0.4)) * 1.1;
-      const sc = (bot - top) / mx;
+      const maxUp = Math.max(0, ...up);
+      const maxDown = Math.max(0, ...down);
+      const span = Math.max(0.01, maxUp + maxDown) * 1.08;
+      const sc = (bottom - top) / span;
+      const bot = top + maxUp * 1.04 * sc;
       const fill = filledBuckets(this.period);
       const live = isLive(this.period);
+      const x = (i: number) => i * bw + bw * 0.18;
+      const bwid = bw * 0.64;
+      const rx = Math.min(3, bw * 0.2);
       const out: TemplateResult[] = [];
+      // Rectangle as a path, rounded only at its top (t) and/or bottom (b) end.
+      const box = (x0: number, y0: number, hh: number, t: boolean, b: boolean) => {
+        const r = Math.min(rx, hh / 2, bwid / 2);
+        const rt = t ? r : 0;
+        const rb = b ? r : 0;
+        const x1 = x0 + bwid;
+        const y1 = y0 + hh;
+        return `M${x0},${y0 + rt} Q${x0},${y0} ${x0 + rt},${y0} L${x1 - rt},${y0} Q${x1},${y0} ${x1},${y0 + rt} L${x1},${y1 - rb} Q${x1},${y1} ${x1 - rb},${y1} L${x0 + rb},${y1} Q${x0},${y1} ${x0},${y1 - rb} Z`;
+      };
+      // Stacked segments touch each other; only the outer end of the bar is rounded.
+      const stack = (i: number, parts: [number, Kind][], dir: 1 | -1, a: number) => {
+        const shown = parts.filter(([v]) => v * sc >= 0.5);
+        let y = dir > 0 ? bot : bot + 1;
+        shown.forEach(([v, k], j) => {
+          const sh = v * sc;
+          const outer = j === shown.length - 1;
+          const y0 = dir > 0 ? y - sh : y;
+          out.push(
+            svg`<path d=${box(x(i), y0, sh, dir > 0 && outer, dir < 0 && outer)} fill="rgba(${this.col(k)},${a})"/>`,
+          );
+          y += dir > 0 ? -sh : sh;
+        });
+      };
       for (let i = 0; i < fill; i++) {
         const a = live && i === fill - 1 ? 0.45 : 0.85;
-        let y = bot;
-        for (const [v, k] of [
-          [used[i], 'solar'],
-          [dis[i], 'bat'],
-          [imp[i], 'grid'],
-        ] as [number, Kind][]) {
-          if (v <= 0) continue;
-          const hh = v * sc;
-          out.push(
-            svg`<rect x=${i * bw + bw * 0.18} y=${y - hh} width=${bw * 0.64} height=${hh} rx=${Math.min(3, bw * 0.2)} fill="rgba(${this.col(k)},${a})"/>`,
-          );
-          y -= hh + 1;
-        }
-        let y2 = bot + 2;
-        for (const [v, k] of [
-          [exp[i], 'solar'],
-          [chg[i], 'bat'],
-        ] as [number, Kind][]) {
-          if (v <= 0) continue;
-          const hh = v * sc * 0.4;
-          out.push(
-            svg`<rect x=${i * bw + bw * 0.18} y=${y2} width=${bw * 0.64} height=${hh} rx=${Math.min(3, bw * 0.2)} fill="rgba(${this.col(k)},.45)"/>`,
-          );
-          y2 += hh + 1;
-        }
+        stack(
+          i,
+          [
+            [used[i], 'solar'],
+            [dis[i], 'bat'],
+            [imp[i], 'grid'],
+          ],
+          1,
+          a,
+        );
+        stack(
+          i,
+          [
+            [exp[i], 'solar'],
+            [chg[i], 'bat'],
+          ],
+          -1,
+          live && i === fill - 1 ? 0.3 : 0.45,
+        );
       }
-      out.push(svg`<line x1="0" x2=${w} y1=${bot + 1} y2=${bot + 1} class="base"/>`);
+      out.push(svg`<line x1="0" x2=${w} y1=${bot + 0.5} y2=${bot + 0.5} class="base"/>`);
       out.push(svg`${this.slots(bw, bot)}`);
       out.push(svg`${this.nowLine(bw, h)}`);
       return [svg`<g style="filter:drop-shadow(0 0 4px rgba(${this.col('grid')},.25))">${out}</g>`];
