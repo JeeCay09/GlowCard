@@ -114,8 +114,10 @@ const CAL_ICON = svg`<svg viewBox="0 0 24 24" aria-hidden="true">
     stroke-linejoin="round"
   />
 </svg>`;
+type CalLevel = 'days' | 'months' | 'years';
 const CHEV_L = 'M15 5l-7 7 7 7';
 const CHEV_R = 'M9 5l7 7-7 7';
+const CHEV_D = 'M5 9l7 7 7-7';
 
 /** Width below which the plan turns vertical and the date picker gets its own row. */
 const NARROW = 560;
@@ -212,6 +214,8 @@ export class GlowFlowCard extends GlowCardBase<FlowCardConfig> {
   @state() private calOpen = false;
   @state() private calY = 0;
   @state() private calM = 0;
+  /** What the calendar lists: days of a month, months of a year or twelve years. */
+  @state() private calLvl: CalLevel = 'days';
   private onViewResize = () => {
     if (Math.abs(window.innerHeight - this.viewH) > 20) this.viewH = window.innerHeight;
   };
@@ -658,6 +662,24 @@ export class GlowFlowCard extends GlowCardBase<FlowCardConfig> {
     const s = this.period.start;
     this.calY = s.getFullYear();
     this.calM = s.getMonth();
+    this.calLvl = this.calBase;
+  }
+
+  /** The level on which the selected range is picked. */
+  private get calBase(): CalLevel {
+    return this.range === 'year' ? 'years' : this.range === 'month' ? 'months' : 'days';
+  }
+
+  /** Title tap: from days to months to years, for far jumps. */
+  private calUp(): void {
+    this.calLvl = this.calLvl === 'days' ? 'months' : 'years';
+  }
+
+  /** Tap on a month or year above the base level: go one level down again. */
+  private calDown(d: Date): void {
+    this.calY = d.getFullYear();
+    if (this.calLvl === 'months') this.calM = d.getMonth();
+    this.calLvl = this.calLvl === 'years' && this.calBase === 'days' ? 'months' : this.calBase;
   }
 
   private toggleCal(): void {
@@ -692,8 +714,9 @@ export class GlowFlowCard extends GlowCardBase<FlowCardConfig> {
 
   /** Pages the calendar: a month (day, week), a year (month) or twelve years (year). */
   private calStep(d: number): void {
-    if (this.range === 'month') this.calY += d;
-    else if (this.range === 'year') this.calY += 12 * d;
+    if (this.calLvl === 'months') this.calY += d;
+    else if (this.calLvl === 'years')
+      this.calY = Math.min(new Date().getFullYear(), this.calY) + 12 * d;
     else {
       const m = new Date(this.calY, this.calM + d, 1);
       this.calY = m.getFullYear();
@@ -717,7 +740,9 @@ export class GlowFlowCard extends GlowCardBase<FlowCardConfig> {
     let title: string;
     let canNext: boolean;
     let body: TemplateResult;
-    if (range === 'day' || range === 'week') {
+    const lvl = this.calLvl;
+    const base = lvl === this.calBase;
+    if (lvl === 'days') {
       title = fmt({ month: 'long', year: 'numeric' }, new Date(y, m, 1));
       canNext = y < yNow || (y === yNow && m < now.getMonth());
       const today = new Date(yNow, now.getMonth(), now.getDate());
@@ -764,28 +789,35 @@ export class GlowFlowCard extends GlowCardBase<FlowCardConfig> {
         )}
       </div>`;
     } else {
-      const first = range === 'month' ? 0 : y - 11;
-      title = range === 'month' ? String(y) : `${first} – ${y}`;
-      canNext = y < yNow;
+      const months = lvl === 'months';
+      // the years page ends with the current year when it would reach past it
+      const last = months ? y : Math.min(yNow, y);
+      const first = last - 11;
+      title = months ? String(y) : `${first} – ${last}`;
+      canNext = months ? y < yNow : last < yNow;
       const items = Array.from({ length: 12 }, (_, i) =>
-        range === 'month' ? new Date(y, i, 1) : new Date(first + i, 0, 1),
+        months ? new Date(y, i, 1) : new Date(first + i, 0, 1),
       );
+      // above the base level the month / year of the selection is marked
+      const sy = sel.start.getFullYear();
+      const on = (d: Date) =>
+        base
+          ? inSel(d)
+          : d.getFullYear() === sy && (!months || d.getMonth() === sel.start.getMonth());
       body = html`<div class="cg cgb">
         ${items.map((d) => {
-          const cur =
-            d.getFullYear() === yNow && (range === 'year' || d.getMonth() === now.getMonth());
+          const cur = d.getFullYear() === yNow && (!months || d.getMonth() === now.getMonth());
+          const label = months
+            ? fmt({ month: 'long', year: 'numeric' }, d)
+            : String(d.getFullYear());
           return html`<button
-            class="c ${cur ? 'now' : ''} ${inSel(d) ? 'on' : ''}"
+            class="c ${cur ? 'now' : ''} ${on(d) ? 'on' : ''}"
             ?disabled=${d > now}
-            aria-label=${
-              range === 'month'
-                ? fmt({ month: 'long', year: 'numeric' }, d)
-                : String(d.getFullYear())
-            }
-            aria-pressed=${inSel(d) ? 'true' : 'false'}
-            @click=${() => this.pick(d)}
+            aria-label=${label}
+            aria-pressed=${on(d) ? 'true' : 'false'}
+            @click=${() => (base ? this.pick(d) : this.calDown(d))}
           >
-            ${range === 'month' ? fmt({ month: 'short' }, d) : d.getFullYear()}
+            ${months ? fmt({ month: 'short' }, d) : d.getFullYear()}
           </button>`;
         })}
       </div>`;
@@ -801,7 +833,17 @@ export class GlowFlowCard extends GlowCardBase<FlowCardConfig> {
         <button aria-label=${ft(hass, 'back')} @click=${() => this.calStep(-1)}>
           ${chev(CHEV_L)}
         </button>
-        <span class="ct2">${title}</span>
+        ${
+          lvl === 'years'
+            ? html`<span class="ct2">${title}</span>`
+            : html`<button
+                class="ct2 up"
+                aria-label="${title}, ${ft(hass, lvl === 'days' ? 'pick_month' : 'pick_year')}"
+                @click=${() => this.calUp()}
+              >
+                ${title}${chev(CHEV_D)}
+              </button>`
+        }
         <button
           aria-label=${ft(hass, 'next')}
           ?disabled=${!canNext}
@@ -1798,6 +1840,18 @@ export class GlowFlowCard extends GlowCardBase<FlowCardConfig> {
         display: grid;
         place-items: center;
         background: var(--glow-inset);
+      }
+      .cn button.up {
+        width: auto;
+        display: flex;
+        align-items: center;
+        gap: 4px;
+        padding: 0 8px 0 12px;
+      }
+      .cn .up svg {
+        width: 12px;
+        height: 12px;
+        color: var(--glow-muted);
       }
       .ct2 {
         font-size: 14px;
