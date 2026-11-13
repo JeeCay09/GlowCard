@@ -21,7 +21,7 @@
 - Works with **standard Home Assistant entities only**. No helpers, template sensors or automations required.
 
 > [!NOTE]
-> GlowCard is in beta. v0.11.0 contains the switch, light, header, status bar, chip, heading, energy, navigation, waste collection and media cards, all with a visual editor; more cards follow (see the roadmap). Options may still change before v1.0.
+> GlowCard is in beta. v0.12.0 contains the switch, light, header, status bar, chip, heading, energy, energy flow, navigation, waste collection and media cards, all with a visual editor; more cards follow (see the roadmap). Options may still change before v1.0.
 
 ## Cards
 
@@ -38,7 +38,7 @@
 | Waste       | `custom:glowcard-waste`       | `calendar.*` or date `sensor.*`                | beta (v0.10) |
 | Media       | `custom:glowcard-media`       | `media_player.*`                               | beta (v0.11) |
 | Media rooms | `custom:glowcard-media-rooms` | several `media_player.*`                       | beta (v0.11) |
-| Energy flow | `custom:glowcard-energy-flow` | HA energy dashboard; power `sensor.*` optional | beta (next)  |
+| Energy flow | `custom:glowcard-energy-flow` | HA energy dashboard; power `sensor.*` optional | beta (v0.12) |
 
 All cards have a visual editor (Home Assistant 2025.1 or newer). In a sections dashboard, the cards fit Home Assistant's grid exactly (rows of 56 px): tile 2 rows on phones or 3 on desktop, switch group and power card 3, mini, status bar and chip 1 row. Width: tile, light, mini and switch group = 1/2 (tile and mini can shrink to 1/4), switch with power/usage, header, status bar, heading, energy and chip rows = full width (the energy card cannot be made narrower), single chip = 1/2, icon-only chip = 1/4. You can still change the width in the dashboard editor. New cards start without an entity; when you add a card "by entity", it uses the entity you picked.
 
@@ -74,7 +74,7 @@ lovelace:
    - Type: **JavaScript module**
 4. Reload your browser.
 
-After an update, change the URL to e.g. `/local/glowcard/glowcard.js?v=0.11.0` so browsers load the new file.
+After an update, change the URL to e.g. `/local/glowcard/glowcard.js?v=0.12.0` so browsers load the new file.
 
 ## Configuration
 
@@ -427,7 +427,7 @@ battery: sensor.battery_state_of_charge
 2. Switch and plug cards → v0.1.0 (beta)
 3. Light card and popup → v0.2.0 (beta)
 4. Header, status bar and chips, visual editor and default widths → **v0.3.0 (beta)**
-5. Heading card (section titles with badges, added to the plan) → v0.4.0; Energy card "load ring" with popup → v0.7.0; energy card without ring (big current value), editor and phone layout → v0.8.0; navigation bar (floating or as a card) → v0.9.0; waste collection card → v0.10.0; media card and media rooms card → v0.11.0
+5. Heading card (section titles with badges, added to the plan) → v0.4.0; Energy card "load ring" with popup → v0.7.0; energy card without ring (big current value), editor and phone layout → v0.8.0; navigation bar (floating or as a card) → v0.9.0; waste collection card → v0.10.0; media card and media rooms card → v0.11.0; energy flow card (whole energy page from the energy dashboard) → v0.12.0
 6. Visual editors for all cards, full docs, submission to the HACS default list → v1.0.0
 
 Later: room card, binary sensor, irrigation/plant, cover and vacuum popups.

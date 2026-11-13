@@ -21,24 +21,24 @@
 - Funktioniert **nur mit Standard-Entitäten von Home Assistant**. Keine Helfer, Template-Sensoren oder Automationen nötig.
 
 > [!NOTE]
-> GlowCard ist in der Beta. v0.11.0 enthält Schalter, Licht, Kopfzeile, Status-Leiste, Chips, Überschrift, Energie, Navigation, Müllabfuhr und Medien, alle mit visuellem Editor; weitere Karten folgen (siehe Roadmap). Optionen können sich bis v1.0 noch ändern.
+> GlowCard ist in der Beta. v0.12.0 enthält Schalter, Licht, Kopfzeile, Status-Leiste, Chips, Überschrift, Energie, Energiefluss, Navigation, Müllabfuhr und Medien, alle mit visuellem Editor; weitere Karten folgen (siehe Roadmap). Optionen können sich bis v1.0 noch ändern.
 
 ## Karten
 
-| Karte         | Typ                           | Entitäten                                               | Status         |
-| ------------- | ----------------------------- | ------------------------------------------------------- | -------------- |
-| Schalter      | `custom:glowcard-switch`      | `switch.*` (auch Steckdosen), `input_boolean.*`         | Beta (v0.1)    |
-| Licht         | `custom:glowcard-light`       | `light.*`                                               | Beta (v0.2)    |
-| Kopfzeile     | `custom:glowcard-header`      | `person.*`, Begrüßung, Datum/Uhrzeit                    | Beta (v0.3)    |
-| Status-Leiste | `custom:glowcard-status`      | Wetter, Lichter, Energie, Sicherheit, Warnungen         | Beta (v0.3)    |
-| Chip          | `custom:glowcard-chip`        | wie die Status-Leiste, plus Personen und Akku           | Beta (v0.3)    |
-| Überschrift   | `custom:glowcard-heading`     | beliebige Entitäten als Badges                          | Beta (v0.4)    |
-| Energie       | `custom:glowcard-energy`      | Leistungs-`sensor.*` für Haus oder Netz; Solar optional | Beta (v0.7)    |
-| Navigation    | `custom:glowcard-nav`         | Ansichten, Popups (`#hash`); Status-Punkte optional     | Beta (v0.9)    |
-| Müll          | `custom:glowcard-waste`       | `calendar.*` oder Datums-`sensor.*`                     | Beta (v0.10)   |
-| Medien        | `custom:glowcard-media`       | `media_player.*`                                        | Beta (v0.11)   |
-| Medien-Räume  | `custom:glowcard-media-rooms` | mehrere `media_player.*`                                | Beta (v0.11)   |
-| Energiefluss  | `custom:glowcard-energy-flow` | HA-Energie-Dashboard; Leistungs-`sensor.*` optional     | Beta (nächste) |
+| Karte         | Typ                           | Entitäten                                               | Status       |
+| ------------- | ----------------------------- | ------------------------------------------------------- | ------------ |
+| Schalter      | `custom:glowcard-switch`      | `switch.*` (auch Steckdosen), `input_boolean.*`         | Beta (v0.1)  |
+| Licht         | `custom:glowcard-light`       | `light.*`                                               | Beta (v0.2)  |
+| Kopfzeile     | `custom:glowcard-header`      | `person.*`, Begrüßung, Datum/Uhrzeit                    | Beta (v0.3)  |
+| Status-Leiste | `custom:glowcard-status`      | Wetter, Lichter, Energie, Sicherheit, Warnungen         | Beta (v0.3)  |
+| Chip          | `custom:glowcard-chip`        | wie die Status-Leiste, plus Personen und Akku           | Beta (v0.3)  |
+| Überschrift   | `custom:glowcard-heading`     | beliebige Entitäten als Badges                          | Beta (v0.4)  |
+| Energie       | `custom:glowcard-energy`      | Leistungs-`sensor.*` für Haus oder Netz; Solar optional | Beta (v0.7)  |
+| Navigation    | `custom:glowcard-nav`         | Ansichten, Popups (`#hash`); Status-Punkte optional     | Beta (v0.9)  |
+| Müll          | `custom:glowcard-waste`       | `calendar.*` oder Datums-`sensor.*`                     | Beta (v0.10) |
+| Medien        | `custom:glowcard-media`       | `media_player.*`                                        | Beta (v0.11) |
+| Medien-Räume  | `custom:glowcard-media-rooms` | mehrere `media_player.*`                                | Beta (v0.11) |
+| Energiefluss  | `custom:glowcard-energy-flow` | HA-Energie-Dashboard; Leistungs-`sensor.*` optional     | Beta (v0.12) |
 
 Alle Karten haben einen visuellen Editor (ab Home Assistant 2025.1). In einem Sections-Dashboard passen die Karten genau ins Raster von Home Assistant (Zeilen zu 56 px): Kachel 2 Zeilen am Handy bzw. 3 am PC, Schalter-Gruppe und Leistungs-Karte 3, Mini, Status-Leiste und Chip 1 Zeile. Breite: Kachel, Licht, Mini und Schalter-Gruppe = 1/2 (Kachel und Mini lassen sich auf 1/4 verkleinern), Schalter mit Leistung/Verbrauch, Kopfzeile, Status-Leiste, Überschrift, Energie und Chip-Reihen = ganze Breite (die Energie-Karte lässt sich nicht schmaler machen), einzelner Chip = 1/2, Symbol-Chip = 1/4. Die Breite kannst du im Dashboard-Editor weiterhin ändern. Neue Karten starten ohne Entität; fügst du eine Karte „nach Entität“ hinzu, nimmt sie die gewählte Entität.
 
@@ -74,7 +74,7 @@ lovelace:
    - Typ: **JavaScript-Modul**
 4. Browser neu laden.
 
-Nach einem Update die URL z. B. auf `/local/glowcard/glowcard.js?v=0.11.0` ändern, damit Browser die neue Datei laden.
+Nach einem Update die URL z. B. auf `/local/glowcard/glowcard.js?v=0.12.0` ändern, damit Browser die neue Datei laden.
 
 ## Konfiguration
 
@@ -427,7 +427,7 @@ battery: sensor.akku_ladestand
 2. Schalter- und Steckdosen-Karte → v0.1.0 (Beta)
 3. Licht-Karte und Popup → v0.2.0 (Beta)
 4. Kopfzeile, Status-Leiste und Chips, visueller Editor und Standard-Breiten → **v0.3.0 (Beta)**
-5. Überschrift-Karte (Abschnittstitel mit Badges, zusätzlich zum Plan) → v0.4.0; Energie-Karte „Lastring“ mit Popup → v0.7.0; Energie-Karte ohne Ring (große Zahl), Editor und Handy-Layout → v0.8.0; Navigationsleiste (schwebend oder als Karte) → v0.9.0; Müll-Karte → v0.10.0; Medien-Karte und Medien-Räume → v0.11.0
+5. Überschrift-Karte (Abschnittstitel mit Badges, zusätzlich zum Plan) → v0.4.0; Energie-Karte „Lastring“ mit Popup → v0.7.0; Energie-Karte ohne Ring (große Zahl), Editor und Handy-Layout → v0.8.0; Navigationsleiste (schwebend oder als Karte) → v0.9.0; Müll-Karte → v0.10.0; Medien-Karte und Medien-Räume → v0.11.0; Energiefluss-Karte (ganze Energie-Seite aus dem Energie-Dashboard) → v0.12.0
 6. Visuelle Editoren für alle Karten, vollständige Doku, Antrag auf HACS-Standardliste → v1.0.0
 
 Später: Raum-Karte, Binärsensor, Bewässerung/Pflanze, Popups für Rollos und Saugroboter.
