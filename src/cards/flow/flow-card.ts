@@ -178,13 +178,6 @@ interface PlanSeg {
   idle: boolean;
 }
 
-interface PlanTag {
-  x: number;
-  y: number;
-  k: NodeKind;
-  text: string;
-}
-
 /**
  * Energy flow card "Schaltplan" (#152): a calm line plan Netz — Solar — Akku — Haus with
  * neon icons and light dots moving with the power. Below it the key figures and optional
@@ -789,7 +782,6 @@ export class GlowFlowCard extends GlowCardBase<FlowCardConfig> {
     if (!f) return nothing;
     const idle = (v: number | undefined) =>
       v === undefined || Math.abs(v) < (live ? IDLE_W : IDLE_KWH);
-    const val = (v: number) => (live ? kwText(hass, v) : `${fkwh(hass, Math.abs(v))} kWh`);
     const big = (v: number) =>
       live
         ? html`${fnum(hass, Math.abs(v) / 1000, Math.abs(v) >= 1000 ? 1 : 2)}<small>kW</small>`
@@ -831,7 +823,6 @@ export class GlowFlowCard extends GlowCardBase<FlowCardConfig> {
 
     const nodes: PlanNode[] = [];
     const segs: PlanSeg[] = [];
-    const tags: PlanTag[] = [];
     const R = narrow ? 28 : 37; // icon half size + gap
     const gridV = live ? f.grid : (t?.import ?? 0);
     const node = (
@@ -846,18 +837,6 @@ export class GlowFlowCard extends GlowCardBase<FlowCardConfig> {
     ) => nodes.push({ k, x, y, lab, t1, t2: big(v), t3: short(t3), entity });
     const seg = (a: [number, number], b: [number, number], k: NodeKind, v: number | undefined) =>
       segs.push({ a, b, k, v: v ?? 0, idle: idle(v) });
-    const tag = (
-      x: number,
-      y: number,
-      k: NodeKind,
-      v: number | undefined,
-      fwd: string,
-      back: string,
-    ) => {
-      if (idle(v)) return;
-      const txt = val(v!);
-      tags.push({ x, y, k, text: v! >= 0 ? `${txt} ${fwd}` : `${back} ${txt}` });
-    };
     const lineK: NodeKind = this.pv ? (this.main === 'grid' ? 'grid' : this.main) : 'grid';
     const batName =
       soc !== null && live ? `${ft(hass, 'battery')} ${fnum(hass, soc, 0)} %` : ft(hass, 'battery');
@@ -892,23 +871,18 @@ export class GlowFlowCard extends GlowCardBase<FlowCardConfig> {
         );
       const j1 = s ? xs : b ? xk : xh - R;
       seg([xn + R, yb], [j1, yb], s || b ? lineK : 'grid', f.grid);
-      tag((xn + R + j1) / 2, yb, s || b ? lineK : 'grid', f.grid, '→', '←');
       if (s) {
         seg([xs, yb - off + R], [xs, yb], 'solar', f.solar);
-        tag(xs, yb - off / 2, 'solar', f.solar, '↓', '↑');
       }
       if (s && b) {
         seg([xs, yb], [xk, yb], lineK, f.middle);
-        tag((xs + xk) / 2, yb, lineK, f.middle, '→', '←');
       }
       if (b) {
         seg([xk, yb], [xk, yb + off - R], 'bat', f.bat);
-        tag(xk, yb + off / 2, 'bat', f.bat, '↓', '↑');
       }
       if (s || b) {
         const last = b ? xk : xs;
         seg([last, yb], [xh - R, yb], lineK, f.home);
-        tag((last + xh - R) / 2, yb, lineK, f.home, '→', '←');
       }
     } else {
       const xb = w / 2;
@@ -924,17 +898,14 @@ export class GlowFlowCard extends GlowCardBase<FlowCardConfig> {
       if (b) node('bat', xr, yk, 'b', batName, f.bat ?? 0, batT3, c.battery_power ?? c.battery);
       const j1 = s ? ys : b ? yk : yh - R;
       seg([xb, yn + R], [xb, j1], s || b ? lineK : 'grid', f.grid);
-      tag(xb, s || b ? (yn + j1) / 2 + 10 : h / 2, s || b ? lineK : 'grid', f.grid, '↓', '↑');
       if (s) seg([xl + R, ys], [xb, ys], 'solar', f.solar);
       if (s && b) {
         seg([xb, ys], [xb, yk], lineK, f.middle);
-        tag(xb, (ys + yk) / 2, lineK, f.middle, '↓', '↑');
       }
       if (b) seg([xb, yk], [xr - R, yk], 'bat', f.bat);
       if (s || b) {
         const last = b ? yk : ys;
         seg([xb, last], [xb, yh - R], lineK, f.home);
-        tag(xb, (last + yh) / 2, lineK, f.home, '↓', '↑');
       }
     }
 
@@ -966,13 +937,7 @@ export class GlowFlowCard extends GlowCardBase<FlowCardConfig> {
             svg`<circle cx=${x} cy=${y} r="5" fill="rgb(${lc})" style="filter:drop-shadow(0 0 5px rgba(${lc},1))"/>`,
         )}
       </svg>
-      ${nodes.map((nd) => this.node(nd, R, nd.k === 'bat' ? soc : null))}
-      ${tags.map(
-        (tg) =>
-          html`<div class="tag" style="left:${tg.x}px;top:${tg.y}px;--a:${this.col(tg.k)}">
-            ${tg.text}
-          </div>`,
-      )}`;
+      ${nodes.map((nd) => this.node(nd, R, nd.k === 'bat' ? soc : null))}`;
   }
 
   private node(nd: PlanNode, R: number, soc: number | null): TemplateResult {
@@ -1672,20 +1637,6 @@ export class GlowFlowCard extends GlowCardBase<FlowCardConfig> {
       }
       .narrow .t3 {
         font-size: 11px;
-      }
-      .tag {
-        position: absolute;
-        transform: translate(-50%, -50%);
-        z-index: 2;
-        padding: 4px 10px;
-        border-radius: 99px;
-        font-size: 12px;
-        font-weight: 800;
-        white-space: nowrap;
-        background: var(--glow-pop-solid);
-        border: 1px solid rgba(var(--a), 0.5);
-        color: color-mix(in srgb, rgb(var(--a)) 75%, var(--glow-text));
-        box-shadow: 0 0 14px -4px rgba(var(--a), 0.8);
       }
       /* key figures */
       .kpis {
