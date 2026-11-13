@@ -902,31 +902,38 @@ export class GlowFlowCard extends GlowCardBase<FlowCardConfig> {
     }
 
     // junction dots where segments meet
-    const ends = new Map<string, number>();
+    // (grey when nothing flows through them, #181)
+    const ends = new Map<string, { n: number; live: boolean }>();
     for (const sg of segs)
-      for (const pt of [sg.a, sg.b]) ends.set(pt.join(), (ends.get(pt.join()) ?? 0) + 1);
+      for (const pt of [sg.a, sg.b]) {
+        const e = ends.get(pt.join()) ?? { n: 0, live: false };
+        ends.set(pt.join(), { n: e.n + 1, live: e.live || !sg.idle });
+      }
     const dots = [...ends.entries()]
-      .filter(([, n]) => n > 1)
-      .map(([k]) => k.split(',').map(Number));
+      .filter(([, e]) => e.n > 1)
+      .map(([k, e]) => ({ p: k.split(',').map(Number), live: e.live }));
     const lc = this.col(lineK);
+    const idleC = this.col('rest');
     const maxV = live ? 5000 : 20;
     return html`<svg class="wires" width=${w} height=${h} viewBox="0 0 ${w} ${h}">
         ${segs.map((sg) => {
-          const c = this.col(sg.k);
+          // idle connections share one neutral grey instead of their source colour
+          const c = sg.idle ? idleC : this.col(sg.k);
           const [a, z] = sg.v < 0 ? [sg.b, sg.a] : [sg.a, sg.b];
           const d = `M${a[0]},${a[1]} L${z[0]},${z[1]}`;
           const mag = Math.min(1, Math.abs(sg.v) / maxV);
-          return svg`<path d=${d} stroke="rgba(${c},.18)" stroke-width=${sg.idle ? 4 : 4 + mag * 8} stroke-linecap="round" fill="none"/>
-            <path d=${d} stroke="rgba(${c},${sg.idle ? 0.25 : 0.55})" stroke-width="1.5" fill="none"/>
+          return svg`<path d=${d} stroke="rgba(${c},${sg.idle ? 0.1 : 0.18})" stroke-width=${sg.idle ? 4 : 4 + mag * 8} stroke-linecap="round" fill="none"/>
+            <path d=${d} stroke="rgba(${c},${sg.idle ? 0.4 : 0.55})" stroke-width="1.5" fill="none"/>
             ${
               sg.idle
                 ? nothing
                 : svg`<path d=${d} class="flow" stroke="rgb(${c})" stroke-width="3" stroke-dasharray="2 10" stroke-linecap="round" fill="none" style="--sp:${(1.9 - mag * 1.2).toFixed(2)}s;filter:drop-shadow(0 0 4px rgba(${c},1))"/>`
             }`;
         })}
-        ${dots.map(
-          ([x, y]) =>
-            svg`<circle cx=${x} cy=${y} r="5" fill="rgb(${lc})" style="filter:drop-shadow(0 0 5px rgba(${lc},1))"/>`,
+        ${dots.map(({ p: [x, y], live: on }) =>
+          on
+            ? svg`<circle cx=${x} cy=${y} r="5" fill="rgb(${lc})" style="filter:drop-shadow(0 0 5px rgba(${lc},1))"/>`
+            : svg`<circle cx=${x} cy=${y} r="4" fill="rgba(${idleC},.7)"/>`,
         )}
       </svg>
       ${nodes.map((nd) => this.node(nd, R, nd.k === 'bat' ? soc : null))}
