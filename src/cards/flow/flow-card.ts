@@ -1245,22 +1245,23 @@ export class GlowFlowCard extends GlowCardBase<FlowCardConfig> {
     const cur = currency(hass);
     const list: [string, string][] = [];
     const cost = t.energyCost;
+    // A figure that cannot be calculated yet shows "–": the tiles stay the same (#202).
+    const pct = (v: number | undefined) => (v === undefined ? '–' : `${fnum(hass, v, 0)} %`);
     if (!this.pv) {
       if (t.home !== undefined) list.push([lab('kpi_consumption'), `${fkwh(hass, t.home)} kWh`]);
       if (t.import !== undefined) list.push([lab('kpi_import'), `${fkwh(hass, t.import)} kWh`]);
       const lc = lowCarbon(t.import, this.pd?.fossil);
-      if (lc !== undefined) list.push([ft(hass, 'kpi_low_carbon'), `${fnum(hass, lc, 0)} %`]);
+      if (lc !== undefined) list.push([ft(hass, 'kpi_low_carbon'), pct(lc)]);
     } else {
-      const ss = selfSufficiency(t);
-      const sc = selfConsumption(t);
       const gn = gridNeutrality(t);
-      if (ss !== undefined) list.push([ft(hass, 'kpi_self_sufficiency'), `${fnum(hass, ss, 0)} %`]);
-      if (sc !== undefined) list.push([ft(hass, 'kpi_self_consumption'), `${fnum(hass, sc, 0)} %`]);
-      if (gn !== undefined)
-        list.push([
-          ft(hass, 'kpi_neutrality'),
-          `${gn > 0 ? '+' : gn < 0 ? '−' : ''}${fkwh(hass, Math.abs(gn))} kWh`,
-        ]);
+      list.push([ft(hass, 'kpi_self_sufficiency'), pct(selfSufficiency(t))]);
+      if (this.hasSolar) list.push([ft(hass, 'kpi_self_consumption'), pct(selfConsumption(t))]);
+      list.push([
+        ft(hass, 'kpi_neutrality'),
+        gn === undefined
+          ? '–'
+          : `${gn > 0 ? '+' : gn < 0 ? '−' : ''}${fkwh(hass, Math.abs(gn))} kWh`,
+      ]);
     }
     if (cost !== undefined) list.push([lab('kpi_cost'), fmoney(hass, cost, cur)]);
     if (!list.length) return nothing;
@@ -2120,6 +2121,10 @@ export class GlowFlowCard extends GlowCardBase<FlowCardConfig> {
       }
       .narrow .kpis {
         gap: 8px;
+      }
+      /* an odd last tile fills the row instead of leaving a gap */
+      .narrow .kpi:last-child:nth-child(odd) {
+        grid-column: 1 / -1;
       }
       .kpi {
         border-radius: 18px;
