@@ -1045,8 +1045,15 @@ export class GlowFlowCard extends GlowCardBase<FlowCardConfig> {
     const live = this.live;
     const n = this.now;
     const t = this.pd?.totals;
-    // While a period loads the plan stays in place with "–" and resting lines (#203).
+    // While a period loads, a spinner takes the plan's place (#203).
     const pending = !live && !t;
+    if (pending)
+      return html`<div class="spin" role="status" aria-label=${ft(hass, 'loading')}>
+        <svg viewBox="0 0 48 48" aria-hidden="true">
+          <circle cx="24" cy="24" r="19" class="ring" />
+          <circle cx="24" cy="24" r="19" class="arc" />
+        </svg>
+      </div>`;
     const f: PlanFlows = live ? livePlan(n) : periodPlan(t ?? {}, this.hasSolar, this.hasBattery);
     const idle = (v: number | undefined) =>
       v === undefined || Math.abs(v) < (live ? IDLE_W : IDLE_KWH);
@@ -1259,9 +1266,9 @@ export class GlowFlowCard extends GlowCardBase<FlowCardConfig> {
   private kpis(): TemplateResult | typeof nothing {
     const setup = this.setup;
     if (!setup || (!setup.import.length && !this.pv)) return nothing;
-    // While the period loads the tiles are already there, with "–" (#203).
-    const pending = !this.pd;
-    const t: Totals = this.pd?.totals ?? {};
+    if (!this.pd) return nothing;
+    const pending = false;
+    const t: Totals = this.pd.totals;
     const hass = this.hass;
     const today = this.range === 'day' && this.offset === 0;
     const lab = (k: FlowKey) =>
@@ -1314,19 +1321,7 @@ export class GlowFlowCard extends GlowCardBase<FlowCardConfig> {
     const setup = this.setup;
     if (!setup) return nothing;
     const want = this.config?.sections ?? SECTIONS;
-    if (!pd) {
-      // placeholders while the period loads, so the card keeps its shape (#203)
-      if (!want.length || (!setup.import.length && !this.pv)) return nothing;
-      return html`<div class="secs" aria-busy="true">
-        ${[0, 1].map(
-          () =>
-            html`<div
-              class="sec skel wait"
-              style="grid-column:span ${this.narrow ? 12 : 6}"
-            ></div>`,
-        )}
-      </div>`;
-    }
+    if (!pd) return nothing;
     const t = pd.totals;
     const has: Record<FlowSection, boolean> = {
       usage: !!pd.series.home || !!pd.series.import,
@@ -2173,15 +2168,44 @@ export class GlowFlowCard extends GlowCardBase<FlowCardConfig> {
       .kpis.wait .v {
         opacity: 0.5;
       }
-      .skel {
-        min-height: 220px;
-      }
-      /* the kept card height goes to the placeholders, not to the plan */
+      /* the card keeps its height while loading; the spinner sits in its middle */
       .loading .plan {
-        flex: none;
-      }
-      .loading .secs {
         flex: 1 1 auto;
+      }
+      /* near the top, so it is in view on a tall phone card as well */
+      .spin {
+        height: min(100%, 360px);
+        min-height: 160px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 12px;
+        font-size: 13px;
+        font-weight: 700;
+        color: var(--glow-muted);
+      }
+      .spin svg {
+        width: 48px;
+        height: 48px;
+        animation: spin 0.9s linear infinite;
+      }
+      .spin circle {
+        fill: none;
+        stroke-width: 4;
+      }
+      .spin .ring {
+        stroke: var(--glow-inset);
+      }
+      .spin .arc {
+        stroke: var(--glow-text);
+        stroke-linecap: round;
+        stroke-dasharray: 34 120;
+      }
+      @keyframes spin {
+        to {
+          transform: rotate(360deg);
+        }
       }
       @keyframes wait {
         from {
@@ -2192,7 +2216,8 @@ export class GlowFlowCard extends GlowCardBase<FlowCardConfig> {
         }
       }
       @media (prefers-reduced-motion: reduce) {
-        .wait {
+        .wait,
+        .spin svg {
           animation: none;
         }
       }
