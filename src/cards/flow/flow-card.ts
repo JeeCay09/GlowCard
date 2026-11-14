@@ -976,7 +976,8 @@ export class GlowFlowCard extends GlowCardBase<FlowCardConfig> {
       return ft(hass, 'live_mixed', { v: home });
     }
     const t = this.pd?.totals;
-    if (!t) return this.setup ? ft(hass, 'loading') : '';
+    // the spinner in the middle of the card says that data loads
+    if (!t) return '';
     if (!this.pv) {
       return ft(hass, 'from_grid_sub', { v: `${fkwh(hass, t.import ?? 0)} kWh`, p: periodName });
     }
@@ -1051,6 +1052,7 @@ export class GlowFlowCard extends GlowCardBase<FlowCardConfig> {
           <circle cx="24" cy="24" r="19" class="ring" />
           <circle cx="24" cy="24" r="19" class="arc" />
         </svg>
+        <span>${ft(hass, 'loading')}</span>
       </div>`;
     const f: PlanFlows = live ? livePlan(n) : periodPlan(t ?? {}, this.hasSolar, this.hasBattery);
     const idle = (v: number | undefined) =>
@@ -2170,9 +2172,11 @@ export class GlowFlowCard extends GlowCardBase<FlowCardConfig> {
       .loading .plan {
         flex: 1 1 auto;
       }
-      /* near the top, so it is in view on a tall phone card as well */
+      /* centred in the card; in a card taller than the screen, centred in what is in view */
       .spin {
-        height: min(100%, 360px);
+        height: 100%;
+        max-height: calc(100vh - 220px);
+        max-height: calc(100dvh - 220px);
         min-height: 160px;
         display: flex;
         flex-direction: column;
