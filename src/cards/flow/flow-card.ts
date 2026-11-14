@@ -401,17 +401,12 @@ export class GlowFlowCard extends GlowCardBase<FlowCardConfig> {
     return this.hasSolar || this.hasBattery;
   }
 
-  /** Main source for the tint: live from the power values, else from the period totals. */
   /**
-   * Card colour (glow, orb, main line): fixed, so it stays the same while browsing days.
-   * Solar yellow when solar is set up, grid blue otherwise (#177).
+   * Accent (orb, picker highlight): the warm house colour, the same in every home. The
+   * card itself is neutral glass, because the lines carry the colour of their source (#200).
    */
-  private get main(): NodeKind {
-    return this.hasSolar ? 'solar' : 'grid';
-  }
-
   protected get accent(): Rgb {
-    return COLORS[this.main][this.dark ? 'dark' : 'light'];
+    return COLORS.home[this.dark ? 'dark' : 'light'];
   }
 
   // ---------- loading ----------
@@ -908,7 +903,7 @@ export class GlowFlowCard extends GlowCardBase<FlowCardConfig> {
     // the date picker shares the header row only where the subtitle keeps enough room
     const inline = this.width >= WIDE;
     return html`<div
-      class="glass active card ${this.narrow ? 'narrow' : ''}"
+      class="glass card ${this.narrow ? 'narrow' : ''}"
       data-size="card"
       style=${this.cardH ? `height:${this.cardH}px` : ''}
     >
