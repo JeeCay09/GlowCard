@@ -91,7 +91,7 @@ const COLORS: Record<Kind, { dark: Rgb; light: Rgb }> = {
   grid: { dark: [96, 165, 250], light: [59, 130, 246] },
   solar: { dark: [251, 191, 36], light: [245, 158, 11] },
   bat: { dark: [52, 211, 153], light: [16, 185, 129] },
-  home: { dark: [255, 200, 120], light: [245, 166, 35] },
+  home: { dark: [167, 139, 250], light: [139, 92, 246] },
   gas: { dark: [251, 146, 60], light: [234, 88, 12] },
   water: { dark: [34, 211, 238], light: [6, 182, 212] },
   rest: { dark: [148, 163, 184], light: [148, 163, 184] },
@@ -401,17 +401,12 @@ export class GlowFlowCard extends GlowCardBase<FlowCardConfig> {
     return this.hasSolar || this.hasBattery;
   }
 
-  /** Main source for the tint: live from the power values, else from the period totals. */
   /**
-   * Card colour (glow, orb, main line): fixed, so it stays the same while browsing days.
-   * Solar yellow when solar is set up, grid blue otherwise (#177).
+   * Accent (orb, picker highlight): the warm house colour, the same in every home. The
+   * card itself is neutral glass, because the lines carry the colour of their source (#200).
    */
-  private get main(): NodeKind {
-    return this.hasSolar ? 'solar' : 'grid';
-  }
-
   protected get accent(): Rgb {
-    return COLORS[this.main][this.dark ? 'dark' : 'light'];
+    return COLORS.home[this.dark ? 'dark' : 'light'];
   }
 
   // ---------- loading ----------
@@ -908,7 +903,7 @@ export class GlowFlowCard extends GlowCardBase<FlowCardConfig> {
     // the date picker shares the header row only where the subtitle keeps enough room
     const inline = this.width >= WIDE;
     return html`<div
-      class="glass active card ${this.narrow ? 'narrow' : ''}"
+      class="glass card ${this.narrow ? 'narrow' : ''}"
       data-size="card"
       style=${this.cardH ? `height:${this.cardH}px` : ''}
     >
