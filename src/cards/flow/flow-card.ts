@@ -91,8 +91,7 @@ const COLORS: Record<Kind, { dark: Rgb; light: Rgb }> = {
   grid: { dark: [96, 165, 250], light: [59, 130, 246] },
   solar: { dark: [251, 191, 36], light: [245, 158, 11] },
   bat: { dark: [52, 211, 153], light: [16, 185, 129] },
-  // the house is white (#200): no source uses it; on light glass that is a dark ink
-  home: { dark: [241, 245, 249], light: [51, 65, 85] },
+  home: { dark: [167, 139, 250], light: [139, 92, 246] },
   gas: { dark: [251, 146, 60], light: [234, 88, 12] },
   water: { dark: [34, 211, 238], light: [6, 182, 212] },
   rest: { dark: [148, 163, 184], light: [148, 163, 184] },
@@ -407,8 +406,7 @@ export class GlowFlowCard extends GlowCardBase<FlowCardConfig> {
    * card itself is neutral glass, because the lines carry the colour of their source (#200).
    */
   protected get accent(): Rgb {
-    // white would swallow the orb's white icon, so the accent is a neutral slate
-    return this.dark ? [148, 163, 184] : [100, 116, 139];
+    return COLORS.home[this.dark ? 'dark' : 'light'];
   }
 
   // ---------- loading ----------
