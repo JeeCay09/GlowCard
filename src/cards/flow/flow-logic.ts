@@ -611,6 +611,90 @@ export function livePlan(n: {
   };
 }
 
+/** Share of each source in what flows through a line; the three add up to 1. */
+export interface SourceShare {
+  grid: number;
+  solar: number;
+  bat: number;
+}
+
+const ONLY_GRID: SourceShare = { grid: 1, solar: 0, bat: 0 };
+const ONLY_SOLAR: SourceShare = { grid: 0, solar: 1, bat: 0 };
+const ONLY_BAT: SourceShare = { grid: 0, solar: 0, bat: 1 };
+
+function blend(parts: [number, SourceShare][]): SourceShare {
+  const total = parts.reduce((a, [w]) => a + w, 0);
+  if (total <= 0) return ONLY_GRID;
+  const sum = (k: keyof SourceShare) => parts.reduce((a, [w, m]) => a + w * m[k], 0) / total;
+  return { grid: sum('grid'), solar: sum('solar'), bat: sum('bat') };
+}
+
+/**
+ * Where the energy in each line comes from (#198). A line leaving a source is all that
+ * source; at a junction everything flowing in mixes in proportion, and every line leaving
+ * the junction carries that mix (e.g. the line to the house, to a charging battery or to
+ * the grid while exporting).
+ */
+export function planMix(f: PlanFlows): Record<keyof PlanFlows, SourceShare> {
+  const grid = f.grid;
+  const solar = Math.max(0, f.solar ?? 0);
+  const bat = f.bat ?? 0;
+  const imp = Math.max(0, grid);
+  const dis = Math.max(0, -bat);
+  // flow from the solar junction to the battery junction
+  const middle = f.middle ?? grid + solar;
+  let j1: SourceShare;
+  let j2: SourceShare;
+  if (middle >= 0) {
+    j1 = blend([
+      [imp, ONLY_GRID],
+      [solar, ONLY_SOLAR],
+    ]);
+    j2 = blend([
+      [middle, j1],
+      [dis, ONLY_BAT],
+    ]);
+  } else {
+    j2 = blend([[dis, ONLY_BAT]]);
+    j1 = blend([
+      [-middle, j2],
+      [solar, ONLY_SOLAR],
+      [imp, ONLY_GRID],
+    ]);
+  }
+  return {
+    grid: grid >= 0 ? ONLY_GRID : j1,
+    solar: ONLY_SOLAR,
+    bat: bat < 0 ? ONLY_BAT : j2,
+    middle: middle >= 0 ? j1 : j2,
+    home: j2,
+  };
+}
+
+/**
+ * Splits a line's light dots between its sources: `n` slots, every source with a visible
+ * share gets at least one, spread so the colours alternate.
+ */
+export function mixSlots(m: SourceShare, n = 4): (keyof SourceShare)[] {
+  const keys = (['grid', 'solar', 'bat'] as const).filter((k) => m[k] >= 0.05);
+  if (keys.length <= 1) return new Array(n).fill(keys[0] ?? 'grid');
+  const total = keys.reduce((a, k) => a + m[k], 0);
+  const count = new Map(keys.map((k) => [k, Math.max(1, Math.round((m[k] / total) * n))]));
+  const big = keys.reduce((a, k) => (m[k] > m[a] ? k : a));
+  count.set(big, n - keys.filter((k) => k !== big).reduce((a, k) => a + count.get(k)!, 0));
+  // spread: always place the source that is furthest behind its share
+  const placed = new Map(keys.map((k) => [k, 0]));
+  const out: (keyof SourceShare)[] = [];
+  for (let i = 1; i <= n; i++) {
+    const next = keys.reduce((a, k) =>
+      (count.get(k)! * i) / n - placed.get(k)! > (count.get(a)! * i) / n - placed.get(a)! ? k : a,
+    );
+    placed.set(next, placed.get(next)! + 1);
+    out.push(next);
+  }
+  return out;
+}
+
 /** Period: from the kWh totals (net values per segment). */
 export function periodPlan(t: Totals, hasSolar: boolean, hasBattery: boolean): PlanFlows {
   const grid = (t.import ?? 0) - (t.export ?? 0);

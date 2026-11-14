@@ -26,6 +26,9 @@ import {
   fmoney,
   fnum,
   forecastHours,
+  mixSlots,
+  planMix,
+  type SourceShare,
   sensorForecast,
   type DayForecast,
   isoWeek,
@@ -88,7 +91,7 @@ const COLORS: Record<Kind, { dark: Rgb; light: Rgb }> = {
   grid: { dark: [96, 165, 250], light: [59, 130, 246] },
   solar: { dark: [251, 191, 36], light: [245, 158, 11] },
   bat: { dark: [52, 211, 153], light: [16, 185, 129] },
-  home: { dark: [255, 200, 120], light: [245, 166, 35] },
+  home: { dark: [167, 139, 250], light: [139, 92, 246] },
   gas: { dark: [251, 146, 60], light: [234, 88, 12] },
   water: { dark: [34, 211, 238], light: [6, 182, 212] },
   rest: { dark: [148, 163, 184], light: [148, 163, 184] },
@@ -193,7 +196,8 @@ interface PlanNode {
 interface PlanSeg {
   a: [number, number];
   b: [number, number];
-  k: NodeKind;
+  /** Where its energy comes from: sets the colour, mixed for several sources (#198). */
+  mix: SourceShare;
   /** Signed value: + = from a to b. */
   v: number;
   idle: boolean;
@@ -397,17 +401,12 @@ export class GlowFlowCard extends GlowCardBase<FlowCardConfig> {
     return this.hasSolar || this.hasBattery;
   }
 
-  /** Main source for the tint: live from the power values, else from the period totals. */
   /**
-   * Card colour (glow, orb, main line): fixed, so it stays the same while browsing days.
-   * Solar yellow when solar is set up, grid blue otherwise (#177).
+   * Accent (orb, picker highlight): the warm house colour, the same in every home. The
+   * card itself is neutral glass, because the lines carry the colour of their source (#200).
    */
-  private get main(): NodeKind {
-    return this.hasSolar ? 'solar' : 'grid';
-  }
-
   protected get accent(): Rgb {
-    return COLORS[this.main][this.dark ? 'dark' : 'light'];
+    return COLORS.home[this.dark ? 'dark' : 'light'];
   }
 
   // ---------- loading ----------
@@ -904,7 +903,7 @@ export class GlowFlowCard extends GlowCardBase<FlowCardConfig> {
     // the date picker shares the header row only where the subtitle keeps enough room
     const inline = this.width >= WIDE;
     return html`<div
-      class="glass active card ${this.narrow ? 'narrow' : ''}"
+      class="glass card ${this.narrow ? 'narrow' : ''}"
       data-size="card"
       style=${this.cardH ? `height:${this.cardH}px` : ''}
     >
@@ -1073,9 +1072,10 @@ export class GlowFlowCard extends GlowCardBase<FlowCardConfig> {
       t3: string,
       entity?: string,
     ) => nodes.push({ k, x, y, lab, t1, t2: big(v), t3: short(t3), entity });
-    const seg = (a: [number, number], b: [number, number], k: NodeKind, v: number | undefined) =>
-      segs.push({ a, b, k, v: v ?? 0, idle: idle(v) });
-    const lineK: NodeKind = this.main;
+    // every line takes the colour of the source it carries, mixed after a junction (#198)
+    const mixes = planMix(f);
+    const seg = (a: [number, number], b: [number, number], k: keyof PlanFlows) =>
+      segs.push({ a, b, mix: mixes[k], v: f[k] ?? 0, idle: idle(f[k]) });
     const batName =
       soc !== null && live ? `${ft(hass, 'battery')} ${fnum(hass, soc, 0)} %` : ft(hass, 'battery');
     const homeT3 = live ? ft(hass, 'consumption') : ft(hass, 'consumed');
@@ -1108,19 +1108,19 @@ export class GlowFlowCard extends GlowCardBase<FlowCardConfig> {
           c.battery_power ?? c.battery,
         );
       const j1 = s ? xs : b ? xk : xh - R;
-      seg([xn + R, yb], [j1, yb], s || b ? lineK : 'grid', f.grid);
+      seg([xn + R, yb], [j1, yb], 'grid');
       if (s) {
-        seg([xs, yb - off + R], [xs, yb], 'solar', f.solar);
+        seg([xs, yb - off + R], [xs, yb], 'solar');
       }
       if (s && b) {
-        seg([xs, yb], [xk, yb], lineK, f.middle);
+        seg([xs, yb], [xk, yb], 'middle');
       }
       if (b) {
-        seg([xk, yb], [xk, yb + off - R], 'bat', f.bat);
+        seg([xk, yb], [xk, yb + off - R], 'bat');
       }
       if (s || b) {
         const last = b ? xk : xs;
-        seg([last, yb], [xh - R, yb], lineK, f.home);
+        seg([last, yb], [xh - R, yb], 'home');
       }
     } else {
       const xb = w / 2;
@@ -1135,52 +1135,76 @@ export class GlowFlowCard extends GlowCardBase<FlowCardConfig> {
       if (s) node('solar', xl, ys, 'b', ft(hass, 'solar'), f.solar ?? 0, solarT3, c.solar);
       if (b) node('bat', xr, yk, 'b', batName, f.bat ?? 0, batT3, c.battery_power ?? c.battery);
       const j1 = s ? ys : b ? yk : yh - R;
-      seg([xb, yn + R], [xb, j1], s || b ? lineK : 'grid', f.grid);
-      if (s) seg([xl + R, ys], [xb, ys], 'solar', f.solar);
+      seg([xb, yn + R], [xb, j1], 'grid');
+      if (s) seg([xl + R, ys], [xb, ys], 'solar');
       if (s && b) {
-        seg([xb, ys], [xb, yk], lineK, f.middle);
+        seg([xb, ys], [xb, yk], 'middle');
       }
-      if (b) seg([xb, yk], [xr - R, yk], 'bat', f.bat);
+      if (b) seg([xb, yk], [xr - R, yk], 'bat');
       if (s || b) {
         const last = b ? yk : ys;
-        seg([xb, last], [xb, yh - R], lineK, f.home);
+        seg([xb, last], [xb, yh - R], 'home');
       }
     }
 
-    // junction dots where segments meet
+    const pal = (k: keyof SourceShare) => COLORS[k][this.dark ? 'dark' : 'light'];
+    const blendC = (m: SourceShare) =>
+      [0, 1, 2]
+        .map((i) =>
+          Math.round(m.grid * pal('grid')[i] + m.solar * pal('solar')[i] + m.bat * pal('bat')[i]),
+        )
+        .join(',');
+    // junction dots where segments meet: the colour of what leaves them
     // (grey when nothing flows through them, #181)
-    const ends = new Map<string, { n: number; live: boolean }>();
+    const ends = new Map<string, { n: number; mix?: SourceShare; out: boolean }>();
     for (const sg of segs)
       for (const pt of [sg.a, sg.b]) {
-        const e = ends.get(pt.join()) ?? { n: 0, live: false };
-        ends.set(pt.join(), { n: e.n + 1, live: e.live || !sg.idle });
+        const e = ends.get(pt.join()) ?? { n: 0, out: false };
+        e.n++;
+        const leaves = pt === (sg.v < 0 ? sg.b : sg.a);
+        if (!sg.idle && (!e.mix || (leaves && !e.out))) {
+          e.mix = sg.mix;
+          e.out = leaves;
+        }
+        ends.set(pt.join(), e);
       }
     const dots = [...ends.entries()]
       .filter(([, e]) => e.n > 1)
-      .map(([k, e]) => ({ p: k.split(',').map(Number), live: e.live }));
-    const lc = this.col(lineK);
+      .map(([k, e]) => ({ p: k.split(',').map(Number), mix: e.mix }));
     const idleC = this.col('rest');
     const maxV = live ? 5000 : 20;
     return html`<svg class="wires" width=${w} height=${h} viewBox="0 0 ${w} ${h}">
         ${segs.map((sg) => {
           // idle connections share one neutral grey instead of their source colour
-          const c = sg.idle ? idleC : this.col(sg.k);
+          const c = sg.idle ? idleC : blendC(sg.mix);
           const [a, z] = sg.v < 0 ? [sg.b, sg.a] : [sg.a, sg.b];
           const d = `M${a[0]},${a[1]} L${z[0]},${z[1]}`;
           const mag = Math.min(1, Math.abs(sg.v) / maxV);
+          const sp = 1.9 - mag * 1.2;
+          const slots = mixSlots(sg.mix);
+          const kinds = [...new Set(slots)];
+          // one source: dots in its colour. Several: the dots alternate in the sources'
+          // colours, as many of each as its share.
+          const flow = kinds.map((k) => {
+            const kc = pal(k).join(',');
+            if (kinds.length === 1)
+              return svg`<path d=${d} class="flow" stroke="rgb(${kc})" stroke-width="3" stroke-dasharray="2 10" stroke-linecap="round" fill="none" style="--sp:${sp.toFixed(2)}s;filter:drop-shadow(0 0 4px rgba(${kc},1))"/>`;
+            const own = slots.map((x, i) => (x === k ? i : -1)).filter((i) => i >= 0);
+            const n = slots.length;
+            const dash = own
+              .map((i, j) => `2 ${((own[j + 1] ?? own[0] + n) - i) * 12 - 2}`)
+              .join(' ');
+            return svg`<path d=${d} class="flow" stroke="rgb(${kc})" stroke-width="3" stroke-dasharray=${dash} stroke-linecap="round" fill="none" style="--sp:${(sp * n).toFixed(2)}s;--o:${-own[0] * 12}px;--len:${n * 12}px;filter:drop-shadow(0 0 4px rgba(${kc},1))"/>`;
+          });
           return svg`<path d=${d} stroke="rgba(${c},${sg.idle ? 0.1 : 0.18})" stroke-width=${sg.idle ? 4 : 4 + mag * 8} stroke-linecap="round" fill="none"/>
             <path d=${d} stroke="rgba(${c},${sg.idle ? 0.4 : 0.55})" stroke-width="1.5" fill="none"/>
-            ${
-              sg.idle
-                ? nothing
-                : svg`<path d=${d} class="flow" stroke="rgb(${c})" stroke-width="3" stroke-dasharray="2 10" stroke-linecap="round" fill="none" style="--sp:${(1.9 - mag * 1.2).toFixed(2)}s;filter:drop-shadow(0 0 4px rgba(${c},1))"/>`
-            }`;
+            ${sg.idle ? nothing : flow}`;
         })}
-        ${dots.map(({ p: [x, y], live: on }) =>
-          on
-            ? svg`<circle cx=${x} cy=${y} r="5" fill="rgb(${lc})" style="filter:drop-shadow(0 0 5px rgba(${lc},1))"/>`
-            : svg`<circle cx=${x} cy=${y} r="4" fill="rgba(${idleC},.7)"/>`,
-        )}
+        ${dots.map(({ p: [x, y], mix }) => {
+          if (!mix) return svg`<circle cx=${x} cy=${y} r="4" fill="rgba(${idleC},.7)"/>`;
+          const dc = blendC(mix);
+          return svg`<circle cx=${x} cy=${y} r="5" fill="rgb(${dc})" style="filter:drop-shadow(0 0 5px rgba(${dc},1))"/>`;
+        })}
       </svg>
       ${nodes.map((nd) => this.node(nd, nd.k === 'bat' ? soc : null))}`;
   }
@@ -1219,22 +1243,23 @@ export class GlowFlowCard extends GlowCardBase<FlowCardConfig> {
     const cur = currency(hass);
     const list: [string, string][] = [];
     const cost = t.energyCost;
+    // A figure that cannot be calculated yet shows "–": the tiles stay the same (#202).
+    const pct = (v: number | undefined) => (v === undefined ? '–' : `${fnum(hass, v, 0)} %`);
     if (!this.pv) {
       if (t.home !== undefined) list.push([lab('kpi_consumption'), `${fkwh(hass, t.home)} kWh`]);
       if (t.import !== undefined) list.push([lab('kpi_import'), `${fkwh(hass, t.import)} kWh`]);
       const lc = lowCarbon(t.import, this.pd?.fossil);
-      if (lc !== undefined) list.push([ft(hass, 'kpi_low_carbon'), `${fnum(hass, lc, 0)} %`]);
+      if (lc !== undefined) list.push([ft(hass, 'kpi_low_carbon'), pct(lc)]);
     } else {
-      const ss = selfSufficiency(t);
-      const sc = selfConsumption(t);
       const gn = gridNeutrality(t);
-      if (ss !== undefined) list.push([ft(hass, 'kpi_self_sufficiency'), `${fnum(hass, ss, 0)} %`]);
-      if (sc !== undefined) list.push([ft(hass, 'kpi_self_consumption'), `${fnum(hass, sc, 0)} %`]);
-      if (gn !== undefined)
-        list.push([
-          ft(hass, 'kpi_neutrality'),
-          `${gn > 0 ? '+' : gn < 0 ? '−' : ''}${fkwh(hass, Math.abs(gn))} kWh`,
-        ]);
+      list.push([ft(hass, 'kpi_self_sufficiency'), pct(selfSufficiency(t))]);
+      if (this.hasSolar) list.push([ft(hass, 'kpi_self_consumption'), pct(selfConsumption(t))]);
+      list.push([
+        ft(hass, 'kpi_neutrality'),
+        gn === undefined
+          ? '–'
+          : `${gn > 0 ? '+' : gn < 0 ? '−' : ''}${fkwh(hass, Math.abs(gn))} kWh`,
+      ]);
     }
     if (cost !== undefined) list.push([lab('kpi_cost'), fmoney(hass, cost, cur)]);
     if (!list.length) return nothing;
@@ -2001,11 +2026,15 @@ export class GlowFlowCard extends GlowCardBase<FlowCardConfig> {
         overflow: visible;
       }
       .flow {
+        stroke-dashoffset: var(--o, 0px);
         animation: flow var(--sp, 1.4s) linear infinite;
       }
       @keyframes flow {
+        from {
+          stroke-dashoffset: var(--o, 0px);
+        }
         to {
-          stroke-dashoffset: -12;
+          stroke-dashoffset: calc(var(--o, 0px) - var(--len, 12px));
         }
       }
       @media (prefers-reduced-motion: reduce) {
@@ -2090,6 +2119,10 @@ export class GlowFlowCard extends GlowCardBase<FlowCardConfig> {
       }
       .narrow .kpis {
         gap: 8px;
+      }
+      /* an odd last tile fills the row instead of leaving a gap */
+      .narrow .kpi:last-child:nth-child(odd) {
+        grid-column: 1 / -1;
       }
       .kpi {
         border-radius: 18px;
