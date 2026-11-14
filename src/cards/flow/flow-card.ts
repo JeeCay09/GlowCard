@@ -179,6 +179,8 @@ interface PeriodData {
   devices: Record<string, number>;
   usual?: { lo: number; hi: number }[];
   fossil?: number;
+  /** False until the comparison, usual range and low-carbon share arrived (#203). */
+  full: boolean;
   loadedAt: number;
 }
 
@@ -489,10 +491,17 @@ export class GlowFlowCard extends GlowCardBase<FlowCardConfig> {
     this.loadingKey = key;
     const ids = setupIds(setup);
     const prevP = previous(p);
-    const [cur, prev] = await Promise.all([this.changes(ids, p), this.changes(ids, prevP)]);
-    const series = flowSeries(p, toBuckets(p, cur), setup);
-    const prevTotals = totals(flowSeries(prevP, toBuckets(prevP, prev), setup));
+    const put = (pd: PeriodData) => {
+      const next = new Map(this.data);
+      next.set(key, pd);
+      this.data = next;
+    };
+    // Stage 1 (#203): only the period itself, so the card can draw right away. On a
+    // refresh the comparison values of the last load stay until the new ones arrive.
+    const old = this.data.get(key);
+    const cur = await this.changes(ids, p);
     const b = toBuckets(p, cur);
+    const series = flowSeries(p, b, setup);
     const devices: Record<string, number> = {};
     for (const d of setup.devices) {
       if (d.stat in b) devices[d.stat] = b[d.stat].reduce((x, y) => x + y, 0);
@@ -500,12 +509,24 @@ export class GlowFlowCard extends GlowCardBase<FlowCardConfig> {
     const pd: PeriodData = {
       series,
       totals: totals(series),
-      prev: prevTotals,
+      prev: old?.prev ?? {},
       devices,
+      usual: old?.usual,
+      fossil: old?.fossil,
+      full: old?.full ?? false,
       loadedAt: Date.now(),
     };
+    put(pd);
+    if (this.loadingKey === key) this.loadingKey = undefined;
+
+    // Stage 2: the comparison, the usual range and the low-carbon share, side by side.
+    const prev = this.changes(ids, prevP).then((rows) =>
+      totals(flowSeries(prevP, toBuckets(prevP, rows), setup)),
+    );
     // "Usual" for the grid-only chart: same hour of the last 14 days / same weekday of 8 weeks.
-    if (!this.pv && setup.import.length && (p.range === 'day' || p.range === 'week')) {
+    const usual = (async () => {
+      if (this.pv || !setup.import.length || (p.range !== 'day' && p.range !== 'week'))
+        return undefined;
       const back = p.range === 'day' ? 14 : 8;
       const hist: number[][] = [];
       const rows = await this.changes(
@@ -525,11 +546,12 @@ export class GlowFlowCard extends GlowCardBase<FlowCardConfig> {
         const s = flowSeries(q, toBuckets(q, sub), setup).import;
         if (s && s.some((v) => v > 0)) hist.push(s);
       }
-      pd.usual = usualBand(hist);
-    }
-    if (this.co2Id && setup.import.length && this.hass.callWS) {
+      return usualBand(hist);
+    })();
+    const fossil = (async () => {
+      if (!this.co2Id || !setup.import.length || !this.hass?.callWS) return undefined;
       try {
-        const fossil = await this.hass.callWS<Record<string, number>>({
+        const res = await this.hass.callWS<Record<string, number>>({
           type: 'energy/fossil_energy_consumption',
           start_time: p.start.toISOString(),
           end_time: p.end.toISOString(),
@@ -537,15 +559,13 @@ export class GlowFlowCard extends GlowCardBase<FlowCardConfig> {
           co2_statistic_id: this.co2Id,
           period: p.stat === 'month' ? 'month' : p.stat === 'day' ? 'day' : 'hour',
         });
-        pd.fossil = Object.values(fossil ?? {}).reduce((a, v) => a + (v ?? 0), 0);
+        return Object.values(res ?? {}).reduce((a, v) => a + (v ?? 0), 0);
       } catch {
-        /* CO₂ signal is optional */
+        return undefined; // CO₂ signal is optional
       }
-    }
-    const next = new Map(this.data);
-    next.set(key, pd);
-    this.data = next;
-    if (this.loadingKey === key) this.loadingKey = undefined;
+    })();
+    const [prevTotals, band, co2] = await Promise.all([prev, usual, fossil]);
+    put({ ...(this.data.get(key) ?? pd), prev: prevTotals, usual: band, fossil: co2, full: true });
   }
 
   /** Today's forecast: the chosen sensor, else the energy dashboard's forecast. */
@@ -630,6 +650,8 @@ export class GlowFlowCard extends GlowCardBase<FlowCardConfig> {
     }
     const rows = Math.ceil((natural + 8) / 64);
     const h = rows * 64 - 8;
+    // while a period loads the card keeps its height instead of collapsing (#203)
+    if (this.setup && !this.pd && h < this.cardH) return;
     if (Math.abs(h - this.cardH) > 0.5) this.cardH = h;
   }
 
@@ -905,7 +927,7 @@ export class GlowFlowCard extends GlowCardBase<FlowCardConfig> {
     // the date picker shares the header row only where the subtitle keeps enough room
     const inline = this.width >= WIDE;
     return html`<div
-      class="glass card ${this.narrow ? 'narrow' : ''}"
+      class="glass card ${this.narrow ? 'narrow' : ''} ${setup && !this.pd ? 'loading' : ''}"
       data-size="card"
       style=${this.cardH ? `height:${this.cardH}px` : ''}
     >
@@ -1023,18 +1045,17 @@ export class GlowFlowCard extends GlowCardBase<FlowCardConfig> {
     const live = this.live;
     const n = this.now;
     const t = this.pd?.totals;
-    const f: PlanFlows | undefined = live
-      ? livePlan(n)
-      : t
-        ? periodPlan(t, this.hasSolar, this.hasBattery)
-        : undefined;
-    if (!f) return nothing;
+    // While a period loads the plan stays in place with "–" and resting lines (#203).
+    const pending = !live && !t;
+    const f: PlanFlows = live ? livePlan(n) : periodPlan(t ?? {}, this.hasSolar, this.hasBattery);
     const idle = (v: number | undefined) =>
       v === undefined || Math.abs(v) < (live ? IDLE_W : IDLE_KWH);
     const big = (v: number) =>
-      live
-        ? html`${fnum(hass, Math.abs(v) / 1000, Math.abs(v) >= 1000 ? 1 : 2)}<small>kW</small>`
-        : html`${fkwh(hass, Math.abs(v))}<small>kWh</small>`;
+      pending
+        ? html`<span class="wait">–</span>`
+        : live
+          ? html`${fnum(hass, Math.abs(v) / 1000, Math.abs(v) >= 1000 ? 1 : 2)}<small>kW</small>`
+          : html`${fkwh(hass, Math.abs(v))}<small>kWh</small>`;
     const c = this.config!;
 
     // Node texts
@@ -1236,8 +1257,11 @@ export class GlowFlowCard extends GlowCardBase<FlowCardConfig> {
   // ---------- key figures ----------
 
   private kpis(): TemplateResult | typeof nothing {
-    const t = this.pd?.totals;
-    if (!t) return nothing;
+    const setup = this.setup;
+    if (!setup || (!setup.import.length && !this.pv)) return nothing;
+    // While the period loads the tiles are already there, with "–" (#203).
+    const pending = !this.pd;
+    const t: Totals = this.pd?.totals ?? {};
     const hass = this.hass;
     const today = this.range === 'day' && this.offset === 0;
     const lab = (k: FlowKey) =>
@@ -1248,10 +1272,13 @@ export class GlowFlowCard extends GlowCardBase<FlowCardConfig> {
     // A figure that cannot be calculated yet shows "–": the tiles stay the same (#202).
     const pct = (v: number | undefined) => (v === undefined ? '–' : `${fnum(hass, v, 0)} %`);
     if (!this.pv) {
+      if (pending) list.push([lab('kpi_consumption'), '–'], [lab('kpi_import'), '–']);
       if (t.home !== undefined) list.push([lab('kpi_consumption'), `${fkwh(hass, t.home)} kWh`]);
       if (t.import !== undefined) list.push([lab('kpi_import'), `${fkwh(hass, t.import)} kWh`]);
       const lc = lowCarbon(t.import, this.pd?.fossil);
-      if (lc !== undefined) list.push([ft(hass, 'kpi_low_carbon'), pct(lc)]);
+      // the low-carbon share arrives later: keep its place so the tiles do not jump
+      if (lc !== undefined || (this.co2Id && (pending || !this.pd?.full)))
+        list.push([ft(hass, 'kpi_low_carbon'), pct(lc)]);
     } else {
       const gn = gridNeutrality(t);
       list.push([ft(hass, 'kpi_self_sufficiency'), pct(selfSufficiency(t))]);
@@ -1264,8 +1291,12 @@ export class GlowFlowCard extends GlowCardBase<FlowCardConfig> {
       ]);
     }
     if (cost !== undefined) list.push([lab('kpi_cost'), fmoney(hass, cost, cur)]);
+    else if (pending && setup.importCost.length) list.push([lab('kpi_cost'), '–']);
     if (!list.length) return nothing;
-    return html`<div class="kpis" style="--n:${this.narrow ? 2 : list.length}">
+    return html`<div
+      class="kpis ${pending ? 'wait' : ''}"
+      style="--n:${this.narrow ? 2 : list.length}"
+    >
       ${list.map(
         ([k, v]) =>
           html`<div class="kpi">
@@ -1281,8 +1312,21 @@ export class GlowFlowCard extends GlowCardBase<FlowCardConfig> {
   private sections(): TemplateResult | typeof nothing {
     const pd = this.pd;
     const setup = this.setup;
-    if (!pd || !setup) return nothing;
+    if (!setup) return nothing;
     const want = this.config?.sections ?? SECTIONS;
+    if (!pd) {
+      // placeholders while the period loads, so the card keeps its shape (#203)
+      if (!want.length || (!setup.import.length && !this.pv)) return nothing;
+      return html`<div class="secs" aria-busy="true">
+        ${[0, 1].map(
+          () =>
+            html`<div
+              class="sec skel wait"
+              style="grid-column:span ${this.narrow ? 12 : 6}"
+            ></div>`,
+        )}
+      </div>`;
+    }
     const t = pd.totals;
     const has: Record<FlowSection, boolean> = {
       usage: !!pd.series.home || !!pd.series.import,
@@ -1697,7 +1741,7 @@ export class GlowFlowCard extends GlowCardBase<FlowCardConfig> {
           : ft(hass, 'before', { v: `${q(prev)} ${u}` });
     return html`${this.head(k, k, ft(hass, k), right)}
       <div class="ch small" data-size=${k}>${chart}</div>
-      ${cmp ? html`<div class="lg"><span>${cmp}</span></div>` : nothing}`;
+      ${cmp || !pd.full ? html`<div class="lg"><span>${cmp || '\u00a0'}</span></div>` : nothing}`;
   }
 
   static styles = [
@@ -2121,6 +2165,36 @@ export class GlowFlowCard extends GlowCardBase<FlowCardConfig> {
       }
       .narrow .kpis {
         gap: 8px;
+      }
+      /* placeholders while a period loads (#203) */
+      .wait {
+        animation: wait 1.2s ease-in-out infinite alternate;
+      }
+      .kpis.wait .v {
+        opacity: 0.5;
+      }
+      .skel {
+        min-height: 220px;
+      }
+      /* the kept card height goes to the placeholders, not to the plan */
+      .loading .plan {
+        flex: none;
+      }
+      .loading .secs {
+        flex: 1 1 auto;
+      }
+      @keyframes wait {
+        from {
+          opacity: 0.45;
+        }
+        to {
+          opacity: 1;
+        }
+      }
+      @media (prefers-reduced-motion: reduce) {
+        .wait {
+          animation: none;
+        }
       }
       /* an odd last tile fills the row instead of leaving a gap */
       .narrow .kpi:last-child:nth-child(odd) {
