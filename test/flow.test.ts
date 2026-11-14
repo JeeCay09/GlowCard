@@ -8,6 +8,8 @@ import {
   isLive,
   livePlan,
   lowCarbon,
+  mixSlots,
+  planMix,
   monthWeeks,
   offsetFor,
   parseSetup,
@@ -318,5 +320,50 @@ describe('date picker', () => {
     expect(nov[0][6].getDate()).toBe(1);
     expect(nov[5][0].getDate()).toBe(30);
     expect(monthWeeks(2027, 1)).toHaveLength(4); // Feb 2027 starts on a Monday
+  });
+});
+
+describe('line colours by source (#198)', () => {
+  const share = (grid: number, solar: number, bat: number) => ({ grid, solar, bat });
+
+  it('colours every line by the source it carries', () => {
+    // only the grid supplies the house, solar and battery idle
+    const g = planMix(livePlan({ grid: 350, solar: 0, battery: 0, home: null }));
+    expect(g.grid).toEqual(share(1, 0, 0));
+    expect(g.middle).toEqual(share(1, 0, 0));
+    expect(g.home).toEqual(share(1, 0, 0));
+    // solar covers house, battery and export: everything after the junction is solar
+    const s = planMix(livePlan({ grid: -600, solar: 3200, battery: 1500, home: null }));
+    expect(s.grid).toEqual(share(0, 1, 0));
+    expect(s.bat).toEqual(share(0, 1, 0));
+    expect(s.home).toEqual(share(0, 1, 0));
+    // grid only, no solar or battery set up
+    expect(planMix(livePlan({ grid: 620, solar: null, battery: null, home: null })).home).toEqual(
+      share(1, 0, 0),
+    );
+  });
+
+  it('mixes the sources that join in proportion', () => {
+    const m = planMix(livePlan({ grid: 500, solar: 1500, battery: -2000, home: null }));
+    expect(m.grid).toEqual(share(1, 0, 0));
+    expect(m.middle).toEqual(share(0.25, 0.75, 0));
+    expect(m.bat).toEqual(share(0, 0, 1));
+    expect(m.home).toEqual(share(0.125, 0.375, 0.5));
+    // battery feeds the grid: the line back to the grid is battery green
+    const e = planMix({ grid: -1000, solar: 0, bat: -1500, middle: -1000, home: 500 });
+    expect(e.middle).toEqual(share(0, 0, 1));
+    expect(e.grid).toEqual(share(0, 0, 1));
+  });
+
+  it('splits the light dots between the sources', () => {
+    expect(mixSlots(share(1, 0, 0))).toEqual(['grid', 'grid', 'grid', 'grid']);
+    expect(mixSlots(share(0.5, 0.5, 0)).sort()).toEqual(['grid', 'grid', 'solar', 'solar']);
+    expect(mixSlots(share(0.25, 0.75, 0)).filter((k) => k === 'solar')).toHaveLength(3);
+    // a small but visible share still gets one dot, a negligible one none
+    expect(mixSlots(share(0.08, 0.92, 0)).filter((k) => k === 'grid')).toHaveLength(1);
+    expect(mixSlots(share(0.02, 0.98, 0))).not.toContain('grid');
+    const three = mixSlots(share(0.125, 0.375, 0.5));
+    expect(new Set(three).size).toBe(3);
+    expect(three).toHaveLength(4);
   });
 });
