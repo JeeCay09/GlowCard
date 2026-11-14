@@ -1333,14 +1333,31 @@ export class GlowFlowCard extends GlowCardBase<FlowCardConfig> {
       gas: !!pd.series.gas,
       water: !!pd.series.water,
     };
-    const list = want.filter((s, i) => SECTIONS.includes(s) && want.indexOf(s) === i && has[s]);
+    // A source the energy dashboard knows keeps its area, even without data in this period.
+    // An area picked in the config shows as well, with a hint, when it has no source (#206).
+    const known: Record<FlowSection, boolean> = {
+      usage: setup.import.length > 0 || setup.solar.length > 0,
+      sources:
+        setup.import.length > 0 ||
+        setup.solar.length > 0 ||
+        setup.gas.length > 0 ||
+        setup.water.length > 0,
+      solar: setup.solar.length > 0,
+      devices: setup.devices.length > 0,
+      gas: setup.gas.length > 0,
+      water: setup.water.length > 0,
+    };
+    const picked = !!this.config?.sections;
+    const list = want.filter(
+      (s, i) => SECTIONS.includes(s) && want.indexOf(s) === i && (has[s] || known[s] || picked),
+    );
     if (!list.length) return nothing;
     const wide = this.width >= WIDE;
     const spans = this.narrow
       ? list.map(() => 12)
       : packSpans(list.map((s) => SPAN[s][wide ? 0 : 1]));
     return html`<div class="secs">
-      ${list.map((s, i) => html`<div class="sec" style="grid-column:span ${spans[i]}">${this.section(s)}</div>`)}
+      ${list.map((s, i) => html`<div class="sec" style="grid-column:span ${spans[i]}">${has[s] ? this.section(s) : this.emptySection(s, known[s])}</div>`)}
     </div>`;
   }
 
@@ -1359,6 +1376,23 @@ export class GlowFlowCard extends GlowCardBase<FlowCardConfig> {
       default:
         return this.meterSection('water');
     }
+  }
+
+  /** An area without anything to draw: its title and why it is empty (#206). */
+  private emptySection(s: FlowSection, known: boolean): TemplateResult {
+    const hass = this.hass;
+    const [icon, kind, title]: [string, Kind, string] =
+      s === 'usage'
+        ? ['chart', 'home', ft(hass, 'sec_usage')]
+        : s === 'sources'
+          ? ['list', 'home', ft(hass, 'sec_sources')]
+          : s === 'solar'
+            ? ['solar', 'solar', ft(hass, 'sec_solar')]
+            : s === 'devices'
+              ? ['plug', 'home', ft(hass, 'sec_devices')]
+              : [s, s, ft(hass, s)];
+    return html`${this.head(icon, kind, title)}
+      <div class="none">${ft(hass, known ? 'no_data' : 'not_setup')}</div>`;
   }
 
   private head(
@@ -2281,6 +2315,19 @@ export class GlowFlowCard extends GlowCardBase<FlowCardConfig> {
         gap: 10px;
         margin-bottom: 10px;
         min-width: 0;
+      }
+      .none {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 72px;
+        padding: 0 12px;
+        border-radius: 14px;
+        background: var(--glow-inset);
+        color: var(--glow-muted);
+        font-size: 13px;
+        font-weight: 600;
+        text-align: center;
       }
       .sh svg {
         width: 20px;

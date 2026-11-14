@@ -195,7 +195,7 @@ const LABELS = {
     flow_live_section: 'Live-Leistung (optional)',
     sections: 'Bereiche unter dem Schaltplan',
     flow_sections_helper:
-      'Auswahl und Reihenfolge; ein Bereich erscheint nur, wenn das Energie-Dashboard Daten dafür hat',
+      'Auswahl und Reihenfolge; ein gewählter Bereich ohne Daten zeigt einen Hinweis',
     period: 'Zeitraum beim Öffnen',
     flow_period_helper: 'Auf der Karte jederzeit umschaltbar',
     solar_forecast: 'Solar-Prognose (optional)',
@@ -365,8 +365,7 @@ const LABELS = {
     media_entities_helper: 'Speakers and TVs, one row each',
     flow_live_section: 'Live power (optional)',
     sections: 'Areas below the line plan',
-    flow_sections_helper:
-      'Choice and order; an area only shows when the energy dashboard has data for it',
+    flow_sections_helper: 'Choice and order; a chosen area without data shows a hint',
     period: 'Period when opened',
     flow_period_helper: 'Can be changed on the card at any time',
     solar_forecast: 'Solar forecast (optional)',
