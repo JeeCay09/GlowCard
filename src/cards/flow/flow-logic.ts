@@ -821,7 +821,7 @@ const de = {
   no_setup_sub: 'Netz, Solar und Akku kommen aus den HA-Energie-Einstellungen',
   no_data: 'Keine Daten für diesen Zeitraum',
   not_setup: 'Im Energie-Dashboard nicht eingerichtet',
-  loading: 'Lädt …',
+  loading: 'Lade Daten …',
 };
 
 const en: typeof de = {
@@ -912,7 +912,7 @@ const en: typeof de = {
   no_setup_sub: 'Grid, solar and battery come from the HA energy settings',
   no_data: 'No data for this period',
   not_setup: 'Not set up in the energy dashboard',
-  loading: 'Loading …',
+  loading: 'Loading data …',
 };
 
 export type FlowKey = keyof typeof de;
